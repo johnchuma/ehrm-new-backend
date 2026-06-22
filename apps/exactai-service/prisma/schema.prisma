@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("EXACTAI_DATABASE_URL")
+}
+
+model AIChat {
+  id        String   @id @default(cuid())
+  companyId String
+  userId    String
+  message   String   @db.Text
+  response  String   @db.Text
+  context   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([userId])
+  @@map("ai_chats")
+}
+
+model AIInsight {
+  id          String   @id @default(cuid())
+  companyId   String
+  type        String
+  title       String
+  description String   @db.Text
+  severity    String   @default("Info")
+  category    String
+  data        String?  @db.LongText
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([type])
+  @@index([category])
+  @@map("ai_insights")
+}

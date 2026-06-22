@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package ehrm.exactai;
+
+service AIService {
+  rpc Chat(ChatRequest) returns (ChatResponse);
+  rpc SummarizeEmployee(SummarizeEmployeeRequest) returns (SummaryResponse);
+  rpc GetInsights(GetInsightsRequest) returns (InsightsResponse);
+  rpc PredictAttrition(PredictAttritionRequest) returns (AttritionResponse);
+  rpc RecommendActions(RecommendActionsRequest) returns (RecommendationsResponse);
+}
+
+message ChatRequest {
+  string companyId = 1;
+  string userId = 2;
+  string message = 3;
+  string context = 4;
+}
+
+message ChatResponse {
+  string response = 1;
+  repeated string suggestions = 2;
+  string confidence = 3;
+}
+
+message SummarizeEmployeeRequest {
+  string employeeId = 1;
+}
+
+message SummaryResponse {
+  string summary = 1;
+  repeated string highlights = 2;
+  repeated string concerns = 3;
+  repeated string recommendations = 4;
+}
+
+message GetInsightsRequest {
+  string companyId = 1;
+  string type = 2;
+}
+
+message InsightsResponse {
+  string type = 1;
+  repeated InsightItem insights = 2;
+  string summary = 3;
+}
+
+message InsightItem {
+  string title = 1;
+  string description = 2;
+  string severity = 3;
+  string category = 4;
+}
+
+message PredictAttritionRequest {
+  string companyId = 1;
+  string departmentId = 2;
+}
+
+message AttritionResponse {
+  double riskScore = 1;
+  repeated EmployeeRisk employees = 2;
+  repeated string factors = 3;
+}
+
+message EmployeeRisk {
+  string employeeId = 1;
+  string employeeName = 2;
+  double riskScore = 3;
+  string department = 4;
+}
+
+message RecommendActionsRequest {
+  string companyId = 1;
+  string type = 2;
+  string context = 3;
+}
+
+message RecommendationsResponse {
+  repeated Recommendation recommendations = 1;
+}
+
+message Recommendation {
+  string title = 1;
+  string description = 2;
+  string priority = 3;
+  string category = 4;
+  string impact = 5;
+}

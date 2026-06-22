@@ -1,0 +1,369 @@
+syntax = "proto3";
+
+package ehrm.attendance;
+
+service AttendanceService {
+  rpc CheckIn(CheckInRequest) returns (AttendanceRecordResponse);
+  rpc CheckOut(CheckOutRequest) returns (AttendanceRecordResponse);
+  rpc GetRecord(GetRecordRequest) returns (AttendanceRecordResponse);
+  rpc ListRecords(ListRecordsRequest) returns (ListRecordsResponse);
+  rpc BulkMarkAttendance(BulkMarkRequest) returns (BulkMarkResponse);
+  rpc GetTodayAttendance(GetTodayAttendanceRequest) returns (ListRecordsResponse);
+}
+
+service AttendanceExceptionService {
+  rpc CreateException(CreateExceptionRequest) returns (ExceptionResponse);
+  rpc ResolveException(ResolveExceptionRequest) returns (ExceptionResponse);
+  rpc ListExceptions(ListExceptionsRequest) returns (ListExceptionsResponse);
+}
+
+service ShiftService {
+  rpc CreateShift(CreateShiftRequest) returns (ShiftResponse);
+  rpc GetShift(GetShiftRequest) returns (ShiftResponse);
+  rpc UpdateShift(UpdateShiftRequest) returns (ShiftResponse);
+  rpc DeleteShift(DeleteShiftRequest) returns (DeleteResponse);
+  rpc ListShifts(ListShiftsRequest) returns (ListShiftsResponse);
+  rpc AssignShift(AssignShiftRequest) returns (ShiftAssignmentResponse);
+  rpc ListAssignments(ListAssignmentsRequest) returns (ListShiftAssignmentsResponse);
+}
+
+service ShiftSwapService {
+  rpc CreateSwapRequest(CreateSwapRequest) returns (SwapResponse);
+  rpc ApproveSwap(ApproveSwapRequest) returns (SwapResponse);
+  rpc ListSwaps(ListSwapsRequest) returns (ListSwapsResponse);
+}
+
+service OvertimeService {
+  rpc CreateOvertime(CreateOvertimeRequest) returns (OvertimeResponse);
+  rpc ApproveOvertime(ApproveOvertimeRequest) returns (OvertimeResponse);
+  rpc ListOvertime(ListOvertimeRequest) returns (ListOvertimeResponse);
+}
+
+service GeofenceService {
+  rpc CreateGeofence(CreateGeofenceRequest) returns (GeofenceResponse);
+  rpc UpdateGeofence(UpdateGeofenceRequest) returns (GeofenceResponse);
+  rpc ListGeofences(ListGeofencesRequest) returns (ListGeofencesResponse);
+}
+
+service AttendanceApprovalService {
+  rpc CreateApproval(CreateApprovalRequest) returns (ApprovalResponse);
+  rpc DecideApproval(DecideApprovalRequest) returns (ApprovalResponse);
+  rpc ListApprovals(ListApprovalsRequest) returns (ListApprovalsResponse);
+}
+
+message CheckInRequest {
+  string employeeId = 1;
+  string method = 2;
+  double lat = 3;
+  double lng = 4;
+  string deviceId = 5;
+}
+
+message CheckOutRequest {
+  string employeeId = 1;
+  string method = 2;
+  double lat = 3;
+  double lng = 4;
+}
+
+message GetRecordRequest {
+  string id = 1;
+}
+
+message ListRecordsRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string date = 3;
+  int32 page = 4;
+  int32 pageSize = 5;
+}
+
+message ListRecordsResponse {
+  repeated AttendanceRecordResponse records = 1;
+  int32 total = 2;
+}
+
+message AttendanceRecordResponse {
+  string id = 1;
+  string employeeId = 2;
+  string companyId = 3;
+  string date = 4;
+  string checkIn = 5;
+  string checkOut = 6;
+  double hours = 7;
+  string method = 8;
+  string status = 9;
+  double lat = 10;
+  double lng = 11;
+}
+
+message GetTodayAttendanceRequest {
+  string companyId = 1;
+}
+
+message BulkMarkRequest {
+  string companyId = 1;
+  string branchId = 2;
+  string departmentId = 3;
+  string date = 4;
+  string status = 5;
+  repeated string employeeIds = 6;
+}
+
+message BulkMarkResponse {
+  int32 marked = 1;
+  string message = 2;
+}
+
+message CreateExceptionRequest {
+  string employeeId = 1;
+  string companyId = 2;
+  string type = 3;
+  string date = 4;
+  string details = 5;
+  string severity = 6;
+  bool flagged = 7;
+}
+
+message ResolveExceptionRequest {
+  string id = 1;
+  string notes = 2;
+}
+
+message ExceptionResponse {
+  string id = 1;
+  string employeeId = 2;
+  string type = 3;
+  string date = 4;
+  string details = 5;
+  string severity = 6;
+  bool flagged = 7;
+  string status = 8;
+  string createdAt = 9;
+}
+
+message ListExceptionsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListExceptionsResponse {
+  repeated ExceptionResponse exceptions = 1;
+}
+
+message CreateShiftRequest {
+  string companyId = 1;
+  string name = 2;
+  string startTime = 3;
+  string endTime = 4;
+  string type = 5;
+  int32 graceMinutes = 6;
+  string color = 7;
+}
+
+message GetShiftRequest {
+  string id = 1;
+}
+
+message UpdateShiftRequest {
+  string id = 1;
+  string name = 2;
+  string startTime = 3;
+  string endTime = 4;
+  string type = 5;
+  int32 graceMinutes = 6;
+  string color = 7;
+}
+
+message DeleteShiftRequest {
+  string id = 1;
+}
+
+message ShiftResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  string startTime = 4;
+  string endTime = 5;
+  string type = 6;
+  int32 graceMinutes = 7;
+  string color = 8;
+}
+
+message ListShiftsRequest {
+  string companyId = 1;
+}
+
+message ListShiftsResponse {
+  repeated ShiftResponse shifts = 1;
+}
+
+message AssignShiftRequest {
+  string employeeId = 1;
+  string shiftId = 2;
+  string effectiveFrom = 3;
+}
+
+message ShiftAssignmentResponse {
+  string id = 1;
+  string employeeId = 2;
+  string shiftId = 3;
+  string status = 4;
+  string effectiveFrom = 5;
+}
+
+message ListAssignmentsRequest {
+  string companyId = 1;
+}
+
+message ListShiftAssignmentsResponse {
+  repeated ShiftAssignmentResponse assignments = 1;
+}
+
+message CreateSwapRequest {
+  string requesterId = 1;
+  string requesteeId = 2;
+  string date = 3;
+  string fromShift = 4;
+  string toShift = 5;
+  string reason = 6;
+}
+
+message ApproveSwapRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message SwapResponse {
+  string id = 1;
+  string requesterId = 2;
+  string requesteeId = 3;
+  string date = 4;
+  string fromShift = 5;
+  string toShift = 6;
+  string reason = 7;
+  string status = 8;
+}
+
+message ListSwapsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListSwapsResponse {
+  repeated SwapResponse swaps = 1;
+}
+
+message CreateOvertimeRequest {
+  string employeeId = 1;
+  string companyId = 2;
+  string date = 3;
+  double hours = 4;
+  double rate = 5;
+  string reason = 6;
+}
+
+message ApproveOvertimeRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message OvertimeResponse {
+  string id = 1;
+  string employeeId = 2;
+  string date = 3;
+  double hours = 4;
+  double rate = 5;
+  string reason = 6;
+  string status = 7;
+  string submittedAt = 8;
+}
+
+message ListOvertimeRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListOvertimeResponse {
+  repeated OvertimeResponse overtime = 1;
+}
+
+message CreateGeofenceRequest {
+  string companyId = 1;
+  string name = 2;
+  string type = 3;
+  double lat = 4;
+  double lng = 5;
+  int32 radius = 6;
+  repeated string branchIds = 7;
+}
+
+message UpdateGeofenceRequest {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  double lat = 4;
+  double lng = 5;
+  int32 radius = 6;
+  string status = 7;
+}
+
+message GeofenceResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  string type = 4;
+  double lat = 5;
+  double lng = 6;
+  int32 radius = 7;
+  repeated string branchIds = 8;
+  string status = 9;
+}
+
+message ListGeofencesRequest {
+  string companyId = 1;
+}
+
+message ListGeofencesResponse {
+  repeated GeofenceResponse geofences = 1;
+}
+
+message CreateApprovalRequest {
+  string employeeId = 1;
+  string companyId = 2;
+  string type = 3;
+  string date = 4;
+  string detail = 5;
+  string reviewer = 6;
+}
+
+message DecideApprovalRequest {
+  string id = 1;
+  string status = 2;
+  string notes = 3;
+}
+
+message ApprovalResponse {
+  string id = 1;
+  string employeeId = 2;
+  string type = 3;
+  string date = 4;
+  string detail = 5;
+  string reviewer = 6;
+  string status = 7;
+  string submittedAt = 8;
+}
+
+message ListApprovalsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListApprovalsResponse {
+  repeated ApprovalResponse approvals = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

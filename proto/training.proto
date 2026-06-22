@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package ehrm.training;
+
+service ProgramService {
+  rpc CreateProgram(CreateProgramRequest) returns (ProgramResponse);
+  rpc GetProgram(GetProgramRequest) returns (ProgramResponse);
+  rpc UpdateProgram(UpdateProgramRequest) returns (ProgramResponse);
+  rpc DeleteProgram(DeleteProgramRequest) returns (DeleteResponse);
+  rpc ListPrograms(ListProgramsRequest) returns (ListProgramsResponse);
+}
+
+service EnrollmentService {
+  rpc EnrollEmployee(EnrollEmployeeRequest) returns (EnrollmentResponse);
+  rpc UpdateEnrollment(UpdateEnrollmentRequest) returns (EnrollmentResponse);
+  rpc ListEnrollments(ListEnrollmentsRequest) returns (ListEnrollmentsResponse);
+}
+
+service CertificationService {
+  rpc IssueCertification(IssueCertificationRequest) returns (CertificationResponse);
+  rpc ListCertifications(ListCertificationsRequest) returns (ListCertificationsResponse);
+}
+
+message CreateProgramRequest {
+  string companyId = 1;
+  string title = 2;
+  string description = 3;
+  string category = 4;
+  string trainer = 5;
+  string startDate = 6;
+  string endDate = 7;
+  string location = 8;
+  int32 maxParticipants = 9;
+  string status = 10;
+}
+
+message GetProgramRequest {
+  string id = 1;
+}
+
+message UpdateProgramRequest {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string trainer = 4;
+  string startDate = 5;
+  string endDate = 6;
+  string location = 7;
+  int32 maxParticipants = 8;
+  string status = 9;
+}
+
+message DeleteProgramRequest {
+  string id = 1;
+}
+
+message ListProgramsRequest {
+  string companyId = 1;
+  string status = 2;
+  string category = 3;
+}
+
+message ListProgramsResponse {
+  repeated ProgramResponse programs = 1;
+}
+
+message ProgramResponse {
+  string id = 1;
+  string companyId = 2;
+  string title = 3;
+  string description = 4;
+  string category = 5;
+  string trainer = 6;
+  string startDate = 7;
+  string endDate = 8;
+  string location = 9;
+  int32 maxParticipants = 10;
+  int32 enrolled = 11;
+  string status = 12;
+  string createdAt = 13;
+}
+
+message EnrollEmployeeRequest {
+  string programId = 1;
+  string employeeId = 2;
+}
+
+message UpdateEnrollmentRequest {
+  string id = 1;
+  string status = 2;
+  double score = 3;
+  string feedback = 4;
+}
+
+message ListEnrollmentsRequest {
+  string programId = 1;
+  string employeeId = 2;
+}
+
+message ListEnrollmentsResponse {
+  repeated EnrollmentResponse enrollments = 1;
+}
+
+message EnrollmentResponse {
+  string id = 1;
+  string programId = 2;
+  string programTitle = 3;
+  string employeeId = 4;
+  string employeeName = 5;
+  string status = 6;
+  double score = 7;
+  string feedback = 8;
+  string enrolledAt = 9;
+  string completedAt = 10;
+}
+
+message IssueCertificationRequest {
+  string employeeId = 1;
+  string programId = 2;
+  string certificateNumber = 3;
+  string issuedDate = 4;
+  string expiryDate = 5;
+}
+
+message CertificationResponse {
+  string id = 1;
+  string employeeId = 2;
+  string employeeName = 3;
+  string programId = 4;
+  string programTitle = 5;
+  string certificateNumber = 6;
+  string issuedDate = 7;
+  string expiryDate = 8;
+}
+
+message ListCertificationsRequest {
+  string employeeId = 1;
+  string companyId = 2;
+}
+
+message ListCertificationsResponse {
+  repeated CertificationResponse certifications = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

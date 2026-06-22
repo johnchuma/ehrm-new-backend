@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("ATTENDANCE_DATABASE_URL")
+}
+
+model AttendanceRecord {
+  id          String   @id @default(cuid())
+  employeeId  String
+  companyId   String
+  date        DateTime
+  checkIn     DateTime?
+  checkOut    DateTime?
+  hours       Float    @default(0)
+  method      String   @default("Web")
+  status      String   @default("Present")
+  lat         Float?
+  lng         Float?
+  deviceId    String?
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([companyId])
+  @@index([date])
+  @@index([status])
+  @@map("attendance_records")
+}
+
+model AttendanceException {
+  id         String   @id @default(cuid())
+  employeeId String
+  companyId  String
+  type       String
+  date       DateTime
+  details    String?  @db.Text
+  severity   String   @default("Moderate")
+  flagged    Boolean  @default(false)
+  status     String   @default("Open")
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("attendance_exceptions")
+}
+
+model Shift {
+  id            String   @id @default(cuid())
+  companyId     String
+  name          String
+  startTime     String
+  endTime       String
+  type          String   @default("Regular")
+  graceMinutes  Int      @default(15)
+  color         String   @default("blue")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  assignments   ShiftAssignment[]
+
+  @@index([companyId])
+  @@map("shifts")
+}
+
+model ShiftAssignment {
+  id            String   @id @default(cuid())
+  employeeId    String
+  shiftId       String
+  status        String   @default("Active")
+  effectiveFrom DateTime @default(now())
+  createdAt     DateTime @default(now())
+  shift         Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([shiftId])
+  @@map("shift_assignments")
+}
+
+model ShiftSwap {
+  id         String   @id @default(cuid())
+  requesterId String
+  requesteeId String
+  companyId  String
+  date       DateTime
+  fromShift  String
+  toShift    String
+  reason     String?  @db.Text
+  status     String   @default("Pending")
+  createdAt  DateTime @default(now())
+
+  @@index([companyId])
+  @@index([status])
+  @@map("shift_swaps")
+}
+
+model Overtime {
+  id         String   @id @default(cuid())
+  employeeId String
+  companyId  String
+  date       DateTime
+  hours      Float
+  rate       Float    @default(1.5)
+  reason     String?  @db.Text
+  status     String   @default("Pending")
+  submittedAt DateTime @default(now())
+  approvedAt DateTime?
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("overtime_requests")
+}
+
+model Geofence {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  type      String   @default("Office")
+  lat       Float
+  lng       Float
+  radius    Int      @default(100)
+  branchIds String?  @db.Text
+  status    String   @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("geofences")
+}
+
+model AttendanceApproval {
+  id         String   @id @default(cuid())
+  employeeId String
+  companyId  String
+  type       String
+  date       DateTime
+  detail     String?  @db.Text
+  reviewer   String?
+  status     String   @default("Pending")
+  notes      String?  @db.Text
+  submittedAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([status])
+  @@map("attendance_approvals")
+}

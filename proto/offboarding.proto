@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package ehrm.offboarding;
+
+service OffboardingService {
+  rpc CreateOffboarding(CreateOffboardingRequest) returns (OffboardingResponse);
+  rpc GetOffboarding(GetOffboardingRequest) returns (OffboardingResponse);
+  rpc UpdateOffboarding(UpdateOffboardingRequest) returns (OffboardingResponse);
+  rpc AdvanceClearance(AdvanceClearanceRequest) returns (OffboardingResponse);
+  rpc CompleteOffboarding(CompleteOffboardingRequest) returns (OffboardingResponse);
+  rpc ListOffboardings(ListOffboardingsRequest) returns (ListOffboardingsResponse);
+}
+
+service ClearanceService {
+  rpc CreateClearance(CreateClearanceRequest) returns (ClearanceResponse);
+  rpc ApproveClearance(ApproveClearanceRequest) returns (ClearanceResponse);
+  rpc ListClearances(ListClearancesRequest) returns (ListClearancesResponse);
+}
+
+message CreateOffboardingRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string reason = 3;
+  string lastWorkingDay = 4;
+  string noticeDate = 5;
+  string type = 6;
+}
+
+message GetOffboardingRequest {
+  string id = 1;
+}
+
+message UpdateOffboardingRequest {
+  string id = 1;
+  string reason = 2;
+  string lastWorkingDay = 3;
+  string notes = 4;
+}
+
+message AdvanceClearanceRequest {
+  string id = 1;
+  string department = 2;
+}
+
+message CompleteOffboardingRequest {
+  string id = 1;
+}
+
+message ListOffboardingsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListOffboardingsResponse {
+  repeated OffboardingResponse offboardings = 1;
+}
+
+message OffboardingResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string reason = 5;
+  string type = 6;
+  string lastWorkingDay = 7;
+  string noticeDate = 8;
+  string status = 9;
+  string createdAt = 10;
+  string completedAt = 11;
+}
+
+message CreateClearanceRequest {
+  string offboardingId = 1;
+  string department = 2;
+  string items = 3;
+  string notes = 4;
+}
+
+message ApproveClearanceRequest {
+  string id = 1;
+  string status = 2;
+  string notes = 3;
+}
+
+message ListClearancesRequest {
+  string offboardingId = 1;
+}
+
+message ListClearancesResponse {
+  repeated ClearanceResponse clearances = 1;
+}
+
+message ClearanceResponse {
+  string id = 1;
+  string offboardingId = 2;
+  string department = 3;
+  string items = 4;
+  string status = 5;
+  string notes = 6;
+  string createdAt = 7;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

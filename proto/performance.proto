@@ -1,0 +1,181 @@
+syntax = "proto3";
+
+package ehrm.performance;
+
+service ReviewService {
+  rpc CreateReview(CreateReviewRequest) returns (ReviewResponse);
+  rpc GetReview(GetReviewRequest) returns (ReviewResponse);
+  rpc UpdateReview(UpdateReviewRequest) returns (ReviewResponse);
+  rpc SubmitReview(SubmitReviewRequest) returns (ReviewResponse);
+  rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse);
+}
+
+service GoalService {
+  rpc CreateGoal(CreateGoalRequest) returns (GoalResponse);
+  rpc GetGoal(GetGoalRequest) returns (GoalResponse);
+  rpc UpdateGoal(UpdateGoalRequest) returns (GoalResponse);
+  rpc DeleteGoal(DeleteGoalRequest) returns (DeleteResponse);
+  rpc ListGoals(ListGoalsRequest) returns (ListGoalsResponse);
+}
+
+service KpiService {
+  rpc CreateKpi(CreateKpiRequest) returns (KpiResponse);
+  rpc GetKpi(GetKpiRequest) returns (KpiResponse);
+  rpc UpdateKpi(UpdateKpiRequest) returns (KpiResponse);
+  rpc ListKpis(ListKpisRequest) returns (ListKpisResponse);
+}
+
+message CreateReviewRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string reviewerId = 3;
+  string period = 4;
+  string type = 5;
+  double rating = 6;
+  string strengths = 7;
+  string improvements = 8;
+  string comments = 9;
+}
+
+message GetReviewRequest {
+  string id = 1;
+}
+
+message UpdateReviewRequest {
+  string id = 1;
+  double rating = 2;
+  string strengths = 3;
+  string improvements = 4;
+  string comments = 5;
+}
+
+message SubmitReviewRequest {
+  string id = 1;
+}
+
+message ListReviewsRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string status = 3;
+}
+
+message ListReviewsResponse {
+  repeated ReviewResponse reviews = 1;
+}
+
+message ReviewResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string reviewerId = 5;
+  string reviewerName = 6;
+  string period = 7;
+  string type = 8;
+  double rating = 9;
+  string strengths = 10;
+  string improvements = 11;
+  string comments = 12;
+  string status = 13;
+  string createdAt = 14;
+  string submittedAt = 15;
+}
+
+message CreateGoalRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string title = 3;
+  string description = 4;
+  string category = 5;
+  string targetDate = 6;
+  double weight = 7;
+}
+
+message GetGoalRequest {
+  string id = 1;
+}
+
+message UpdateGoalRequest {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string status = 4;
+  double progress = 5;
+}
+
+message DeleteGoalRequest {
+  string id = 1;
+}
+
+message ListGoalsRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string status = 3;
+}
+
+message ListGoalsResponse {
+  repeated GoalResponse goals = 1;
+}
+
+message GoalResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string title = 5;
+  string description = 6;
+  string category = 7;
+  string targetDate = 8;
+  double weight = 9;
+  double progress = 10;
+  string status = 11;
+  string createdAt = 12;
+}
+
+message CreateKpiRequest {
+  string companyId = 1;
+  string name = 2;
+  string description = 3;
+  string unit = 4;
+  double target = 5;
+  string category = 6;
+}
+
+message GetKpiRequest {
+  string id = 1;
+}
+
+message UpdateKpiRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  double target = 4;
+  double actual = 5;
+}
+
+message ListKpisRequest {
+  string companyId = 1;
+  string category = 2;
+}
+
+message ListKpisResponse {
+  repeated KpiResponse kpis = 1;
+}
+
+message KpiResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  string description = 4;
+  string unit = 5;
+  double target = 6;
+  double actual = 7;
+  double achievement = 8;
+  string category = 9;
+  string createdAt = 10;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

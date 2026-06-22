@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package ehrm.analytics;
+
+service AnalyticsService {
+  rpc GetDashboard(GetDashboardRequest) returns (DashboardResponse);
+  rpc GetHeadcountAnalytics(GetHeadcountRequest) returns (HeadcountResponse);
+  rpc GetAttendanceAnalytics(GetAttendanceAnalyticsRequest) returns (AttendanceAnalyticsResponse);
+  rpc GetLeaveAnalytics(GetLeaveAnalyticsRequest) returns (LeaveAnalyticsResponse);
+  rpc GetPayrollAnalytics(GetPayrollAnalyticsRequest) returns (PayrollAnalyticsResponse);
+}
+
+message GetDashboardRequest {
+  string companyId = 1;
+}
+
+message DashboardResponse {
+  int32 totalEmployees = 1;
+  int32 activeEmployees = 2;
+  int32 onLeave = 3;
+  int32 pendingApprovals = 4;
+  double totalPayroll = 5;
+  double attendanceRate = 6;
+  repeated KpiItem kpis = 7;
+}
+
+message KpiItem {
+  string label = 1;
+  string value = 2;
+  string trend = 3;
+  string icon = 4;
+}
+
+message GetHeadcountRequest {
+  string companyId = 1;
+  string departmentId = 2;
+  string branchId = 3;
+}
+
+message HeadcountResponse {
+  int32 total = 1;
+  repeated DepartmentCount byDepartment = 2;
+  repeated BranchCount byBranch = 3;
+  repeated EmploymentTypeCount byEmploymentType = 4;
+  repeated GenderCount byGender = 5;
+}
+
+message DepartmentCount {
+  string department = 1;
+  int32 count = 2;
+}
+
+message BranchCount {
+  string branch = 1;
+  int32 count = 2;
+}
+
+message EmploymentTypeCount {
+  string type = 1;
+  int32 count = 2;
+}
+
+message GenderCount {
+  string gender = 1;
+  int32 count = 2;
+}
+
+message GetAttendanceAnalyticsRequest {
+  string companyId = 1;
+  string period = 2;
+}
+
+message AttendanceAnalyticsResponse {
+  double attendanceRate = 1;
+  double punctualityRate = 2;
+  double overtimeHours = 3;
+  repeated MonthlyAttendance monthly = 4;
+  repeated DepartmentPunctuality byDepartment = 5;
+}
+
+message MonthlyAttendance {
+  string month = 1;
+  double rate = 2;
+  int32 lateArrivals = 3;
+  int32 earlyDepartures = 4;
+}
+
+message DepartmentPunctuality {
+  string department = 1;
+  double rate = 2;
+}
+
+message GetLeaveAnalyticsRequest {
+  string companyId = 1;
+  string period = 2;
+}
+
+message LeaveAnalyticsResponse {
+  int32 totalRequests = 1;
+  int32 approved = 2;
+  int32 pending = 3;
+  int32 rejected = 4;
+  double totalDays = 5;
+  repeated LeaveTypeUtilization byType = 6;
+  repeated MonthlyLeaves monthly = 7;
+}
+
+message LeaveTypeUtilization {
+  string type = 1;
+  int32 count = 2;
+  double days = 3;
+}
+
+message MonthlyLeaves {
+  string month = 1;
+  int32 count = 2;
+  double days = 3;
+}
+
+message GetPayrollAnalyticsRequest {
+  string companyId = 1;
+  string period = 2;
+}
+
+message PayrollAnalyticsResponse {
+  double totalGross = 1;
+  double totalNet = 2;
+  double totalStatutory = 3;
+  double averageSalary = 4;
+  repeated DepartmentPayroll byDepartment = 5;
+  repeated MonthlyPayroll monthly = 6;
+}
+
+message DepartmentPayroll {
+  string department = 1;
+  double gross = 2;
+  double net = 3;
+  int32 employees = 4;
+}
+
+message MonthlyPayroll {
+  string month = 1;
+  double gross = 2;
+  double net = 3;
+  double statutory = 4;
+}

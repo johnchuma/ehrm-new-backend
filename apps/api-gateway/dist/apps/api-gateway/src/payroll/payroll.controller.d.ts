@@ -1,0 +1,31 @@
+import { ClientGrpc } from '@nestjs/microservices';
+export declare class PayrollController {
+    private readonly client;
+    private runService;
+    private advService;
+    private dedService;
+    private alwService;
+    private bonService;
+    private setService;
+    private jService;
+    constructor(client: ClientGrpc);
+    onModuleInit(): void;
+    generate(body: any): Promise<unknown>;
+    list(query: any): Promise<unknown>;
+    getRun(id: string): Promise<unknown>;
+    getRunDetails(id: string): Promise<unknown>;
+    approveRun(id: string, body: any): Promise<unknown>;
+    publish(id: string): Promise<unknown>;
+    createAdv(body: any): Promise<unknown>;
+    listAdv(query: any): Promise<unknown>;
+    createDed(body: any): Promise<unknown>;
+    listDed(query: any): Promise<unknown>;
+    createAlw(body: any): Promise<unknown>;
+    listAlw(query: any): Promise<unknown>;
+    createBon(body: any): Promise<unknown>;
+    listBon(query: any): Promise<unknown>;
+    createSet(body: any): Promise<unknown>;
+    listSet(query: any): Promise<unknown>;
+    getJournal(query: any): Promise<unknown>;
+    exportJournal(body: any): Promise<unknown>;
+}

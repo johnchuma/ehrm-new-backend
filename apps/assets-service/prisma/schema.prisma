@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("ASSETS_DATABASE_URL")
+}
+
+model Asset {
+  id            String   @id @default(cuid())
+  companyId     String
+  name          String
+  category      String
+  serialNumber  String?  @unique
+  model         String?
+  purchaseDate  DateTime?
+  purchasePrice Float    @default(0)
+  status        String   @default("Available")
+  condition     String   @default("Good")
+  location      String?
+  assignedTo    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  assignments   AssetAssignment[]
+
+  @@index([companyId])
+  @@index([category])
+  @@index([status])
+  @@map("assets")
+}
+
+model AssetAssignment {
+  id           String   @id @default(cuid())
+  assetId      String
+  assetName    String?
+  employeeId   String
+  employeeName String?
+  assignedDate DateTime @default(now())
+  returnDate   DateTime?
+  status       String   @default("Active")
+  condition    String?
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([employeeId])
+  @@map("asset_assignments")
+}

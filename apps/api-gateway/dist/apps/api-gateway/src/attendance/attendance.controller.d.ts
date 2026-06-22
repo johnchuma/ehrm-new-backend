@@ -1,0 +1,31 @@
+import { ClientGrpc } from '@nestjs/microservices';
+export declare class AttendanceController {
+    private readonly client;
+    private attService;
+    private excService;
+    private shiftService;
+    private swapService;
+    private otService;
+    private gfService;
+    private apprService;
+    constructor(client: ClientGrpc);
+    onModuleInit(): void;
+    checkIn(body: any): Promise<unknown>;
+    checkOut(body: any): Promise<unknown>;
+    listRecords(query: any): Promise<unknown>;
+    today(companyId: string): Promise<unknown>;
+    bulkMark(body: any): Promise<unknown>;
+    createException(body: any): Promise<unknown>;
+    listExceptions(query: any): Promise<unknown>;
+    resolveException(id: string, body: any): Promise<unknown>;
+    createShift(body: any): Promise<unknown>;
+    listShifts(query: any): Promise<unknown>;
+    assignShift(body: any): Promise<unknown>;
+    createOT(body: any): Promise<unknown>;
+    listOT(query: any): Promise<unknown>;
+    approveOT(id: string, body: any): Promise<unknown>;
+    createGF(body: any): Promise<unknown>;
+    listGF(query: any): Promise<unknown>;
+    createAppr(body: any): Promise<unknown>;
+    listAppr(query: any): Promise<unknown>;
+}

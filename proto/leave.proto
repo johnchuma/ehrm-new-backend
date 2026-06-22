@@ -1,0 +1,270 @@
+syntax = "proto3";
+
+package ehrm.leave;
+
+service LeaveRequestService {
+  rpc CreateRequest(CreateLeaveRequest) returns (LeaveRequestResponse);
+  rpc ApproveRequest(ApproveLeaveRequest) returns (LeaveRequestResponse);
+  rpc RejectRequest(RejectLeaveRequest) returns (LeaveRequestResponse);
+  rpc GetRequest(GetLeaveRequest) returns (LeaveRequestResponse);
+  rpc ListRequests(ListLeaveRequestsRequest) returns (ListLeaveRequestsResponse);
+  rpc GetCalendarEvents(GetCalendarRequest) returns (ListLeaveRequestsResponse);
+}
+
+service LeaveTypeService {
+  rpc CreateType(CreateLeaveTypeRequest) returns (LeaveTypeResponse);
+  rpc GetType(GetLeaveTypeRequest) returns (LeaveTypeResponse);
+  rpc UpdateType(UpdateLeaveTypeRequest) returns (LeaveTypeResponse);
+  rpc DeleteType(DeleteLeaveTypeRequest) returns (DeleteResponse);
+  rpc ListTypes(ListLeaveTypesRequest) returns (ListLeaveTypesResponse);
+}
+
+service LeaveBalanceService {
+  rpc GetBalance(GetLeaveBalanceRequest) returns (LeaveBalanceResponse);
+  rpc ListBalances(ListLeaveBalancesRequest) returns (ListLeaveBalancesResponse);
+  rpc AccrueLeave(AccrueLeaveRequest) returns (LeaveBalanceResponse);
+}
+
+service LeaveEncashmentService {
+  rpc CreateEncashment(CreateEncashmentRequest) returns (EncashmentResponse);
+  rpc ApproveEncashment(ApproveEncashmentRequest) returns (EncashmentResponse);
+  rpc ListEncashments(ListEncashmentsRequest) returns (ListEncashmentsResponse);
+}
+
+service BlackoutPeriodService {
+  rpc CreateBlackout(CreateBlackoutRequest) returns (BlackoutResponse);
+  rpc ListBlackouts(ListBlackoutsRequest) returns (ListBlackoutsResponse);
+}
+
+service LeaveLiabilityService {
+  rpc GetLiability(GetLiabilityRequest) returns (ListLiabilitiesResponse);
+  rpc GetDepartmentLiability(GetLiabilityRequest) returns (ListLiabilitiesResponse);
+}
+
+message CreateLeaveRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string leaveTypeId = 3;
+  string from = 4;
+  string to = 5;
+  double days = 6;
+  string reason = 7;
+}
+
+message ApproveLeaveRequest {
+  string id = 1;
+  string approverId = 2;
+  string comments = 3;
+}
+
+message RejectLeaveRequest {
+  string id = 1;
+  string approverId = 2;
+  string reason = 3;
+}
+
+message GetLeaveRequest {
+  string id = 1;
+}
+
+message LeaveRequestResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string leaveTypeId = 4;
+  string leaveTypeName = 5;
+  string from = 6;
+  string to = 7;
+  double days = 8;
+  string reason = 9;
+  string status = 10;
+  string createdAt = 11;
+  string updatedAt = 12;
+}
+
+message ListLeaveRequestsRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string status = 3;
+  int32 page = 4;
+  int32 pageSize = 5;
+}
+
+message ListLeaveRequestsResponse {
+  repeated LeaveRequestResponse requests = 1;
+  int32 total = 2;
+}
+
+message GetCalendarRequest {
+  string companyId = 1;
+  int32 year = 2;
+  int32 month = 3;
+}
+
+message CreateLeaveTypeRequest {
+  string companyId = 1;
+  string name = 2;
+  double entitlementDays = 3;
+  string color = 4;
+  string accrual = 5;
+  string carryForward = 6;
+  string eligibility = 7;
+  int32 maxCarry = 8;
+}
+
+message GetLeaveTypeRequest {
+  string id = 1;
+}
+
+message UpdateLeaveTypeRequest {
+  string id = 1;
+  string name = 2;
+  double entitlementDays = 3;
+  string color = 4;
+  string accrual = 5;
+  string carryForward = 6;
+  string eligibility = 7;
+  int32 maxCarry = 8;
+}
+
+message DeleteLeaveTypeRequest {
+  string id = 1;
+}
+
+message LeaveTypeResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  double entitlementDays = 4;
+  string color = 5;
+  string accrual = 6;
+  string carryForward = 7;
+  string eligibility = 8;
+  int32 maxCarry = 9;
+  string createdAt = 10;
+}
+
+message ListLeaveTypesRequest {
+  string companyId = 1;
+}
+
+message ListLeaveTypesResponse {
+  repeated LeaveTypeResponse types = 1;
+}
+
+message GetLeaveBalanceRequest {
+  string employeeId = 1;
+  string leaveTypeId = 2;
+}
+
+message LeaveBalanceResponse {
+  string id = 1;
+  string employeeId = 2;
+  string leaveTypeId = 3;
+  string leaveTypeName = 4;
+  double opening = 5;
+  double accrued = 6;
+  double used = 7;
+  double available = 8;
+  string year = 9;
+}
+
+message ListLeaveBalancesRequest {
+  string companyId = 1;
+  string employeeId = 2;
+}
+
+message ListLeaveBalancesResponse {
+  repeated LeaveBalanceResponse balances = 1;
+}
+
+message AccrueLeaveRequest {
+  string employeeId = 1;
+  string leaveTypeId = 2;
+  double days = 3;
+  string year = 4;
+}
+
+message CreateEncashmentRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string leaveTypeId = 3;
+  double days = 4;
+  double amount = 5;
+}
+
+message ApproveEncashmentRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message EncashmentResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string leaveTypeId = 4;
+  double days = 5;
+  double amount = 6;
+  string status = 7;
+  string submittedAt = 8;
+}
+
+message ListEncashmentsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListEncashmentsResponse {
+  repeated EncashmentResponse encashments = 1;
+}
+
+message CreateBlackoutRequest {
+  string companyId = 1;
+  string name = 2;
+  string from = 3;
+  string to = 4;
+  string scope = 5;
+  string description = 6;
+}
+
+message BlackoutResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  string from = 4;
+  string to = 5;
+  string scope = 6;
+  string status = 7;
+  string description = 8;
+}
+
+message ListBlackoutsRequest {
+  string companyId = 1;
+}
+
+message ListBlackoutsResponse {
+  repeated BlackoutResponse blackouts = 1;
+}
+
+message GetLiabilityRequest {
+  string companyId = 1;
+}
+
+message LiabilityItem {
+  string department = 1;
+  int32 headcount = 2;
+  double totalDays = 3;
+  double liability = 4;
+  double encashmentExposure = 5;
+}
+
+message ListLiabilitiesResponse {
+  repeated LiabilityItem items = 1;
+  double totalLiability = 2;
+  double totalEncashmentExposure = 3;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

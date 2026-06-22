@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package ehrm.notifications;
+
+service NotificationService {
+  rpc CreateNotification(CreateNotificationRequest) returns (NotificationResponse);
+  rpc GetNotification(GetNotificationRequest) returns (NotificationResponse);
+  rpc MarkAsRead(MarkAsReadRequest) returns (NotificationResponse);
+  rpc MarkAllAsRead(MarkAllAsReadRequest) returns (DeleteResponse);
+  rpc DeleteNotification(DeleteNotificationRequest) returns (DeleteResponse);
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (UnreadCountResponse);
+}
+
+message CreateNotificationRequest {
+  string userId = 1;
+  string companyId = 2;
+  string title = 3;
+  string message = 4;
+  string type = 5;
+  string link = 6;
+  string category = 7;
+}
+
+message GetNotificationRequest {
+  string id = 1;
+}
+
+message MarkAsReadRequest {
+  string id = 1;
+}
+
+message MarkAllAsReadRequest {
+  string userId = 1;
+}
+
+message DeleteNotificationRequest {
+  string id = 1;
+}
+
+message ListNotificationsRequest {
+  string userId = 1;
+  bool unreadOnly = 2;
+  int32 page = 3;
+  int32 pageSize = 4;
+}
+
+message ListNotificationsResponse {
+  repeated NotificationResponse notifications = 1;
+  int32 total = 2;
+  int32 unread = 3;
+}
+
+message GetUnreadCountRequest {
+  string userId = 1;
+}
+
+message UnreadCountResponse {
+  int32 count = 1;
+}
+
+message NotificationResponse {
+  string id = 1;
+  string userId = 2;
+  string companyId = 3;
+  string title = 4;
+  string message = 5;
+  string type = 6;
+  string link = 7;
+  string category = 8;
+  bool isRead = 9;
+  string createdAt = 10;
+  string readAt = 11;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("PERFORMANCE_DATABASE_URL")
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  companyId    String
+  employeeId   String
+  employeeName String
+  reviewerId   String
+  reviewerName String?
+  period       String
+  type         String   @default("Annual")
+  rating       Float    @default(0)
+  strengths    String?  @db.Text
+  improvements String?  @db.Text
+  comments     String?  @db.Text
+  status       String   @default("Draft")
+  submittedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("performance_reviews")
+}
+
+model Goal {
+  id           String   @id @default(cuid())
+  companyId    String
+  employeeId   String
+  employeeName String
+  title        String
+  description  String?  @db.Text
+  category     String?
+  targetDate   DateTime?
+  weight       Float    @default(1.0)
+  progress     Float    @default(0)
+  status       String   @default("In Progress")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("performance_goals")
+}
+
+model Kpi {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?  @db.Text
+  unit        String?
+  target      Float    @default(0)
+  actual      Float    @default(0)
+  category    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([category])
+  @@map("performance_kpis")
+}

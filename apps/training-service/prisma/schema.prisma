@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("TRAINING_DATABASE_URL")
+}
+
+model TrainingProgram {
+  id              String   @id @default(cuid())
+  companyId       String
+  title           String
+  description     String?  @db.Text
+  category        String?
+  trainer         String?
+  startDate       DateTime
+  endDate         DateTime
+  location        String?
+  maxParticipants Int      @default(20)
+  enrolled        Int      @default(0)
+  status          String   @default("Upcoming")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  enrollments     TrainingEnrollment[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([category])
+  @@map("training_programs")
+}
+
+model TrainingEnrollment {
+  id           String   @id @default(cuid())
+  programId    String
+  programTitle String?
+  employeeId   String
+  employeeName String?
+  status       String   @default("Enrolled")
+  score        Float?
+  feedback     String?  @db.Text
+  enrolledAt   DateTime @default(now())
+  completedAt  DateTime?
+  program      TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, employeeId])
+  @@index([programId])
+  @@index([employeeId])
+  @@map("training_enrollments")
+}
+
+model Certification {
+  id               String   @id @default(cuid())
+  employeeId       String
+  employeeName     String?
+  programId        String
+  programTitle     String?
+  certificateNumber String @unique
+  issuedDate       DateTime
+  expiryDate       DateTime?
+  createdAt        DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([programId])
+  @@map("certifications")
+}

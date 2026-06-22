@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("OFFBOARDING_DATABASE_URL")
+}
+
+model Offboarding {
+  id             String   @id @default(cuid())
+  companyId      String
+  employeeId     String
+  employeeName   String?
+  reason         String
+  type           String   @default("Resignation")
+  lastWorkingDay DateTime
+  noticeDate     DateTime
+  status         String   @default("In Progress")
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+  clearances     Clearance[]
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("offboardings")
+}
+
+model Clearance {
+  id             String   @id @default(cuid())
+  offboardingId  String
+  department     String
+  items          String?  @db.Text
+  status         String   @default("Pending")
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  offboarding    Offboarding @relation(fields: [offboardingId], references: [id], onDelete: Cascade)
+
+  @@index([offboardingId])
+  @@map("clearances")
+}

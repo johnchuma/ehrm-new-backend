@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package ehrm.assets;
+
+service AssetService {
+  rpc CreateAsset(CreateAssetRequest) returns (AssetResponse);
+  rpc GetAsset(GetAssetRequest) returns (AssetResponse);
+  rpc UpdateAsset(UpdateAssetRequest) returns (AssetResponse);
+  rpc DeleteAsset(DeleteAssetRequest) returns (DeleteResponse);
+  rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse);
+}
+
+service AssetAssignmentService {
+  rpc AssignAsset(AssignAssetRequest) returns (AssetAssignmentResponse);
+  rpc ReturnAsset(ReturnAssetRequest) returns (AssetAssignmentResponse);
+  rpc ListAssignments(ListAssignmentsRequest) returns (ListAssetAssignmentsResponse);
+}
+
+message CreateAssetRequest {
+  string companyId = 1;
+  string name = 2;
+  string category = 3;
+  string serialNumber = 4;
+  string model = 5;
+  string purchaseDate = 6;
+  double purchasePrice = 7;
+  string status = 8;
+  string condition = 9;
+  string location = 10;
+}
+
+message GetAssetRequest {
+  string id = 1;
+}
+
+message UpdateAssetRequest {
+  string id = 1;
+  string name = 2;
+  string category = 3;
+  string status = 4;
+  string condition = 5;
+  string location = 6;
+}
+
+message DeleteAssetRequest {
+  string id = 1;
+}
+
+message ListAssetsRequest {
+  string companyId = 1;
+  string category = 2;
+  string status = 3;
+}
+
+message ListAssetsResponse {
+  repeated AssetResponse assets = 1;
+}
+
+message AssetResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  string category = 4;
+  string serialNumber = 5;
+  string model = 6;
+  string purchaseDate = 7;
+  double purchasePrice = 8;
+  string status = 9;
+  string condition = 10;
+  string location = 11;
+  string assignedTo = 12;
+  string createdAt = 13;
+}
+
+message AssignAssetRequest {
+  string assetId = 1;
+  string employeeId = 2;
+  string assignedDate = 3;
+  string notes = 4;
+}
+
+message ReturnAssetRequest {
+  string id = 1;
+  string returnDate = 2;
+  string condition = 3;
+  string notes = 4;
+}
+
+message AssetAssignmentResponse {
+  string id = 1;
+  string assetId = 2;
+  string assetName = 3;
+  string employeeId = 4;
+  string employeeName = 5;
+  string assignedDate = 6;
+  string returnDate = 7;
+  string status = 8;
+  string condition = 9;
+  string notes = 10;
+}
+
+message ListAssignmentsRequest {
+  string companyId = 1;
+  string employeeId = 2;
+}
+
+message ListAssetAssignmentsResponse {
+  repeated AssetAssignmentResponse assignments = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

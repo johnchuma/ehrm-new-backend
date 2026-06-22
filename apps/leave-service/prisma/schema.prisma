@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("LEAVE_DATABASE_URL")
+}
+
+model LeaveRequest {
+  id            String   @id @default(cuid())
+  companyId     String
+  employeeId    String
+  leaveTypeId   String
+  from          DateTime
+  to            DateTime
+  days          Float
+  reason        String?  @db.Text
+  status        String   @default("Pending")
+  approverId    String?
+  comments      String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([from, to])
+  @@map("leave_requests")
+}
+
+model LeaveType {
+  id              String   @id @default(cuid())
+  companyId       String
+  name            String
+  entitlementDays Float
+  color           String   @default("orange")
+  accrual         String   @default("Monthly")
+  carryForward    String   @default("Allowed")
+  eligibility     String?
+  maxCarry        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  balances        LeaveBalance[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("leave_types")
+}
+
+model LeaveBalance {
+  id          String   @id @default(cuid())
+  employeeId  String
+  leaveTypeId String
+  opening     Float    @default(0)
+  accrued     Float    @default(0)
+  used        Float    @default(0)
+  available   Float    @default(0)
+  year        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([employeeId])
+  @@map("leave_balances")
+}
+
+model LeaveEncashment {
+  id          String   @id @default(cuid())
+  companyId   String
+  employeeId  String
+  leaveTypeId String
+  days        Float
+  amount      Float
+  status      String   @default("Pending")
+  submittedAt DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("leave_encashments")
+}
+
+model BlackoutPeriod {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  from        DateTime
+  to          DateTime
+  scope       String
+  description String?  @db.Text
+  status      String   @default("Active")
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@map("leave_blackout_periods")
+}
+
+model LeaveAccrualRule {
+  id        String   @id @default(cuid())
+  companyId String
+  type      String
+  desc      String   @db.Text
+  appliesTo String
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@map("leave_accrual_rules")
+}

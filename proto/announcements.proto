@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package ehrm.announcements;
+
+service AnnouncementService {
+  rpc CreateAnnouncement(CreateAnnouncementRequest) returns (AnnouncementResponse);
+  rpc GetAnnouncement(GetAnnouncementRequest) returns (AnnouncementResponse);
+  rpc UpdateAnnouncement(UpdateAnnouncementRequest) returns (AnnouncementResponse);
+  rpc DeleteAnnouncement(DeleteAnnouncementRequest) returns (DeleteResponse);
+  rpc ListAnnouncements(ListAnnouncementsRequest) returns (ListAnnouncementsResponse);
+}
+
+message CreateAnnouncementRequest {
+  string companyId = 1;
+  string title = 2;
+  string content = 3;
+  string type = 4;
+  string priority = 5;
+  string audience = 6;
+  string publishedAt = 7;
+  string expiresAt = 8;
+  string authorId = 9;
+}
+
+message GetAnnouncementRequest {
+  string id = 1;
+}
+
+message UpdateAnnouncementRequest {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string priority = 4;
+  string publishedAt = 5;
+  string expiresAt = 6;
+}
+
+message DeleteAnnouncementRequest {
+  string id = 1;
+}
+
+message ListAnnouncementsRequest {
+  string companyId = 1;
+  string type = 2;
+  string priority = 3;
+}
+
+message ListAnnouncementsResponse {
+  repeated AnnouncementResponse announcements = 1;
+}
+
+message AnnouncementResponse {
+  string id = 1;
+  string companyId = 2;
+  string title = 3;
+  string content = 4;
+  string type = 5;
+  string priority = 6;
+  string audience = 7;
+  string publishedAt = 8;
+  string expiresAt = 9;
+  string authorId = 10;
+  string createdAt = 11;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package ehrm.benefits;
+
+service BenefitService {
+  rpc CreateBenefit(CreateBenefitRequest) returns (BenefitResponse);
+  rpc GetBenefit(GetBenefitRequest) returns (BenefitResponse);
+  rpc UpdateBenefit(UpdateBenefitRequest) returns (BenefitResponse);
+  rpc DeleteBenefit(DeleteBenefitRequest) returns (DeleteResponse);
+  rpc ListBenefits(ListBenefitsRequest) returns (ListBenefitsResponse);
+}
+
+service BenefitEnrollmentService {
+  rpc EnrollEmployee(EnrollEmployeeRequest) returns (BenefitEnrollmentResponse);
+  rpc ListEnrollments(ListEnrollmentsRequest) returns (ListBenefitEnrollmentsResponse);
+}
+
+message CreateBenefitRequest {
+  string companyId = 1;
+  string name = 2;
+  string type = 3;
+  string description = 4;
+  double employeeContribution = 5;
+  double employerContribution = 6;
+  string eligibility = 7;
+  string status = 8;
+}
+
+message GetBenefitRequest {
+  string id = 1;
+}
+
+message UpdateBenefitRequest {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  double employeeContribution = 4;
+  double employerContribution = 5;
+  string status = 6;
+}
+
+message DeleteBenefitRequest {
+  string id = 1;
+}
+
+message ListBenefitsRequest {
+  string companyId = 1;
+  string type = 2;
+}
+
+message ListBenefitsResponse {
+  repeated BenefitResponse benefits = 1;
+}
+
+message BenefitResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  string type = 4;
+  string description = 5;
+  double employeeContribution = 6;
+  double employerContribution = 7;
+  string eligibility = 8;
+  string status = 9;
+  string createdAt = 10;
+}
+
+message EnrollEmployeeRequest {
+  string benefitId = 1;
+  string employeeId = 2;
+  string effectiveDate = 3;
+}
+
+message ListEnrollmentsRequest {
+  string companyId = 1;
+  string employeeId = 2;
+}
+
+message ListBenefitEnrollmentsResponse {
+  repeated BenefitEnrollmentResponse enrollments = 1;
+}
+
+message BenefitEnrollmentResponse {
+  string id = 1;
+  string benefitId = 2;
+  string benefitName = 3;
+  string employeeId = 4;
+  string employeeName = 5;
+  string effectiveDate = 6;
+  string status = 7;
+  string enrolledAt = 8;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

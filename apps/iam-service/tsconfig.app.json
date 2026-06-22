@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@app/common": ["../../libs/common/src"],
+      "@app/common/*": ["../../libs/common/src/*"]
+    }
+  },
+  "include": ["src/**/*", "prisma/**/*"]
+}

@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package ehrm.movement;
+
+service TransferService {
+  rpc CreateTransfer(CreateTransferRequest) returns (TransferResponse);
+  rpc ApproveTransfer(ApproveTransferRequest) returns (TransferResponse);
+  rpc ListTransfers(ListTransfersRequest) returns (ListTransfersResponse);
+}
+
+service PromotionService {
+  rpc CreatePromotion(CreatePromotionRequest) returns (PromotionResponse);
+  rpc ApprovePromotion(ApprovePromotionRequest) returns (PromotionResponse);
+  rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
+}
+
+message CreateTransferRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string fromBranchId = 3;
+  string fromDepartmentId = 4;
+  string toBranchId = 5;
+  string toDepartmentId = 6;
+  string effectiveDate = 7;
+  string reason = 8;
+}
+
+message ApproveTransferRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message ListTransfersRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListTransfersResponse {
+  repeated TransferResponse transfers = 1;
+}
+
+message TransferResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string fromBranchId = 5;
+  string fromDepartmentId = 6;
+  string toBranchId = 7;
+  string toDepartmentId = 8;
+  string effectiveDate = 9;
+  string reason = 10;
+  string status = 11;
+  string createdAt = 12;
+}
+
+message CreatePromotionRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string fromTitle = 3;
+  string toTitle = 4;
+  string fromGrade = 5;
+  string toGrade = 6;
+  double newSalary = 7;
+  string effectiveDate = 8;
+  string reason = 9;
+}
+
+message ApprovePromotionRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message ListPromotionsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListPromotionsResponse {
+  repeated PromotionResponse promotions = 1;
+}
+
+message PromotionResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string fromTitle = 5;
+  string toTitle = 6;
+  string fromGrade = 7;
+  string toGrade = 8;
+  double newSalary = 9;
+  string effectiveDate = 10;
+  string reason = 11;
+  string status = 12;
+  string createdAt = 13;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

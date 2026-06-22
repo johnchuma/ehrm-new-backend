@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package ehrm.documents;
+
+service DocumentService {
+  rpc UploadDocument(UploadDocumentRequest) returns (DocumentResponse);
+  rpc GetDocument(GetDocumentRequest) returns (DocumentResponse);
+  rpc UpdateDocument(UpdateDocumentRequest) returns (DocumentResponse);
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteResponse);
+  rpc ListDocuments(ListDocumentsRequest) returns (ListDocumentsResponse);
+  rpc ShareDocument(ShareDocumentRequest) returns (DocumentResponse);
+}
+
+message UploadDocumentRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string name = 3;
+  string type = 4;
+  string category = 5;
+  string url = 6;
+  int32 size = 7;
+  string uploadedBy = 8;
+  string description = 9;
+}
+
+message GetDocumentRequest {
+  string id = 1;
+}
+
+message UpdateDocumentRequest {
+  string id = 1;
+  string name = 2;
+  string category = 3;
+  string description = 4;
+}
+
+message DeleteDocumentRequest {
+  string id = 1;
+}
+
+message ListDocumentsRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string category = 3;
+  string type = 4;
+}
+
+message ListDocumentsResponse {
+  repeated DocumentResponse documents = 1;
+}
+
+message ShareDocumentRequest {
+  string id = 1;
+  repeated string userIds = 2;
+  string expiresAt = 3;
+}
+
+message DocumentResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string name = 4;
+  string type = 5;
+  string category = 6;
+  string url = 7;
+  int32 size = 8;
+  string uploadedBy = 9;
+  string description = 10;
+  repeated string sharedWith = 11;
+  string expiresAt = 12;
+  string createdAt = 13;
+  string updatedAt = 14;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

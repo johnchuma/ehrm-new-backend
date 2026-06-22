@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("NOTIFICATIONS_DATABASE_URL")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  title     String
+  message   String   @db.Text
+  type      String   @default("Info")
+  link      String?
+  category  String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}

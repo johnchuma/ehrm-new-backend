@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package ehrm.compliance;
+
+service ComplianceService {
+  rpc CreateRequirement(CreateRequirementRequest) returns (RequirementResponse);
+  rpc GetRequirement(GetRequirementRequest) returns (RequirementResponse);
+  rpc UpdateRequirement(UpdateRequirementRequest) returns (RequirementResponse);
+  rpc ListRequirements(ListRequirementsRequest) returns (ListRequirementsResponse);
+}
+
+service StatutoryService {
+  rpc CreateFiling(CreateFilingRequest) returns (FilingResponse);
+  rpc UpdateFiling(UpdateFilingRequest) returns (FilingResponse);
+  rpc ListFilings(ListFilingsRequest) returns (ListFilingsResponse);
+}
+
+message CreateRequirementRequest {
+  string companyId = 1;
+  string name = 2;
+  string description = 3;
+  string authority = 4;
+  string frequency = 5;
+  string dueDate = 6;
+  string status = 7;
+}
+
+message GetRequirementRequest {
+  string id = 1;
+}
+
+message UpdateRequirementRequest {
+  string id = 1;
+  string status = 2;
+  string notes = 3;
+}
+
+message ListRequirementsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListRequirementsResponse {
+  repeated RequirementResponse requirements = 1;
+}
+
+message RequirementResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  string description = 4;
+  string authority = 5;
+  string frequency = 6;
+  string dueDate = 7;
+  string status = 8;
+  string createdAt = 9;
+}
+
+message CreateFilingRequest {
+  string companyId = 1;
+  string type = 2;
+  string period = 3;
+  string amount = 4;
+  string dueDate = 5;
+  string authority = 6;
+  string status = 7;
+}
+
+message UpdateFilingRequest {
+  string id = 1;
+  string status = 2;
+  string reference = 3;
+  string filedDate = 4;
+}
+
+message ListFilingsRequest {
+  string companyId = 1;
+  string type = 2;
+  string status = 3;
+}
+
+message ListFilingsResponse {
+  repeated FilingResponse filings = 1;
+}
+
+message FilingResponse {
+  string id = 1;
+  string companyId = 2;
+  string type = 3;
+  string period = 4;
+  double amount = 5;
+  string dueDate = 6;
+  string authority = 7;
+  string status = 8;
+  string reference = 9;
+  string filedDate = 10;
+  string createdAt = 11;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

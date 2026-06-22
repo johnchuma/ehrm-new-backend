@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("INTEGRATIONS_DATABASE_URL")
+}
+
+model Integration {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  type        String
+  provider    String
+  config      String?  @db.Text
+  status      String   @default("ACTIVE")
+  enabled     Boolean  @default(true)
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([type])
+  @@map("integrations")
+}
+
+model Webhook {
+  id        String   @id @default(cuid())
+  companyId String
+  url       String
+  events    String   @db.Text
+  secret    String?
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("webhooks")
+}

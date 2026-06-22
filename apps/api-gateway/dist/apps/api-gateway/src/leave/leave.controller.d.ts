@@ -1,0 +1,30 @@
+import { ClientGrpc } from '@nestjs/microservices';
+export declare class LeaveController {
+    private readonly client;
+    private reqService;
+    private typeService;
+    private balService;
+    private encService;
+    private boService;
+    private liabService;
+    constructor(client: ClientGrpc);
+    onModuleInit(): void;
+    create(body: any): Promise<unknown>;
+    list(query: any): Promise<unknown>;
+    get(id: string): Promise<unknown>;
+    approve(id: string, body: any): Promise<unknown>;
+    reject(id: string, body: any): Promise<unknown>;
+    calendar(companyId: string, query: any): Promise<unknown>;
+    createType(body: any): Promise<unknown>;
+    listTypes(query: any): Promise<unknown>;
+    getType(id: string): Promise<unknown>;
+    updateType(id: string, body: any): Promise<unknown>;
+    deleteType(id: string): Promise<unknown>;
+    listBalances(employeeId: string): Promise<unknown>;
+    accrue(body: any): Promise<unknown>;
+    createEnc(body: any): Promise<unknown>;
+    listEnc(query: any): Promise<unknown>;
+    createBO(body: any): Promise<unknown>;
+    listBO(query: any): Promise<unknown>;
+    getLiability(companyId: string): Promise<unknown>;
+}

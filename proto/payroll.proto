@@ -1,0 +1,326 @@
+syntax = "proto3";
+
+package ehrm.payroll;
+
+service PayrollRunService {
+  rpc GeneratePayroll(GeneratePayrollRequest) returns (PayrollRunResponse);
+  rpc GetRun(GetPayrollRunRequest) returns (PayrollRunResponse);
+  rpc ListRuns(ListPayrollRunsRequest) returns (ListPayrollRunsResponse);
+  rpc ApproveRun(ApprovePayrollRunRequest) returns (PayrollRunResponse);
+  rpc PublishPayslips(PublishPayslipsRequest) returns (PayrollRunResponse);
+  rpc GetRunDetails(GetPayrollRunRequest) returns (PayrollRunDetailsResponse);
+}
+
+service SalaryAdvanceService {
+  rpc CreateAdvance(CreateAdvanceRequest) returns (AdvanceResponse);
+  rpc ListAdvances(ListAdvancesRequest) returns (ListAdvancesResponse);
+}
+
+service DeductionService {
+  rpc CreateDeduction(CreateDeductionRequest) returns (DeductionResponse);
+  rpc ListDeductions(ListDeductionsRequest) returns (ListDeductionsResponse);
+}
+
+service AllowanceService {
+  rpc CreateAllowance(CreateAllowanceRequest) returns (AllowanceResponse);
+  rpc ListAllowances(ListAllowancesRequest) returns (ListAllowancesResponse);
+}
+
+service BonusService {
+  rpc CreateBonus(CreateBonusRequest) returns (BonusResponse);
+  rpc ListBonuses(ListBonusesRequest) returns (ListBonusesResponse);
+}
+
+service SettlementService {
+  rpc CreateSettlement(CreateSettlementRequest) returns (SettlementResponse);
+  rpc ApproveSettlement(ApproveSettlementRequest) returns (SettlementResponse);
+  rpc ListSettlements(ListSettlementsRequest) returns (ListSettlementsResponse);
+}
+
+service PayrollJournalService {
+  rpc GetJournal(GetJournalRequest) returns (JournalResponse);
+  rpc ExportJournal(ExportJournalRequest) returns (JournalExportResponse);
+}
+
+message GeneratePayrollRequest {
+  string companyId = 1;
+  string month = 2;
+  string year = 3;
+  string paymentMethod = 4;
+  string payDate = 5;
+  int32 cutoffDay = 6;
+}
+
+message GetPayrollRunRequest {
+  string id = 1;
+}
+
+message ApprovePayrollRunRequest {
+  string id = 1;
+  string approverId = 2;
+}
+
+message PublishPayslipsRequest {
+  string id = 1;
+}
+
+message PayrollRunResponse {
+  string id = 1;
+  string companyId = 2;
+  string period = 3;
+  string month = 4;
+  string year = 5;
+  int32 employees = 6;
+  double gross = 7;
+  double net = 8;
+  double paye = 9;
+  string status = 10;
+  string payDate = 11;
+  string method = 12;
+  string createdAt = 13;
+}
+
+message PayrollRunDetailsResponse {
+  PayrollRunResponse run = 1;
+  repeated PayrollRowResponse rows = 2;
+  PayrollSummaryResponse summary = 3;
+  JournalResponse journal = 4;
+}
+
+message PayrollRowResponse {
+  string id = 1;
+  string employeeId = 2;
+  string employeeName = 3;
+  string designation = 4;
+  int32 workingDays = 5;
+  double basicSalary = 6;
+  double nightAllowance = 7;
+  double terminationAmount = 8;
+  double allowances = 9;
+  double overtime = 10;
+  double grossSalary = 11;
+  double nssf = 12;
+  double paye = 13;
+  double nhif = 14;
+  double heslb = 15;
+  double salaryAdvance = 16;
+  double otherDeduction = 17;
+  double totalDeduction = 18;
+  double netSalary = 19;
+  double employerNssf = 20;
+  double sdl = 21;
+  double wcf = 22;
+  double employerNhif = 23;
+  double totalPayrollCost = 24;
+}
+
+message PayrollSummaryResponse {
+  double gross = 1;
+  double net = 2;
+  double paye = 3;
+  double nssf = 4;
+  double sdl = 5;
+  double wcf = 6;
+  double nhifEmployer = 7;
+  double totalPayrollCost = 8;
+}
+
+message ListPayrollRunsRequest {
+  string companyId = 1;
+  string year = 2;
+  string status = 3;
+  int32 page = 4;
+  int32 pageSize = 5;
+}
+
+message ListPayrollRunsResponse {
+  repeated PayrollRunResponse runs = 1;
+  int32 total = 2;
+}
+
+message CreateAdvanceRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  double amount = 3;
+  int32 termMonths = 4;
+  string notes = 5;
+}
+
+message ListAdvancesRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListAdvancesResponse {
+  repeated AdvanceResponse advances = 1;
+}
+
+message AdvanceResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  double amount = 5;
+  int32 termMonths = 6;
+  string status = 7;
+  string disbursedAt = 8;
+  string notes = 9;
+}
+
+message CreateDeductionRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string code = 3;
+  double amount = 4;
+  string month = 5;
+  string year = 6;
+  string notes = 7;
+}
+
+message ListDeductionsRequest {
+  string companyId = 1;
+}
+
+message ListDeductionsResponse {
+  repeated DeductionResponse deductions = 1;
+}
+
+message DeductionResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string code = 5;
+  double amount = 6;
+  string month = 7;
+  string year = 8;
+  string notes = 9;
+}
+
+message CreateAllowanceRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string code = 3;
+  double amount = 4;
+  string month = 5;
+  string year = 6;
+  string notes = 7;
+}
+
+message ListAllowancesRequest {
+  string companyId = 1;
+}
+
+message ListAllowancesResponse {
+  repeated AllowanceResponse allowances = 1;
+}
+
+message AllowanceResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string code = 5;
+  double amount = 6;
+  string month = 7;
+  string year = 8;
+  string notes = 9;
+}
+
+message CreateBonusRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string type = 3;
+  double amount = 4;
+  string period = 5;
+  string notes = 6;
+}
+
+message ListBonusesRequest {
+  string companyId = 1;
+  string type = 2;
+}
+
+message ListBonusesResponse {
+  repeated BonusResponse bonuses = 1;
+}
+
+message BonusResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string type = 5;
+  double amount = 6;
+  string period = 7;
+  string status = 8;
+  string notes = 9;
+}
+
+message CreateSettlementRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string type = 3;
+  double amount = 4;
+  string reason = 5;
+  string effectiveDate = 6;
+}
+
+message ApproveSettlementRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message ListSettlementsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListSettlementsResponse {
+  repeated SettlementResponse settlements = 1;
+}
+
+message SettlementResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string type = 5;
+  double amount = 6;
+  string reason = 7;
+  string effectiveDate = 8;
+  string status = 9;
+  string createdAt = 10;
+}
+
+message GetJournalRequest {
+  string companyId = 1;
+  string month = 2;
+  string year = 3;
+  string runId = 4;
+}
+
+message JournalEntry {
+  string account = 1;
+  double amount = 2;
+  string type = 3;
+}
+
+message JournalResponse {
+  repeated JournalEntry debits = 1;
+  repeated JournalEntry credits = 2;
+  double totalDebit = 3;
+  double totalCredit = 4;
+  string month = 5;
+  string year = 6;
+}
+
+message ExportJournalRequest {
+  string companyId = 1;
+  string month = 2;
+  string year = 3;
+}
+
+message JournalExportResponse {
+  string csv = 1;
+}

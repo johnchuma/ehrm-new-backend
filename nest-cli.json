@@ -1,8 +1,222 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/api-gateway/src",
+  "monorepo": true,
+  "root": "apps/api-gateway",
   "compilerOptions": {
-    "deleteOutDir": true
-  }
+    "deleteOutDir": true,
+    "webpack": false,
+    "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
+  },
+  "apps": [
+    {
+      "name": "api-gateway",
+      "root": "apps/api-gateway",
+      "sourceRoot": "apps/api-gateway/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "iam-service",
+      "root": "apps/iam-service",
+      "sourceRoot": "apps/iam-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/iam-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "company-service",
+      "root": "apps/company-service",
+      "sourceRoot": "apps/company-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/company-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "employee-service",
+      "root": "apps/employee-service",
+      "sourceRoot": "apps/employee-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/employee-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "attendance-service",
+      "root": "apps/attendance-service",
+      "sourceRoot": "apps/attendance-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/attendance-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "leave-service",
+      "root": "apps/leave-service",
+      "sourceRoot": "apps/leave-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/leave-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "payroll-service",
+      "root": "apps/payroll-service",
+      "sourceRoot": "apps/payroll-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/payroll-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "performance-service",
+      "root": "apps/performance-service",
+      "sourceRoot": "apps/performance-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/performance-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "training-service",
+      "root": "apps/training-service",
+      "sourceRoot": "apps/training-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/training-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "onboarding-service",
+      "root": "apps/onboarding-service",
+      "sourceRoot": "apps/onboarding-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/onboarding-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "offboarding-service",
+      "root": "apps/offboarding-service",
+      "sourceRoot": "apps/offboarding-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/offboarding-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "movement-service",
+      "root": "apps/movement-service",
+      "sourceRoot": "apps/movement-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/movement-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "contracts-service",
+      "root": "apps/contracts-service",
+      "sourceRoot": "apps/contracts-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/contracts-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "assets-service",
+      "root": "apps/assets-service",
+      "sourceRoot": "apps/assets-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/assets-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "benefits-service",
+      "root": "apps/benefits-service",
+      "sourceRoot": "apps/benefits-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/benefits-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "disciplinary-service",
+      "root": "apps/disciplinary-service",
+      "sourceRoot": "apps/disciplinary-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/disciplinary-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "compliance-service",
+      "root": "apps/compliance-service",
+      "sourceRoot": "apps/compliance-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/compliance-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "announcements-service",
+      "root": "apps/announcements-service",
+      "sourceRoot": "apps/announcements-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/announcements-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "analytics-service",
+      "root": "apps/analytics-service",
+      "sourceRoot": "apps/analytics-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/analytics-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "salary-intelligence-service",
+      "root": "apps/salary-intelligence-service",
+      "sourceRoot": "apps/salary-intelligence-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/salary-intelligence-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "exactai-service",
+      "root": "apps/exactai-service",
+      "sourceRoot": "apps/exactai-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/exactai-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "notifications-service",
+      "root": "apps/notifications-service",
+      "sourceRoot": "apps/notifications-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/notifications-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "tasks-service",
+      "root": "apps/tasks-service",
+      "sourceRoot": "apps/tasks-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/tasks-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "hr-query-service",
+      "root": "apps/hr-query-service",
+      "sourceRoot": "apps/hr-query-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/hr-query-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "documents-service",
+      "root": "apps/documents-service",
+      "sourceRoot": "apps/documents-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/documents-service/tsconfig.app.json"
+      }
+    },
+    {
+      "name": "integrations-service",
+      "root": "apps/integrations-service",
+      "sourceRoot": "apps/integrations-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/integrations-service/tsconfig.app.json"
+      }
+    }
+  ]
 }

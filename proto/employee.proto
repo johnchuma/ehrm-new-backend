@@ -1,0 +1,329 @@
+syntax = "proto3";
+
+package ehrm.employee;
+
+service EmployeeService {
+  rpc CreateEmployee(CreateEmployeeRequest) returns (EmployeeResponse);
+  rpc GetEmployee(GetEmployeeRequest) returns (EmployeeResponse);
+  rpc UpdateEmployee(UpdateEmployeeRequest) returns (EmployeeResponse);
+  rpc DeleteEmployee(DeleteEmployeeRequest) returns (DeleteResponse);
+  rpc ListEmployees(ListEmployeesRequest) returns (ListEmployeesResponse);
+  rpc GetEmployeeProfile(GetEmployeeRequest) returns (EmployeeProfileResponse);
+  rpc AdvanceApproval(AdvanceApprovalRequest) returns (EmployeeResponse);
+  rpc ApproveEmployee(ApproveEmployeeRequest) returns (EmployeeResponse);
+}
+
+service DocumentService {
+  rpc UploadDocument(UploadDocumentRequest) returns (DocumentResponse);
+  rpc GetDocument(GetDocumentRequest) returns (DocumentResponse);
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteResponse);
+  rpc ListDocuments(ListDocumentsRequest) returns (ListDocumentsResponse);
+}
+
+service QualificationService {
+  rpc AddEducation(AddEducationRequest) returns (EducationResponse);
+  rpc AddProfessionalQualification(AddProfessionalQualificationRequest) returns (QualificationResponse);
+  rpc ListEducation(ListEducationRequest) returns (ListEducationResponse);
+  rpc ListQualifications(ListQualificationsRequest) returns (ListQualificationsResponse);
+}
+
+service EmergencyContactService {
+  rpc AddEmergencyContact(AddEmergencyContactRequest) returns (EmergencyContactResponse);
+  rpc ListEmergencyContacts(ListEmergencyContactsRequest) returns (ListEmergencyContactsResponse);
+}
+
+service FamilyService {
+  rpc AddFamilyMember(AddFamilyMemberRequest) returns (FamilyResponse);
+  rpc ListFamily(ListFamilyRequest) returns (ListFamilyResponse);
+}
+
+message CreateEmployeeRequest {
+  string companyId = 1;
+  string firstName = 2;
+  string middleName = 3;
+  string lastName = 4;
+  string preferredName = 5;
+  string email = 6;
+  string phone = 7;
+  string altPhone = 8;
+  string personalEmail = 9;
+  string gender = 10;
+  string dob = 11;
+  string nationality = 12;
+  string maritalStatus = 13;
+  string disabilityStatus = 14;
+  string disabilityCategory = 15;
+  string bloodGroup = 16;
+  string departmentId = 17;
+  string branchId = 18;
+  string jobTitle = 19;
+  string position = 20;
+  string grade = 21;
+  string businessUnit = 22;
+  string section = 23;
+  string employmentType = 24;
+  string recruitmentChannel = 25;
+  string modeOfPayment = 26;
+  string status = 27;
+  string managerId = 28;
+  string dateJoined = 29;
+  string confirmationDate = 30;
+  string employmentId = 31;
+  string contractType = 32;
+  string contractStartDate = 33;
+  string contractEndDate = 34;
+  string probationStartDate = 35;
+  string probationEndDate = 36;
+  double grossSalary = 37;
+  string salaryGrade = 38;
+  string salaryLevel = 39;
+  string costCentre = 40;
+  string payrollGroup = 41;
+  string socialSecurityType = 42;
+  string socialSecurityNumber = 43;
+  string tinNumber = 44;
+  string nidaNumber = 45;
+  string passportNumber = 46;
+  string bankName = 47;
+  string bankBranch = 48;
+  string bankAccount = 49;
+  string bankAccountName = 50;
+  string mobileMoneyProvider = 51;
+  string mobileMoneyNumber = 52;
+  string address = 53;
+  string postalAddress = 54;
+  string region = 55;
+  string district = 56;
+  string country = 57;
+  string photo = 58;
+  string technicalSkills = 59;
+  string functionalSkills = 60;
+  string softSkills = 61;
+  string languages = 62;
+}
+
+message GetEmployeeRequest {
+  string id = 1;
+}
+
+message UpdateEmployeeRequest {
+  string id = 1;
+  string firstName = 2;
+  string middleName = 3;
+  string lastName = 4;
+  string email = 5;
+  string phone = 6;
+  string departmentId = 7;
+  string branchId = 8;
+  string jobTitle = 9;
+  string grade = 10;
+  string status = 11;
+  string managerId = 12;
+  double grossSalary = 13;
+  string address = 14;
+}
+
+message DeleteEmployeeRequest {
+  string id = 1;
+}
+
+message ListEmployeesRequest {
+  string companyId = 1;
+  string departmentId = 2;
+  string branchId = 3;
+  string status = 4;
+  int32 page = 5;
+  int32 pageSize = 6;
+  string search = 7;
+}
+
+message ListEmployeesResponse {
+  repeated EmployeeResponse employees = 1;
+  int32 total = 2;
+}
+
+message EmployeeResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string firstName = 4;
+  string middleName = 5;
+  string lastName = 6;
+  string fullName = 7;
+  string preferredName = 8;
+  string email = 9;
+  string phone = 10;
+  string gender = 11;
+  string dob = 12;
+  string nationality = 13;
+  string maritalStatus = 14;
+  string departmentId = 15;
+  string branchId = 16;
+  string jobTitle = 17;
+  string grade = 18;
+  string employmentType = 19;
+  string status = 20;
+  string managerId = 21;
+  string dateJoined = 22;
+  double grossSalary = 23;
+  int32 leaveBalance = 24;
+  int32 approvalStage = 25;
+  string approvalStatus = 26;
+  string photo = 27;
+  string createdAt = 28;
+  string updatedAt = 29;
+}
+
+message EmployeeProfileResponse {
+  EmployeeResponse employee = 1;
+  repeated DocumentResponse documents = 2;
+  repeated EducationResponse education = 3;
+  repeated QualificationResponse qualifications = 4;
+  repeated EmergencyContactResponse emergencyContacts = 5;
+  repeated FamilyResponse family = 6;
+}
+
+message AdvanceApprovalRequest {
+  string id = 1;
+}
+
+message ApproveEmployeeRequest {
+  string id = 1;
+}
+
+message UploadDocumentRequest {
+  string employeeId = 1;
+  string category = 2;
+  string fileName = 3;
+  string fileUrl = 4;
+  int32 version = 5;
+}
+
+message GetDocumentRequest {
+  string id = 1;
+}
+
+message DeleteDocumentRequest {
+  string id = 1;
+}
+
+message ListDocumentsRequest {
+  string employeeId = 1;
+}
+
+message ListDocumentsResponse {
+  repeated DocumentResponse documents = 1;
+}
+
+message DocumentResponse {
+  string id = 1;
+  string employeeId = 2;
+  string category = 3;
+  string fileName = 4;
+  string fileUrl = 5;
+  int32 version = 6;
+  string uploadedAt = 7;
+}
+
+message AddEducationRequest {
+  string employeeId = 1;
+  string institution = 2;
+  string qualification = 3;
+  string award = 4;
+  string year = 5;
+}
+
+message ListEducationRequest {
+  string employeeId = 1;
+}
+
+message ListEducationResponse {
+  repeated EducationResponse education = 1;
+}
+
+message EducationResponse {
+  string id = 1;
+  string employeeId = 2;
+  string institution = 3;
+  string qualification = 4;
+  string award = 5;
+  string year = 6;
+}
+
+message AddProfessionalQualificationRequest {
+  string employeeId = 1;
+  string name = 2;
+  string authority = 3;
+  string licenseNumber = 4;
+  string expiry = 5;
+}
+
+message ListQualificationsRequest {
+  string employeeId = 1;
+}
+
+message ListQualificationsResponse {
+  repeated QualificationResponse qualifications = 1;
+}
+
+message QualificationResponse {
+  string id = 1;
+  string employeeId = 2;
+  string name = 3;
+  string authority = 4;
+  string licenseNumber = 5;
+  string expiry = 6;
+}
+
+message AddEmergencyContactRequest {
+  string employeeId = 1;
+  string name = 2;
+  string relationship = 3;
+  string phone = 4;
+  string altPhone = 5;
+}
+
+message ListEmergencyContactsRequest {
+  string employeeId = 1;
+}
+
+message ListEmergencyContactsResponse {
+  repeated EmergencyContactResponse contacts = 1;
+}
+
+message EmergencyContactResponse {
+  string id = 1;
+  string employeeId = 2;
+  string name = 3;
+  string relationship = 4;
+  string phone = 5;
+  string altPhone = 6;
+}
+
+message AddFamilyMemberRequest {
+  string employeeId = 1;
+  string name = 2;
+  string relationship = 3;
+  string phone = 4;
+}
+
+message ListFamilyRequest {
+  string employeeId = 1;
+}
+
+message ListFamilyResponse {
+  repeated FamilyResponse family = 1;
+}
+
+message FamilyResponse {
+  string id = 1;
+  string employeeId = 2;
+  string name = 3;
+  string relationship = 4;
+  string phone = 5;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package ehrm.disciplinary;
+
+service DisciplinaryService {
+  rpc CreateCase(CreateCaseRequest) returns (CaseResponse);
+  rpc GetCase(GetCaseRequest) returns (CaseResponse);
+  rpc UpdateCase(UpdateCaseRequest) returns (CaseResponse);
+  rpc ListCases(ListCasesRequest) returns (ListCasesResponse);
+}
+
+service DisciplinaryActionService {
+  rpc CreateAction(CreateActionRequest) returns (ActionResponse);
+  rpc ApproveAction(ApproveActionRequest) returns (ActionResponse);
+  rpc ListActions(ListActionsRequest) returns (ListActionsResponse);
+}
+
+message CreateCaseRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string incident = 3;
+  string description = 4;
+  string date = 5;
+  string reportedBy = 6;
+  string severity = 7;
+}
+
+message GetCaseRequest {
+  string id = 1;
+}
+
+message UpdateCaseRequest {
+  string id = 1;
+  string status = 2;
+  string notes = 3;
+}
+
+message ListCasesRequest {
+  string companyId = 1;
+  string status = 2;
+  string severity = 3;
+}
+
+message ListCasesResponse {
+  repeated CaseResponse cases = 1;
+}
+
+message CaseResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string incident = 5;
+  string description = 6;
+  string date = 7;
+  string reportedBy = 8;
+  string severity = 9;
+  string status = 10;
+  string createdAt = 11;
+}
+
+message CreateActionRequest {
+  string caseId = 1;
+  string type = 2;
+  string description = 3;
+  string effectiveDate = 4;
+  string issuedBy = 5;
+}
+
+message ApproveActionRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message ListActionsRequest {
+  string caseId = 1;
+}
+
+message ListActionsResponse {
+  repeated ActionResponse actions = 1;
+}
+
+message ActionResponse {
+  string id = 1;
+  string caseId = 2;
+  string type = 3;
+  string description = 4;
+  string effectiveDate = 5;
+  string issuedBy = 6;
+  string status = 7;
+  string createdAt = 8;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

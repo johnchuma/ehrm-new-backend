@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("ANNOUNCEMENTS_DATABASE_URL")
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  companyId   String
+  title       String
+  content     String   @db.Text
+  type        String   @default("General")
+  priority    String   @default("Normal")
+  audience    String   @default("All")
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  authorId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([type])
+  @@index([priority])
+  @@map("announcements")
+}

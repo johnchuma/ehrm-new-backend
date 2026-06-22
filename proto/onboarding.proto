@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package ehrm.onboarding;
+
+service OnboardingService {
+  rpc CreateOnboarding(CreateOnboardingRequest) returns (OnboardingResponse);
+  rpc GetOnboarding(GetOnboardingRequest) returns (OnboardingResponse);
+  rpc UpdateOnboarding(UpdateOnboardingRequest) returns (OnboardingResponse);
+  rpc AdvanceStage(AdvanceStageRequest) returns (OnboardingResponse);
+  rpc CompleteOnboarding(CompleteOnboardingRequest) returns (OnboardingResponse);
+  rpc ListOnboardings(ListOnboardingsRequest) returns (ListOnboardingsResponse);
+}
+
+service OnboardingTaskService {
+  rpc CreateTask(CreateOnboardingTaskRequest) returns (OnboardingTaskResponse);
+  rpc CompleteTask(CompleteOnboardingTaskRequest) returns (OnboardingTaskResponse);
+  rpc ListTasks(ListOnboardingTasksRequest) returns (ListOnboardingTasksResponse);
+}
+
+message CreateOnboardingRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string startDate = 3;
+  string buddy = 4;
+  string departmentId = 5;
+  string position = 6;
+}
+
+message GetOnboardingRequest {
+  string id = 1;
+}
+
+message UpdateOnboardingRequest {
+  string id = 1;
+  string buddy = 2;
+  string startDate = 3;
+  string notes = 4;
+}
+
+message AdvanceStageRequest {
+  string id = 1;
+  string stage = 2;
+}
+
+message CompleteOnboardingRequest {
+  string id = 1;
+}
+
+message ListOnboardingsRequest {
+  string companyId = 1;
+  string status = 2;
+}
+
+message ListOnboardingsResponse {
+  repeated OnboardingResponse onboardings = 1;
+}
+
+message OnboardingResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string startDate = 5;
+  string buddy = 6;
+  string departmentId = 7;
+  string position = 8;
+  string currentStage = 9;
+  string status = 10;
+  string createdAt = 11;
+  string completedAt = 12;
+}
+
+message CreateOnboardingTaskRequest {
+  string onboardingId = 1;
+  string title = 2;
+  string description = 3;
+  string assignee = 4;
+  string dueDate = 5;
+}
+
+message CompleteOnboardingTaskRequest {
+  string id = 1;
+}
+
+message ListOnboardingTasksRequest {
+  string onboardingId = 1;
+}
+
+message ListOnboardingTasksResponse {
+  repeated OnboardingTaskResponse tasks = 1;
+}
+
+message OnboardingTaskResponse {
+  string id = 1;
+  string onboardingId = 2;
+  string title = 3;
+  string description = 4;
+  string assignee = 5;
+  string dueDate = 6;
+  string status = 7;
+  string completedAt = 8;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

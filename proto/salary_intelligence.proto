@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package ehrm.salaryintelligence;
+
+service SalaryIntelligenceService {
+  rpc GetBenchmarks(GetBenchmarksRequest) returns (BenchmarksResponse);
+  rpc GetCompensationAnalysis(GetCompensationAnalysisRequest) returns (CompensationAnalysisResponse);
+  rpc GetSalaryStructure(GetSalaryStructureRequest) returns (SalaryStructureResponse);
+  rpc SimulateSalary(SimulateSalaryRequest) returns (SimulationResponse);
+}
+
+message GetBenchmarksRequest {
+  string companyId = 1;
+  string jobTitle = 2;
+  string department = 3;
+}
+
+message BenchmarksResponse {
+  string jobTitle = 1;
+  string department = 2;
+  double marketMin = 3;
+  double marketMedian = 4;
+  double marketMax = 5;
+  double companyAverage = 6;
+  double percentile = 7;
+  string recommendation = 8;
+}
+
+message GetCompensationAnalysisRequest {
+  string companyId = 1;
+  string departmentId = 2;
+}
+
+message CompensationAnalysisResponse {
+  string department = 1;
+  int32 employees = 2;
+  double averageSalary = 3;
+  double medianSalary = 4;
+  double minSalary = 5;
+  double maxSalary = 6;
+  double totalCost = 7;
+  repeated GradeDistribution gradeDistribution = 8;
+}
+
+message GradeDistribution {
+  string grade = 1;
+  int32 count = 2;
+  double average = 3;
+}
+
+message GetSalaryStructureRequest {
+  string companyId = 1;
+}
+
+message SalaryStructureResponse {
+  repeated SalaryGrade grades = 1;
+}
+
+message SalaryGrade {
+  string grade = 1;
+  string level = 2;
+  double minSalary = 3;
+  double midSalary = 4;
+  double maxSalary = 5;
+  string description = 6;
+}
+
+message SimulateSalaryRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  double proposedSalary = 3;
+  string reason = 4;
+}
+
+message SimulationResponse {
+  string employeeId = 1;
+  double currentSalary = 2;
+  double proposedSalary = 3;
+  double increase = 4;
+  double increasePercent = 5;
+  double monthlyImpact = 6;
+  double annualImpact = 7;
+  string recommendation = 8;
+}

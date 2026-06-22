@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package ehrm.contracts;
+
+service ContractService {
+  rpc CreateContract(CreateContractRequest) returns (ContractResponse);
+  rpc GetContract(GetContractRequest) returns (ContractResponse);
+  rpc UpdateContract(UpdateContractRequest) returns (ContractResponse);
+  rpc TerminateContract(TerminateContractRequest) returns (ContractResponse);
+  rpc RenewContract(RenewContractRequest) returns (ContractResponse);
+  rpc ListContracts(ListContractsRequest) returns (ListContractsResponse);
+}
+
+message CreateContractRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string type = 3;
+  string startDate = 4;
+  string endDate = 5;
+  string probationEndDate = 6;
+  double basicSalary = 7;
+  string terms = 8;
+  string status = 9;
+}
+
+message GetContractRequest {
+  string id = 1;
+}
+
+message UpdateContractRequest {
+  string id = 1;
+  string type = 2;
+  string endDate = 3;
+  double basicSalary = 4;
+  string terms = 5;
+}
+
+message TerminateContractRequest {
+  string id = 1;
+  string reason = 2;
+  string terminationDate = 3;
+}
+
+message RenewContractRequest {
+  string id = 1;
+  string newEndDate = 2;
+  double newSalary = 3;
+}
+
+message ListContractsRequest {
+  string companyId = 1;
+  string employeeId = 2;
+  string status = 3;
+}
+
+message ListContractsResponse {
+  repeated ContractResponse contracts = 1;
+}
+
+message ContractResponse {
+  string id = 1;
+  string companyId = 2;
+  string employeeId = 3;
+  string employeeName = 4;
+  string type = 5;
+  string startDate = 6;
+  string endDate = 7;
+  string probationEndDate = 8;
+  double basicSalary = 9;
+  string terms = 10;
+  string status = 11;
+  string createdAt = 12;
+  string terminatedAt = 13;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

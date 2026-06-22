@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package ehrm.integrations;
+
+service IntegrationService {
+  rpc CreateIntegration(CreateIntegrationRequest) returns (IntegrationResponse);
+  rpc GetIntegration(GetIntegrationRequest) returns (IntegrationResponse);
+  rpc UpdateIntegration(UpdateIntegrationRequest) returns (IntegrationResponse);
+  rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteResponse);
+  rpc ListIntegrations(ListIntegrationsRequest) returns (ListIntegrationsResponse);
+  rpc ToggleIntegration(ToggleIntegrationRequest) returns (IntegrationResponse);
+}
+
+service WebhookService {
+  rpc CreateWebhook(CreateWebhookRequest) returns (WebhookResponse);
+  rpc ListWebhooks(ListWebhooksRequest) returns (ListWebhooksResponse);
+  rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteResponse);
+}
+
+message CreateIntegrationRequest {
+  string companyId = 1;
+  string name = 2;
+  string type = 3;
+  string provider = 4;
+  string config = 5;
+  string status = 6;
+}
+
+message GetIntegrationRequest {
+  string id = 1;
+}
+
+message UpdateIntegrationRequest {
+  string id = 1;
+  string name = 2;
+  string config = 3;
+  string status = 4;
+}
+
+message DeleteIntegrationRequest {
+  string id = 1;
+}
+
+message ListIntegrationsRequest {
+  string companyId = 1;
+  string type = 2;
+}
+
+message ListIntegrationsResponse {
+  repeated IntegrationResponse integrations = 1;
+}
+
+message ToggleIntegrationRequest {
+  string id = 1;
+  bool enabled = 2;
+}
+
+message IntegrationResponse {
+  string id = 1;
+  string companyId = 2;
+  string name = 3;
+  string type = 4;
+  string provider = 5;
+  string config = 6;
+  string status = 7;
+  bool enabled = 8;
+  string lastSyncAt = 9;
+  string createdAt = 10;
+}
+
+message CreateWebhookRequest {
+  string companyId = 1;
+  string url = 2;
+  repeated string events = 3;
+  string secret = 4;
+}
+
+message ListWebhooksRequest {
+  string companyId = 1;
+}
+
+message ListWebhooksResponse {
+  repeated WebhookResponse webhooks = 1;
+}
+
+message DeleteWebhookRequest {
+  string id = 1;
+}
+
+message WebhookResponse {
+  string id = 1;
+  string companyId = 2;
+  string url = 3;
+  repeated string events = 4;
+  string secret = 5;
+  string status = 6;
+  string createdAt = 7;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
