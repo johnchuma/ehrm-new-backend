@@ -10,8 +10,8 @@ async function bootstrap() {
     options: {
       package: ['ehrm.company', 'ehrm.common'],
       protoPath: [
-        join(__dirname, '..', '..', '..', 'proto', 'company.proto'),
-        join(__dirname, '..', '..', '..', 'proto', 'common.proto'),
+        join(__dirname, '..', '..', '..', '..', '..', '..', 'proto', 'company.proto'),
+        join(__dirname, '..', '..', '..', '..', '..', '..', 'proto', 'common.proto'),
       ],
       url: '0.0.0.0:5002',
     },

@@ -35,7 +35,8 @@ export function createPrismaClient(serviceName: string): any {
     throw new Error(`Unknown service: ${serviceName}`);
   }
 
-  const PrismaClient = require('@prisma/client').PrismaClient;
+  const name = serviceName.replace(/[^a-z]/g, '');
+  const { PrismaClient } = require(`${process.cwd()}/node_modules/.prisma/client-${name}`);
   return new PrismaClient({
     datasources: {
       db: {

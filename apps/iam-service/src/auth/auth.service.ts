@@ -158,7 +158,7 @@ export class IamAuthService {
     const user = await this.prisma.user.create({
       data: {
         email: data.email.toLowerCase(),
-        phone: data.phone,
+        phone: data.phone || null,
         password: hashedPassword,
         firstName: data.firstName,
         lastName: data.lastName,
