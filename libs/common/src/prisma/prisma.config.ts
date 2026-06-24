@@ -29,6 +29,8 @@ export const DATABASE_URLS = {
   integrations: process.env.INTEGRATIONS_DATABASE_URL || 'mysql://root@localhost:3306/ehrm-integrations',
 };
 
+const PROJECT_ROOT = path.resolve(__dirname, '../../../../../..');
+
 export function createPrismaClient(serviceName: string): any {
   const url = DATABASE_URLS[serviceName];
   if (!url) {
@@ -36,7 +38,8 @@ export function createPrismaClient(serviceName: string): any {
   }
 
   const name = serviceName.replace(/[^a-z]/g, '');
-  const { PrismaClient } = require(`${process.cwd()}/node_modules/.prisma/client-${name}`);
+  const clientPath = path.join(PROJECT_ROOT, 'node_modules', '.prisma', `client-${name}`);
+  const { PrismaClient } = require(clientPath);
   return new PrismaClient({
     datasources: {
       db: {
