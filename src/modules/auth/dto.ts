@@ -116,6 +116,12 @@ export class RegisterWorkspaceDto {
     currency?: string;
   }>;
 
+  @ApiPropertyOptional({ example: 'John' })
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: 'Doe' })
+  lastName?: string;
+
   @ApiProperty({ example: 'John' })
   fname: string;
 
