@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const compliance_service_1 = require("./compliance/compliance.service");
 const statutory_service_1 = require("./statutory/statutory.service");
-const SERVICE_NAME = 'compliance';
 let ComplianceModule = class ComplianceModule {
 };
 exports.ComplianceModule = ComplianceModule;
 exports.ComplianceModule = ComplianceModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            compliance_service_1.ComplianceService, statutory_service_1.StatutoryService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [compliance_service_1.ComplianceService, statutory_service_1.StatutoryService],
         exports: [compliance_service_1.ComplianceService, statutory_service_1.StatutoryService],
     })
 ], ComplianceModule);

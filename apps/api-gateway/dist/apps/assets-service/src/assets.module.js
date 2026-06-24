@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const assets_service_1 = require("./assets/assets.service");
 const assignments_service_1 = require("./assignments/assignments.service");
-const SERVICE_NAME = 'assets';
 let AssetsModule = class AssetsModule {
 };
 exports.AssetsModule = AssetsModule;
 exports.AssetsModule = AssetsModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            assets_service_1.AssetService, assignments_service_1.AssignmentService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [assets_service_1.AssetService, assignments_service_1.AssignmentService],
         exports: [assets_service_1.AssetService, assignments_service_1.AssignmentService],
     })
 ], AssetsModule);

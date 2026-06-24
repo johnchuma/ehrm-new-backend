@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const onboarding_service_1 = require("./onboarding/onboarding.service");
 const tasks_service_1 = require("./tasks/tasks.service");
-const SERVICE_NAME = 'onboarding';
 let OnboardingModule = class OnboardingModule {
 };
 exports.OnboardingModule = OnboardingModule;
 exports.OnboardingModule = OnboardingModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            onboarding_service_1.OnboardingService, tasks_service_1.OnboardingTaskService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [onboarding_service_1.OnboardingService, tasks_service_1.OnboardingTaskService],
         exports: [onboarding_service_1.OnboardingService, tasks_service_1.OnboardingTaskService],
     })
 ], OnboardingModule);

@@ -21,18 +21,18 @@ let DocumentService = class DocumentService {
         this.prisma = prisma;
     }
     async uploadDocument(data) {
-        const doc = await this.prisma.document.create({ data });
+        const doc = await this.prisma.employeeDocument.create({ data });
         return this.toDocResponse(doc);
     }
     async getDocument(id) {
-        return this.prisma.document.findUnique({ where: { id } });
+        return this.prisma.employeeDocument.findUnique({ where: { id } });
     }
     async deleteDocument(id) {
-        await this.prisma.document.delete({ where: { id } });
+        await this.prisma.employeeDocument.delete({ where: { id } });
         return { success: true, message: 'Document deleted' };
     }
     async listDocuments(employeeId) {
-        const docs = await this.prisma.document.findMany({
+        const docs = await this.prisma.employeeDocument.findMany({
             where: { employeeId },
             orderBy: { uploadedAt: 'desc' },
         });

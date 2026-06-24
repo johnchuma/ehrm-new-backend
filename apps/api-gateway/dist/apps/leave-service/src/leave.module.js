@@ -15,25 +15,13 @@ const leave_types_service_1 = require("./leave-types/leave-types.service");
 const leave_balances_service_1 = require("./leave-balances/leave-balances.service");
 const encashment_service_1 = require("./encashment/encashment.service");
 const blackouts_service_1 = require("./blackouts/blackouts.service");
-const SERVICE_NAME = 'leave';
 let LeaveModule = class LeaveModule {
 };
 exports.LeaveModule = LeaveModule;
 exports.LeaveModule = LeaveModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            {
-                provide: prisma_module_1.PRISMA_CLIENT,
-                useFactory: (client) => client,
-                inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)],
-            },
-            leave_requests_service_1.LeaveRequestService,
-            leave_types_service_1.LeaveTypeService,
-            leave_balances_service_1.LeaveBalanceService,
-            encashment_service_1.EncashmentService,
-            blackouts_service_1.BlackoutService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [leave_requests_service_1.LeaveRequestService, leave_types_service_1.LeaveTypeService, leave_balances_service_1.LeaveBalanceService, encashment_service_1.EncashmentService, blackouts_service_1.BlackoutService],
         exports: [leave_requests_service_1.LeaveRequestService, leave_types_service_1.LeaveTypeService, leave_balances_service_1.LeaveBalanceService, encashment_service_1.EncashmentService, blackouts_service_1.BlackoutService],
     })
 ], LeaveModule);

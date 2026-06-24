@@ -13,23 +13,13 @@ const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module")
 const auth_service_1 = require("./auth/auth.service");
 const users_service_1 = require("./users/users.service");
 const roles_service_1 = require("./roles/roles.service");
-const SERVICE_NAME = 'iam';
 let IamModule = class IamModule {
 };
 exports.IamModule = IamModule;
 exports.IamModule = IamModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            {
-                provide: prisma_module_1.PRISMA_CLIENT,
-                useFactory: (client) => client,
-                inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)],
-            },
-            auth_service_1.IamAuthService,
-            users_service_1.UserService,
-            roles_service_1.RoleService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [auth_service_1.IamAuthService, users_service_1.UserService, roles_service_1.RoleService],
         exports: [auth_service_1.IamAuthService, users_service_1.UserService, roles_service_1.RoleService],
     })
 ], IamModule);

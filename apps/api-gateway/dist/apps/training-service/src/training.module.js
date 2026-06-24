@@ -13,17 +13,13 @@ const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module")
 const programs_service_1 = require("./programs/programs.service");
 const enrollments_service_1 = require("./enrollments/enrollments.service");
 const certifications_service_1 = require("./certifications/certifications.service");
-const SERVICE_NAME = 'training';
 let TrainingModule = class TrainingModule {
 };
 exports.TrainingModule = TrainingModule;
 exports.TrainingModule = TrainingModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            programs_service_1.ProgramService, enrollments_service_1.EnrollmentService, certifications_service_1.CertificationService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [programs_service_1.ProgramService, enrollments_service_1.EnrollmentService, certifications_service_1.CertificationService],
         exports: [programs_service_1.ProgramService, enrollments_service_1.EnrollmentService, certifications_service_1.CertificationService],
     })
 ], TrainingModule);

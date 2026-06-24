@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const hr_query_service_1 = require("./hr-query/hr-query.service");
 const tickets_service_1 = require("./tickets/tickets.service");
-const SERVICE_NAME = 'hr-query';
 let HRQueryModule = class HRQueryModule {
 };
 exports.HRQueryModule = HRQueryModule;
 exports.HRQueryModule = HRQueryModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            hr_query_service_1.HRQueryService, tickets_service_1.TicketService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [hr_query_service_1.HRQueryService, tickets_service_1.TicketService],
         exports: [hr_query_service_1.HRQueryService, tickets_service_1.TicketService],
     })
 ], HRQueryModule);

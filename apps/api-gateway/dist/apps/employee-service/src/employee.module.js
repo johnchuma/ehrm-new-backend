@@ -15,25 +15,13 @@ const documents_service_1 = require("./documents/documents.service");
 const qualifications_service_1 = require("./qualifications/qualifications.service");
 const emergency_contacts_service_1 = require("./emergency-contacts/emergency-contacts.service");
 const family_service_1 = require("./family/family.service");
-const SERVICE_NAME = 'employee';
 let EmployeeModule = class EmployeeModule {
 };
 exports.EmployeeModule = EmployeeModule;
 exports.EmployeeModule = EmployeeModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            {
-                provide: prisma_module_1.PRISMA_CLIENT,
-                useFactory: (client) => client,
-                inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)],
-            },
-            employees_service_1.EmployeeService,
-            documents_service_1.DocumentService,
-            qualifications_service_1.QualificationService,
-            emergency_contacts_service_1.EmergencyContactService,
-            family_service_1.FamilyService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [employees_service_1.EmployeeService, documents_service_1.DocumentService, qualifications_service_1.QualificationService, emergency_contacts_service_1.EmergencyContactService, family_service_1.FamilyService],
         exports: [employees_service_1.EmployeeService, documents_service_1.DocumentService, qualifications_service_1.QualificationService, emergency_contacts_service_1.EmergencyContactService, family_service_1.FamilyService],
     })
 ], EmployeeModule);

@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const offboarding_service_1 = require("./offboarding/offboarding.service");
 const clearance_service_1 = require("./clearance/clearance.service");
-const SERVICE_NAME = 'offboarding';
 let OffboardingModule = class OffboardingModule {
 };
 exports.OffboardingModule = OffboardingModule;
 exports.OffboardingModule = OffboardingModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            offboarding_service_1.OffboardingService, clearance_service_1.ClearanceService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [offboarding_service_1.OffboardingService, clearance_service_1.ClearanceService],
         exports: [offboarding_service_1.OffboardingService, clearance_service_1.ClearanceService],
     })
 ], OffboardingModule);

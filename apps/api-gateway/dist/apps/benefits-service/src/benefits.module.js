@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const benefits_service_1 = require("./benefits/benefits.service");
 const enrollments_service_1 = require("./enrollments/enrollments.service");
-const SERVICE_NAME = 'benefits';
 let BenefitsModule = class BenefitsModule {
 };
 exports.BenefitsModule = BenefitsModule;
 exports.BenefitsModule = BenefitsModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            benefits_service_1.BenefitService, enrollments_service_1.EnrollmentService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [benefits_service_1.BenefitService, enrollments_service_1.EnrollmentService],
         exports: [benefits_service_1.BenefitService, enrollments_service_1.EnrollmentService],
     })
 ], BenefitsModule);

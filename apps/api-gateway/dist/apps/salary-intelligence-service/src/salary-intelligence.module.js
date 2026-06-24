@@ -11,17 +11,13 @@ const common_1 = require("@nestjs/common");
 const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const salary_intelligence_service_1 = require("./salary-intelligence/salary-intelligence.service");
-const SERVICE_NAME = 'salary-intelligence';
 let SalaryIntelligenceModule = class SalaryIntelligenceModule {
 };
 exports.SalaryIntelligenceModule = SalaryIntelligenceModule;
 exports.SalaryIntelligenceModule = SalaryIntelligenceModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            salary_intelligence_service_1.SalaryIntelligenceService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [salary_intelligence_service_1.SalaryIntelligenceService],
         exports: [salary_intelligence_service_1.SalaryIntelligenceService],
     })
 ], SalaryIntelligenceModule);

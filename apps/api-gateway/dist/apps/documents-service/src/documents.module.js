@@ -11,17 +11,13 @@ const common_1 = require("@nestjs/common");
 const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const documents_service_1 = require("./documents/documents.service");
-const SERVICE_NAME = 'documents';
 let DocumentsModule = class DocumentsModule {
 };
 exports.DocumentsModule = DocumentsModule;
 exports.DocumentsModule = DocumentsModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            documents_service_1.DocumentService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [documents_service_1.DocumentService],
         exports: [documents_service_1.DocumentService],
     })
 ], DocumentsModule);

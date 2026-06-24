@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const cases_service_1 = require("./cases/cases.service");
 const actions_service_1 = require("./actions/actions.service");
-const SERVICE_NAME = 'disciplinary';
 let DisciplinaryModule = class DisciplinaryModule {
 };
 exports.DisciplinaryModule = DisciplinaryModule;
 exports.DisciplinaryModule = DisciplinaryModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            cases_service_1.CaseService, actions_service_1.ActionService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [cases_service_1.CaseService, actions_service_1.ActionService],
         exports: [cases_service_1.CaseService, actions_service_1.ActionService],
     })
 ], DisciplinaryModule);

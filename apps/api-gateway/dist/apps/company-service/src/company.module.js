@@ -14,24 +14,13 @@ const companies_service_1 = require("./companies/companies.service");
 const branches_service_1 = require("./branches/branches.service");
 const departments_service_1 = require("./departments/departments.service");
 const settings_service_1 = require("./settings/settings.service");
-const SERVICE_NAME = 'company';
 let CompanyModule = class CompanyModule {
 };
 exports.CompanyModule = CompanyModule;
 exports.CompanyModule = CompanyModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            {
-                provide: prisma_module_1.PRISMA_CLIENT,
-                useFactory: (client) => client,
-                inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)],
-            },
-            companies_service_1.CompanyService,
-            branches_service_1.BranchService,
-            departments_service_1.DepartmentService,
-            settings_service_1.SettingsService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [companies_service_1.CompanyService, branches_service_1.BranchService, departments_service_1.DepartmentService, settings_service_1.SettingsService],
         exports: [companies_service_1.CompanyService, branches_service_1.BranchService, departments_service_1.DepartmentService, settings_service_1.SettingsService],
     })
 ], CompanyModule);

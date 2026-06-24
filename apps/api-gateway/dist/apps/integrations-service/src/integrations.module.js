@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const integrations_service_1 = require("./integrations/integrations.service");
 const webhooks_service_1 = require("./webhooks/webhooks.service");
-const SERVICE_NAME = 'integrations';
 let IntegrationsModule = class IntegrationsModule {
 };
 exports.IntegrationsModule = IntegrationsModule;
 exports.IntegrationsModule = IntegrationsModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            integrations_service_1.IntegrationService, webhooks_service_1.WebhookService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [integrations_service_1.IntegrationService, webhooks_service_1.WebhookService],
         exports: [integrations_service_1.IntegrationService, webhooks_service_1.WebhookService],
     })
 ], IntegrationsModule);

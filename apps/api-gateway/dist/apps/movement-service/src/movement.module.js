@@ -12,17 +12,13 @@ const common_module_1 = require("../../../libs/common/src/common.module");
 const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module");
 const transfers_service_1 = require("./transfers/transfers.service");
 const promotions_service_1 = require("./promotions/promotions.service");
-const SERVICE_NAME = 'movement';
 let MovementModule = class MovementModule {
 };
 exports.MovementModule = MovementModule;
 exports.MovementModule = MovementModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            transfers_service_1.TransferService, promotions_service_1.PromotionService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [transfers_service_1.TransferService, promotions_service_1.PromotionService],
         exports: [transfers_service_1.TransferService, promotions_service_1.PromotionService],
     })
 ], MovementModule);

@@ -13,17 +13,13 @@ const prisma_module_1 = require("../../../libs/common/src/prisma/prisma.module")
 const reviews_service_1 = require("./reviews/reviews.service");
 const goals_service_1 = require("./goals/goals.service");
 const kpis_service_1 = require("./kpis/kpis.service");
-const SERVICE_NAME = 'performance';
 let PerformanceModule = class PerformanceModule {
 };
 exports.PerformanceModule = PerformanceModule;
 exports.PerformanceModule = PerformanceModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            { provide: prisma_module_1.PRISMA_CLIENT, useFactory: (c) => c, inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)] },
-            reviews_service_1.ReviewService, goals_service_1.GoalService, kpis_service_1.KpiService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [reviews_service_1.ReviewService, goals_service_1.GoalService, kpis_service_1.KpiService],
         exports: [reviews_service_1.ReviewService, goals_service_1.GoalService, kpis_service_1.KpiService],
     })
 ], PerformanceModule);

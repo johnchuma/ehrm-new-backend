@@ -17,27 +17,13 @@ const allowances_service_1 = require("./allowances/allowances.service");
 const bonuses_service_1 = require("./bonuses/bonuses.service");
 const settlements_service_1 = require("./settlements/settlements.service");
 const journal_service_1 = require("./journal/journal.service");
-const SERVICE_NAME = 'payroll';
 let PayrollModule = class PayrollModule {
 };
 exports.PayrollModule = PayrollModule;
 exports.PayrollModule = PayrollModule = __decorate([
     (0, common_1.Module)({
-        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule.forServices(SERVICE_NAME)],
-        providers: [
-            {
-                provide: prisma_module_1.PRISMA_CLIENT,
-                useFactory: (client) => client,
-                inject: [(0, prisma_module_1.prismaToken)(SERVICE_NAME)],
-            },
-            payroll_runs_service_1.PayrollRunService,
-            salary_advance_service_1.AdvanceService,
-            deductions_service_1.DeductionService,
-            allowances_service_1.AllowanceService,
-            bonuses_service_1.BonusService,
-            settlements_service_1.SettlementService,
-            journal_service_1.JournalService,
-        ],
+        imports: [common_module_1.CommonModule, prisma_module_1.PrismaModule],
+        providers: [payroll_runs_service_1.PayrollRunService, salary_advance_service_1.AdvanceService, deductions_service_1.DeductionService, allowances_service_1.AllowanceService, bonuses_service_1.BonusService, settlements_service_1.SettlementService, journal_service_1.JournalService],
         exports: [payroll_runs_service_1.PayrollRunService, salary_advance_service_1.AdvanceService, deductions_service_1.DeductionService, allowances_service_1.AllowanceService, bonuses_service_1.BonusService, settlements_service_1.SettlementService, journal_service_1.JournalService],
     })
 ], PayrollModule);
