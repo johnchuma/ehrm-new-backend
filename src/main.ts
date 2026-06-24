@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -7,8 +8,18 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   app.enableCors({ origin: '*', credentials: true });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: false }));
+  const config = new DocumentBuilder()
+    .setTitle('ExactEHRM API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const doc = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, doc);
+
   const port = process.env.GATEWAY_PORT || 3000;
   await app.listen(port, '0.0.0.0');
-  console.log(`API running on http://localhost:${port}`);
+  const logger = new Logger('Bootstrap');
+  logger.log(`API running on http://localhost:${port}`);
+  logger.log(`Swagger: http://localhost:${port}/api/docs`);
 }
 bootstrap();

@@ -38,9 +38,20 @@ export class AuthService {
     return { ...tokens, user };
   }
 
-  private generateTokens(payload: { sub: string; email: string }) {
+  generateTokens(payload: { sub: string; email: string }) {
     const accessToken = this.jwt.sign({ ...payload, type: 'access' }, { expiresIn: '7d' });
     const refreshToken = this.jwt.sign({ ...payload, type: 'refresh' }, { expiresIn: '30d' });
     return { accessToken, refreshToken };
+  }
+
+  async validateToken(token: string) {
+    try {
+      const payload = this.jwt.verify(token);
+      const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+      if (!user) throw new Error('User not found');
+      return { valid: true, user };
+    } catch {
+      return { valid: false, user: null };
+    }
   }
 }

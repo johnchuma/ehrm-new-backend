@@ -1,0 +1,96 @@
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const email = 'exactonlinesoftware@gmail.com';
+  const password = 'admin123';
+  const hashed = await bcrypt.hash(password, 12);
+
+  // Create system company if not exists
+  let company = await prisma.company.findUnique({ where: { slug: 'exactehrm-system' } });
+  if (!company) {
+    company = await prisma.company.create({
+      data: {
+        name: 'ExactEHRM System',
+        slug: 'exactehrm-system',
+        email: 'system@exactehrm.com',
+        phone: '+255712000000',
+        country: 'Tanzania',
+        currency: 'TZS',
+        subscriptionPlan: 'Enterprise Suite',
+        status: 'ACTIVE',
+      },
+    });
+    console.log('Company created:', company.id);
+  }
+
+  // Create default settings if not exists
+  const existingSettings = await prisma.companySettings.findUnique({ where: { companyId: company.id } });
+  if (!existingSettings) {
+    await prisma.companySettings.create({
+      data: {
+        companyId: company.id,
+        generalSettings: JSON.stringify({
+          companyUnits: [],
+          businessUnits: [],
+          sections: [],
+          contractTypes: [
+            { id: 'permanent', name: 'Permanent', desc: 'Full-time indefinite contract', probation: 6 },
+            { id: 'fixed-term', name: 'Fixed Term', desc: 'Contract with specified end date', probation: 3 },
+          ],
+          levels: [
+            { id: 'level-1', name: 'Level 1', rank: 1, desc: 'Entry-level' },
+            { id: 'level-2', name: 'Level 2', rank: 2, desc: 'Junior' },
+            { id: 'level-3', name: 'Level 3', rank: 3, desc: 'Mid-level' },
+          ],
+          salaryGrades: [],
+          jobTitles: [],
+          positions: [],
+          benefits: [],
+          roles: [],
+          accessRights: [],
+          workingDays: [
+            { day: 'Monday', working: true, start: '08:00', end: '17:00' },
+            { day: 'Tuesday', working: true, start: '08:00', end: '17:00' },
+            { day: 'Wednesday', working: true, start: '08:00', end: '17:00' },
+            { day: 'Thursday', working: true, start: '08:00', end: '17:00' },
+            { day: 'Friday', working: true, start: '08:00', end: '17:00' },
+            { day: 'Saturday', working: false },
+            { day: 'Sunday', working: false },
+          ],
+          holidays: [],
+          locations: [],
+          approvalConfigs: [],
+        }),
+      },
+    });
+    console.log('Default settings created');
+  }
+
+  // Check if user already exists
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    console.log('System admin already exists');
+    return;
+  }
+
+  await prisma.user.create({
+    data: {
+      email,
+      password: hashed,
+      firstName: 'System',
+      lastName: 'Admin',
+      fullName: 'System Admin',
+      companyId: company.id,
+      isActive: true,
+    },
+  });
+  console.log('System admin created:', email);
+  console.log('Password:', password);
+}
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());
