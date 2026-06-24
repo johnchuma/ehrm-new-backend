@@ -209,6 +209,19 @@ model Department {
 }
 
 
+model DemoRequest {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  company   String?
+  phone     String?
+  size      String?
+  message   String?
+  createdAt DateTime @default(now())
+
+  @@map("demo_requests")
+}
+
 model CompanySettings {
   id                   String   @id @default(cuid())
   companyId            String   @unique
