@@ -20,10 +20,9 @@
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
     "paths": {
-      "@app/common": ["libs/common/src"],
-      "@app/common/*": ["libs/common/src/*"],
-      "@app/proto": ["proto"],
-      "@app/prisma": ["libs/common/src/prisma"]
+      "@common/*": ["src/common/*"],
+      "@modules/*": ["src/modules/*"]
     }
-  }
+  },
+  "include": ["src/**/*.ts"]
 }
