@@ -11,34 +11,35 @@ export class AiController {
     const messages = body.messages || [];
     const settings = body.settings || {};
 
-    const systemPrompt = `You are an AI setup assistant for ExactEHRM, an HR management platform. Your job is to help the user configure their company workspace settings by having a natural conversation.
+    const systemPrompt = `You are an AI setup assistant for ExactEHRM, an HR management platform. Your job is to help users configure their company workspace by asking questions and saving their answers to the database.
 
 The user's current settings so far: ${JSON.stringify(settings)}
 
-Guide the user through setting up each section ONE AT A TIME in this order:
-1. Company Profile (name, industry, size, country, etc.) — skip if already set
-2. Departments — ask what departments they have
-3. Branches — ask what physical locations
-4. Contract Types — ask what employment contracts they use
-5. Levels / Salary Grades / Job Titles
-6. Benefits
-7. Working Days & Holidays
-8. Approval Configs
+ORDER OF SECTIONS (go one at a time):
+1. Departments — ask what departments they have
+2. Branches — ask what physical locations
+3. Contract Types — ask what contracts they use
+4. Levels / Salary Grades / Job Titles
+5. Benefits
+6. Working Days & Holidays
+7. Approval Configs — skip if they say "later"
 
-For the current section, ask ONE question at a time. After the user answers, summarize what they said and ask for confirmation. Once confirmed, immediately move to the NEXT section without asking "what would you like to set up next". Just start asking about the next section directly.
+CRITICAL RULE — You MUST include a ---CONFIRM--- JSON block EVERY TIME the user confirms. This is how data gets saved. Without this block, nothing gets saved.
 
-When the user confirms, respond with a JSON block at the end of your message like:
+When the user says "yes" or confirms, your response MUST end with:
 ---CONFIRM---
-{"departments":[{"name":"Human Resources"},{"name":"Finance"}]}
+{"departments":[{"name":"IT"},{"name":"HR"}]}
 ---CONFIRM---
+[then immediately move to next section]
 
-After the CONFIRM block, continue to the next section naturally. Example:
-"---CONFIRM---
+Example of a complete response after user confirms:
+"Great! I'll save those departments.
+---CONFIRM---
 {"departments":[{"name":"IT"},{"name":"HR"}]}
 ---CONFIRM---
 Now, let's talk about branches. What physical locations does your company have?"
 
-Only include the CONFIRM block when the user explicitly says yes or confirms. Keep responses friendly and concise.`;
+You MUST include the CONFIRM block every single time the user confirms. If you don't, the data won't be saved.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -56,11 +57,18 @@ Only include the CONFIRM block when the user explicitly says yes or confirms. Ke
     const data = await response.json();
     const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not process that.';
 
-    // Extract confirmation data if present
-    const confirmMatch = reply.match(/---CONFIRM---\n([\s\S]*?)\n---CONFIRM---/);
+    // Extract confirmation data
     let confirmData = null;
+    const confirmMatch = reply.match(/---CONFIRM---\s*\n?([\s\S]*?)\n?\s*---CONFIRM---/);
     if (confirmMatch) {
       try { confirmData = JSON.parse(confirmMatch[1]); } catch {}
+    }
+    // Fallback: look for JSON array/object in backticks after "yes" or "confirm"
+    if (!confirmData) {
+      const jsonMatch = reply.match(/```(?:json)?\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/);
+      if (jsonMatch) {
+        try { confirmData = JSON.parse(jsonMatch[1]); } catch {}
+      }
     }
 
     return {
