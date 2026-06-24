@@ -1,30 +1,171 @@
-import { ClientGrpc } from '@nestjs/microservices';
+import { LeaveRequestService } from '../../../leave-service/src/leave-requests/leave-requests.service';
+import { LeaveTypeService } from '../../../leave-service/src/leave-types/leave-types.service';
+import { LeaveBalanceService } from '../../../leave-service/src/leave-balances/leave-balances.service';
+import { EncashmentService } from '../../../leave-service/src/encashment/encashment.service';
+import { BlackoutService } from '../../../leave-service/src/blackouts/blackouts.service';
 export declare class LeaveController {
-    private readonly client;
-    private reqService;
-    private typeService;
-    private balService;
-    private encService;
-    private boService;
-    private liabService;
-    constructor(client: ClientGrpc);
-    onModuleInit(): void;
-    create(body: any): Promise<unknown>;
-    list(query: any): Promise<unknown>;
-    get(id: string): Promise<unknown>;
-    approve(id: string, body: any): Promise<unknown>;
-    reject(id: string, body: any): Promise<unknown>;
-    calendar(companyId: string, query: any): Promise<unknown>;
-    createType(body: any): Promise<unknown>;
-    listTypes(query: any): Promise<unknown>;
-    getType(id: string): Promise<unknown>;
-    updateType(id: string, body: any): Promise<unknown>;
-    deleteType(id: string): Promise<unknown>;
-    listBalances(employeeId: string): Promise<unknown>;
-    accrue(body: any): Promise<unknown>;
-    createEnc(body: any): Promise<unknown>;
-    listEnc(query: any): Promise<unknown>;
-    createBO(body: any): Promise<unknown>;
-    listBO(query: any): Promise<unknown>;
-    getLiability(companyId: string): Promise<unknown>;
+    private readonly reqService;
+    private readonly typeService;
+    private readonly balService;
+    private readonly encService;
+    private readonly boService;
+    constructor(reqService: LeaveRequestService, typeService: LeaveTypeService, balService: LeaveBalanceService, encService: EncashmentService, boService: BlackoutService);
+    create(body: any): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        leaveTypeId: any;
+        leaveTypeName: string;
+        from: any;
+        to: any;
+        days: any;
+        reason: any;
+        status: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    list(query: any): Promise<{
+        requests: any;
+        total: any;
+    }>;
+    get(id: string): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        leaveTypeId: any;
+        leaveTypeName: string;
+        from: any;
+        to: any;
+        days: any;
+        reason: any;
+        status: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    approve(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        leaveTypeId: any;
+        leaveTypeName: string;
+        from: any;
+        to: any;
+        days: any;
+        reason: any;
+        status: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    reject(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        leaveTypeId: any;
+        leaveTypeName: string;
+        from: any;
+        to: any;
+        days: any;
+        reason: any;
+        status: any;
+        createdAt: any;
+        updatedAt: any;
+    }>;
+    calendar(companyId: string, query: any): Promise<{
+        requests: any;
+        total: any;
+    }>;
+    createType(body: any): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        entitlementDays: any;
+        color: any;
+        accrual: any;
+        carryForward: any;
+        eligibility: any;
+        maxCarry: any;
+        createdAt: any;
+    }>;
+    listTypes(query: any): Promise<{
+        types: any;
+    }>;
+    getType(id: string): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        entitlementDays: any;
+        color: any;
+        accrual: any;
+        carryForward: any;
+        eligibility: any;
+        maxCarry: any;
+        createdAt: any;
+    }>;
+    updateType(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        entitlementDays: any;
+        color: any;
+        accrual: any;
+        carryForward: any;
+        eligibility: any;
+        maxCarry: any;
+        createdAt: any;
+    }>;
+    deleteType(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    listBalances(employeeId: string): Promise<{
+        balances: any;
+    }>;
+    accrue(body: any): Promise<{
+        id: any;
+        employeeId: any;
+        leaveTypeId: any;
+        leaveTypeName: any;
+        opening: any;
+        accrued: any;
+        used: any;
+        available: any;
+        year: any;
+    }>;
+    createEnc(body: any): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        leaveTypeId: any;
+        days: any;
+        amount: any;
+        status: any;
+        submittedAt: any;
+    }>;
+    listEnc(query: any): Promise<{
+        encashments: any;
+    }>;
+    createBO(body: any): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        from: any;
+        to: any;
+        scope: any;
+        status: any;
+        description: any;
+    }>;
+    listBO(query: any): Promise<{
+        blackouts: any;
+    }>;
+    getLiability(companyId: string): Promise<{
+        items: {
+            department: string;
+            headcount: number;
+            totalDays: any;
+            liability: number;
+            encashmentExposure: number;
+        }[];
+        totalLiability: number;
+        totalEncashmentExposure: number;
+    }>;
 }

@@ -15,11 +15,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PayrollController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const payroll_runs_service_1 = require("../../../payroll-service/src/payroll-runs/payroll-runs.service");
+const salary_advance_service_1 = require("../../../payroll-service/src/salary-advance/salary-advance.service");
+const deductions_service_1 = require("../../../payroll-service/src/deductions/deductions.service");
+const allowances_service_1 = require("../../../payroll-service/src/allowances/allowances.service");
+const bonuses_service_1 = require("../../../payroll-service/src/bonuses/bonuses.service");
+const settlements_service_1 = require("../../../payroll-service/src/settlements/settlements.service");
+const journal_service_1 = require("../../../payroll-service/src/journal/journal.service");
 let PayrollController = class PayrollController {
-    client;
     runService;
     advService;
     dedService;
@@ -27,36 +31,33 @@ let PayrollController = class PayrollController {
     bonService;
     setService;
     jService;
-    constructor(client) {
-        this.client = client;
+    constructor(runService, advService, dedService, alwService, bonService, setService, jService) {
+        this.runService = runService;
+        this.advService = advService;
+        this.dedService = dedService;
+        this.alwService = alwService;
+        this.bonService = bonService;
+        this.setService = setService;
+        this.jService = jService;
     }
-    onModuleInit() {
-        this.runService = this.client.getService('PayrollRunService');
-        this.advService = this.client.getService('SalaryAdvanceService');
-        this.dedService = this.client.getService('DeductionService');
-        this.alwService = this.client.getService('AllowanceService');
-        this.bonService = this.client.getService('BonusService');
-        this.setService = this.client.getService('SettlementService');
-        this.jService = this.client.getService('PayrollJournalService');
-    }
-    generate(body) { return (0, rxjs_1.firstValueFrom)(this.runService.GeneratePayroll(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.runService.ListRuns(query)); }
-    getRun(id) { return (0, rxjs_1.firstValueFrom)(this.runService.GetRun({ id })); }
-    getRunDetails(id) { return (0, rxjs_1.firstValueFrom)(this.runService.GetRunDetails({ id })); }
-    approveRun(id, body) { return (0, rxjs_1.firstValueFrom)(this.runService.ApproveRun({ id, ...body })); }
-    publish(id) { return (0, rxjs_1.firstValueFrom)(this.runService.PublishPayslips({ id })); }
-    createAdv(body) { return (0, rxjs_1.firstValueFrom)(this.advService.CreateAdvance(body)); }
-    listAdv(query) { return (0, rxjs_1.firstValueFrom)(this.advService.ListAdvances(query)); }
-    createDed(body) { return (0, rxjs_1.firstValueFrom)(this.dedService.CreateDeduction(body)); }
-    listDed(query) { return (0, rxjs_1.firstValueFrom)(this.dedService.ListDeductions(query)); }
-    createAlw(body) { return (0, rxjs_1.firstValueFrom)(this.alwService.CreateAllowance(body)); }
-    listAlw(query) { return (0, rxjs_1.firstValueFrom)(this.alwService.ListAllowances(query)); }
-    createBon(body) { return (0, rxjs_1.firstValueFrom)(this.bonService.CreateBonus(body)); }
-    listBon(query) { return (0, rxjs_1.firstValueFrom)(this.bonService.ListBonuses(query)); }
-    createSet(body) { return (0, rxjs_1.firstValueFrom)(this.setService.CreateSettlement(body)); }
-    listSet(query) { return (0, rxjs_1.firstValueFrom)(this.setService.ListSettlements(query)); }
-    getJournal(query) { return (0, rxjs_1.firstValueFrom)(this.jService.GetJournal(query)); }
-    exportJournal(body) { return (0, rxjs_1.firstValueFrom)(this.jService.ExportJournal(body)); }
+    generate(body) { return this.runService.generate(body); }
+    list(query) { return this.runService.list(query.companyId, query); }
+    getRun(id) { return this.runService.get(id); }
+    getRunDetails(id) { return this.runService.getDetails(id); }
+    approveRun(id, body) { return this.runService.approve(id, body.approvedBy); }
+    publish(id) { return this.runService.publishPayslips(id); }
+    createAdv(body) { return this.advService.create(body); }
+    listAdv(query) { return this.advService.list(query.companyId, query.status); }
+    createDed(body) { return this.dedService.create(body); }
+    listDed(query) { return this.dedService.list(query.companyId); }
+    createAlw(body) { return this.alwService.create(body); }
+    listAlw(query) { return this.alwService.list(query.companyId); }
+    createBon(body) { return this.bonService.create(body); }
+    listBon(query) { return this.bonService.list(query.companyId, query.type); }
+    createSet(body) { return this.setService.create(body); }
+    listSet(query) { return this.setService.list(query.companyId, query.status); }
+    getJournal(query) { return this.jService.getJournal(query); }
+    exportJournal(body) { return this.jService.exportJournal(body); }
 };
 exports.PayrollController = PayrollController;
 __decorate([
@@ -296,7 +297,12 @@ exports.PayrollController = PayrollController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('payroll'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.PAYROLL)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [payroll_runs_service_1.PayrollRunService,
+        salary_advance_service_1.AdvanceService,
+        deductions_service_1.DeductionService,
+        allowances_service_1.AllowanceService,
+        bonuses_service_1.BonusService,
+        settlements_service_1.SettlementService,
+        journal_service_1.JournalService])
 ], PayrollController);
 //# sourceMappingURL=payroll.controller.js.map

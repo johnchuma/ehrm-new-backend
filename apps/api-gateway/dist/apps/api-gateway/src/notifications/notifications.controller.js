@@ -15,23 +15,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const notifications_service_1 = require("../../../notifications-service/src/notifications/notifications.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let NotificationsController = class NotificationsController {
-    client;
-    service;
-    constructor(client) {
-        this.client = client;
+    notificationService;
+    constructor(notificationService) {
+        this.notificationService = notificationService;
     }
-    onModuleInit() { this.service = this.client.getService('NotificationService'); }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.service.CreateNotification(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.service.ListNotifications(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.service.GetNotification({ id })); }
-    markRead(id) { return (0, rxjs_1.firstValueFrom)(this.service.MarkAsRead({ id })); }
-    markAll(body) { return (0, rxjs_1.firstValueFrom)(this.service.MarkAllAsRead(body)); }
-    remove(id) { return (0, rxjs_1.firstValueFrom)(this.service.DeleteNotification({ id })); }
-    unread(userId) { return (0, rxjs_1.firstValueFrom)(this.service.GetUnreadCount({ userId })); }
+    create(body) { return this.notificationService.create(body); }
+    list(query) { return this.notificationService.list(query.userId, query.unreadOnly, query.page, query.pageSize); }
+    get(id) { return this.notificationService.get(id); }
+    markRead(id) { return this.notificationService.markAsRead(id); }
+    markAll(body) { return this.notificationService.markAllAsRead(body.userId); }
+    remove(id) { return this.notificationService.delete(id); }
+    unread(userId) { return this.notificationService.getUnreadCount(userId); }
 };
 exports.NotificationsController = NotificationsController;
 __decorate([
@@ -114,7 +111,6 @@ exports.NotificationsController = NotificationsController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('notifications'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.NOTIFICATIONS)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [notifications_service_1.NotificationService])
 ], NotificationsController);
 //# sourceMappingURL=notifications.controller.js.map

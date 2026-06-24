@@ -1,12 +1,51 @@
-import { ClientGrpc } from '@nestjs/microservices';
+import { AnnouncementService } from '../../../announcements-service/src/announcements/announcements.service';
 export declare class AnnouncementsController {
-    private readonly client;
-    private service;
-    constructor(client: ClientGrpc);
-    onModuleInit(): void;
-    create(body: any): Promise<unknown>;
-    list(query: any): Promise<unknown>;
-    get(id: string): Promise<unknown>;
-    update(id: string, body: any): Promise<unknown>;
-    remove(id: string): Promise<unknown>;
+    private readonly service;
+    constructor(service: AnnouncementService);
+    create(body: any): Promise<{
+        id: any;
+        companyId: any;
+        title: any;
+        content: any;
+        type: any;
+        priority: any;
+        audience: any;
+        publishedAt: any;
+        expiresAt: any;
+        authorId: any;
+        createdAt: any;
+    }>;
+    list(query: any): Promise<{
+        announcements: any;
+    }>;
+    get(id: string): Promise<{
+        id: any;
+        companyId: any;
+        title: any;
+        content: any;
+        type: any;
+        priority: any;
+        audience: any;
+        publishedAt: any;
+        expiresAt: any;
+        authorId: any;
+        createdAt: any;
+    }>;
+    update(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        title: any;
+        content: any;
+        type: any;
+        priority: any;
+        audience: any;
+        publishedAt: any;
+        expiresAt: any;
+        authorId: any;
+        createdAt: any;
+    }>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
 }

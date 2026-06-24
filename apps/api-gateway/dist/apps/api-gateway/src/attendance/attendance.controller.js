@@ -15,11 +15,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AttendanceController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const attendance_service_1 = require("../../../attendance-service/src/attendance/attendance.service");
+const exceptions_service_1 = require("../../../attendance-service/src/exceptions/exceptions.service");
+const shifts_service_1 = require("../../../attendance-service/src/shifts/shifts.service");
+const swap_service_1 = require("../../../attendance-service/src/swap-requests/swap.service");
+const overtime_service_1 = require("../../../attendance-service/src/overtime/overtime.service");
+const geofencing_service_1 = require("../../../attendance-service/src/geofencing/geofencing.service");
+const approvals_service_1 = require("../../../attendance-service/src/attendance/approvals.service");
 let AttendanceController = class AttendanceController {
-    client;
     attService;
     excService;
     shiftService;
@@ -27,36 +31,33 @@ let AttendanceController = class AttendanceController {
     otService;
     gfService;
     apprService;
-    constructor(client) {
-        this.client = client;
+    constructor(attService, excService, shiftService, swapService, otService, gfService, apprService) {
+        this.attService = attService;
+        this.excService = excService;
+        this.shiftService = shiftService;
+        this.swapService = swapService;
+        this.otService = otService;
+        this.gfService = gfService;
+        this.apprService = apprService;
     }
-    onModuleInit() {
-        this.attService = this.client.getService('AttendanceService');
-        this.excService = this.client.getService('AttendanceExceptionService');
-        this.shiftService = this.client.getService('ShiftService');
-        this.swapService = this.client.getService('ShiftSwapService');
-        this.otService = this.client.getService('OvertimeService');
-        this.gfService = this.client.getService('GeofenceService');
-        this.apprService = this.client.getService('AttendanceApprovalService');
-    }
-    checkIn(body) { return (0, rxjs_1.firstValueFrom)(this.attService.CheckIn(body)); }
-    checkOut(body) { return (0, rxjs_1.firstValueFrom)(this.attService.CheckOut(body)); }
-    listRecords(query) { return (0, rxjs_1.firstValueFrom)(this.attService.ListRecords(query)); }
-    today(companyId) { return (0, rxjs_1.firstValueFrom)(this.attService.GetTodayAttendance({ companyId })); }
-    bulkMark(body) { return (0, rxjs_1.firstValueFrom)(this.attService.BulkMarkAttendance(body)); }
-    createException(body) { return (0, rxjs_1.firstValueFrom)(this.excService.CreateException(body)); }
-    listExceptions(query) { return (0, rxjs_1.firstValueFrom)(this.excService.ListExceptions(query)); }
-    resolveException(id, body) { return (0, rxjs_1.firstValueFrom)(this.excService.ResolveException({ id, ...body })); }
-    createShift(body) { return (0, rxjs_1.firstValueFrom)(this.shiftService.CreateShift(body)); }
-    listShifts(query) { return (0, rxjs_1.firstValueFrom)(this.shiftService.ListShifts(query)); }
-    assignShift(body) { return (0, rxjs_1.firstValueFrom)(this.shiftService.AssignShift(body)); }
-    createOT(body) { return (0, rxjs_1.firstValueFrom)(this.otService.CreateOvertime(body)); }
-    listOT(query) { return (0, rxjs_1.firstValueFrom)(this.otService.ListOvertime(query)); }
-    approveOT(id, body) { return (0, rxjs_1.firstValueFrom)(this.otService.ApproveOvertime({ id, ...body })); }
-    createGF(body) { return (0, rxjs_1.firstValueFrom)(this.gfService.CreateGeofence(body)); }
-    listGF(query) { return (0, rxjs_1.firstValueFrom)(this.gfService.ListGeofences(query)); }
-    createAppr(body) { return (0, rxjs_1.firstValueFrom)(this.apprService.CreateApproval(body)); }
-    listAppr(query) { return (0, rxjs_1.firstValueFrom)(this.apprService.ListApprovals(query)); }
+    checkIn(body) { return this.attService.checkIn(body); }
+    checkOut(body) { return this.attService.checkOut(body); }
+    listRecords(query) { return this.attService.listRecords(query.companyId, query); }
+    today(companyId) { return this.attService.getTodayAttendance(companyId); }
+    bulkMark(body) { return this.attService.bulkMark(body); }
+    createException(body) { return this.excService.create(body); }
+    listExceptions(query) { return this.excService.list(query.companyId, query.status); }
+    resolveException(id, body) { return this.excService.resolve(id, body.notes); }
+    createShift(body) { return this.shiftService.create(body); }
+    listShifts(query) { return this.shiftService.list(query.companyId); }
+    assignShift(body) { return this.shiftService.assign(body); }
+    createOT(body) { return this.otService.create(body); }
+    listOT(query) { return this.otService.list(query.companyId, query.status); }
+    approveOT(id, body) { return this.otService.approve(id, body.approved ? 'approved' : 'rejected'); }
+    createGF(body) { return this.gfService.create(body); }
+    listGF(query) { return this.gfService.list(query.companyId); }
+    createAppr(body) { return this.apprService.create(body); }
+    listAppr(query) { return this.apprService.list(query.companyId, query.status); }
 };
 exports.AttendanceController = AttendanceController;
 __decorate([
@@ -331,7 +332,12 @@ exports.AttendanceController = AttendanceController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('attendance'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.ATTENDANCE)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [attendance_service_1.AttendanceService,
+        exceptions_service_1.ExceptionService,
+        shifts_service_1.ShiftService,
+        swap_service_1.SwapService,
+        overtime_service_1.OvertimeService,
+        geofencing_service_1.GeofenceService,
+        approvals_service_1.ApprovalService])
 ], AttendanceController);
 //# sourceMappingURL=attendance.controller.js.map

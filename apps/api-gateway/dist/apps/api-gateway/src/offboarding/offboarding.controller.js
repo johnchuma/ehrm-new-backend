@@ -15,29 +15,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OffboardingController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const offboarding_service_1 = require("../../../offboarding-service/src/offboarding/offboarding.service");
+const clearance_service_1 = require("../../../offboarding-service/src/clearance/clearance.service");
 let OffboardingController = class OffboardingController {
-    client;
     offService;
     clrService;
-    constructor(client) {
-        this.client = client;
+    constructor(offService, clrService) {
+        this.offService = offService;
+        this.clrService = clrService;
     }
-    onModuleInit() {
-        this.offService = this.client.getService('OffboardingService');
-        this.clrService = this.client.getService('ClearanceService');
-    }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.offService.CreateOffboarding(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.offService.ListOffboardings(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.offService.GetOffboarding({ id })); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.offService.UpdateOffboarding({ id, ...body })); }
-    advance(id, body) { return (0, rxjs_1.firstValueFrom)(this.offService.AdvanceClearance({ id, ...body })); }
-    complete(id) { return (0, rxjs_1.firstValueFrom)(this.offService.CompleteOffboarding({ id })); }
-    createClr(body) { return (0, rxjs_1.firstValueFrom)(this.clrService.CreateClearance(body)); }
-    listClr(offboardingId) { return (0, rxjs_1.firstValueFrom)(this.clrService.ListClearances({ offboardingId })); }
-    approveClr(id, body) { return (0, rxjs_1.firstValueFrom)(this.clrService.ApproveClearance({ id, ...body })); }
+    create(body) { return this.offService.create(body); }
+    list(query) { return this.offService.list(query.companyId, query.status); }
+    get(id) { return this.offService.get(id); }
+    update(id, body) { return this.offService.update(id, body); }
+    advance(id, body) { return this.offService.advanceClearance(id, body.department); }
+    complete(id) { return this.offService.complete(id); }
+    createClr(body) { return this.clrService.create(body); }
+    listClr(offboardingId) { return this.clrService.list(offboardingId); }
+    approveClr(id, body) { return this.clrService.approve(id, 'Approved', body.notes); }
 };
 exports.OffboardingController = OffboardingController;
 __decorate([
@@ -175,7 +171,7 @@ exports.OffboardingController = OffboardingController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('offboarding'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.OFFBOARDING)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [offboarding_service_1.OffboardingService,
+        clearance_service_1.ClearanceService])
 ], OffboardingController);
 //# sourceMappingURL=offboarding.controller.js.map

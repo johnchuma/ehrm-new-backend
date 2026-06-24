@@ -1,0 +1,113 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.JournalService = void 0;
+const common_1 = require("@nestjs/common");
+const prisma_module_1 = require("../../../../libs/common/src/prisma/prisma.module");
+const decorators_1 = require("../../../../libs/common/src/decorators");
+let JournalService = class JournalService {
+    prisma;
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async getJournal(data) {
+        if (data.runId) {
+            const run = await this.prisma.payrollRun.findUnique({
+                where: { id: data.runId },
+                include: { rows: true },
+            });
+            if (!run)
+                throw decorators_1.GrpcErrors.NOT_FOUND('Payroll run not found');
+            return this.buildJournal(run.rows, data.month || run.month, data.year || run.year);
+        }
+        const where = { companyId: data.companyId };
+        if (data.month)
+            where.month = data.month;
+        if (data.year)
+            where.year = data.year;
+        const runs = await this.prisma.payrollRun.findMany({
+            where,
+            include: { rows: true },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+        });
+        if (runs.length === 0) {
+            return { debits: [], credits: [], totalDebit: 0, totalCredit: 0, month: data.month || '', year: data.year || '' };
+        }
+        return this.buildJournal(runs[0].rows, data.month || runs[0].month, data.year || runs[0].year);
+    }
+    async exportJournal(data) {
+        const journal = await this.getJournal(data);
+        const rows = [['Date', 'Account', 'Currency', 'Debit', 'Credit']];
+        const dateStr = `${data.month} ${data.year}`;
+        journal.debits.forEach((d, i) => {
+            rows.push([i === 0 ? dateStr : '', d.account, 'TZS', String(Math.round(d.amount)), '']);
+        });
+        journal.credits.forEach((c) => {
+            rows.push(['', c.account, 'TZS', '', String(Math.round(c.amount))]);
+        });
+        rows.push(['', 'TOTAL', '', String(Math.round(journal.totalDebit)), String(Math.round(journal.totalCredit))]);
+        return { csv: rows.map((r) => r.map((v) => `"${v}"`).join(',')).join('\n') };
+    }
+    buildJournal(rows, month, year) {
+        let gross = 0, paye = 0, nssf = 0, nhif = 0, sdl = 0, wcf = 0, net = 0, heslb = 0, salaryAdvance = 0;
+        let employerNssf = 0, employerNhif = 0;
+        rows.forEach((r) => {
+            gross += r.grossSalary;
+            paye += r.paye;
+            nssf += r.nssf;
+            nhif += r.nhif;
+            sdl += r.sdl;
+            wcf += r.wcf;
+            net += r.netSalary;
+            heslb += r.heslb;
+            salaryAdvance += r.salaryAdvance;
+            employerNssf += r.employerNssf;
+            employerNhif += r.employerNhif;
+        });
+        const otherDeductions = Math.max(0, gross - net - paye - nssf - heslb - salaryAdvance);
+        const debits = [
+            { account: 'Salaries / Wages', amount: gross, type: 'debit' },
+            { account: 'NSSF Expenses', amount: employerNssf, type: 'debit' },
+            { account: 'SDL Expenses', amount: sdl, type: 'debit' },
+            { account: 'WCF Expenses', amount: wcf, type: 'debit' },
+            { account: 'NHIF Expenses', amount: nhif + employerNhif, type: 'debit' },
+        ];
+        const credits = [
+            { account: 'Advance Salary', amount: salaryAdvance, type: 'credit' },
+            { account: 'Net Salary Payable', amount: net, type: 'credit' },
+            { account: 'NSSF Payable', amount: nssf + employerNssf, type: 'credit' },
+            { account: 'PAYE Payable', amount: paye, type: 'credit' },
+            { account: 'NHIF Payable', amount: nhif + employerNhif, type: 'credit' },
+            { account: 'HESLB Payable', amount: heslb, type: 'credit' },
+            { account: 'WCF Payable', amount: wcf, type: 'credit' },
+            { account: 'SDL Payable', amount: sdl, type: 'credit' },
+        ];
+        if (otherDeductions > 0)
+            credits.push({ account: 'Other Deductions Payable', amount: otherDeductions, type: 'credit' });
+        return {
+            debits, credits,
+            totalDebit: debits.reduce((s, d) => s + d.amount, 0),
+            totalCredit: credits.reduce((s, c) => s + c.amount, 0),
+            month, year,
+        };
+    }
+};
+exports.JournalService = JournalService;
+exports.JournalService = JournalService = __decorate([
+    (0, common_1.Injectable)(),
+    __param(0, (0, common_1.Inject)(prisma_module_1.PRISMA_CLIENT)),
+    __metadata("design:paramtypes", [Object])
+], JournalService);
+//# sourceMappingURL=journal.service.js.map

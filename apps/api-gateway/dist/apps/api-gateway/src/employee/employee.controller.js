@@ -15,44 +15,43 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmployeeController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const employees_service_1 = require("../../../employee-service/src/employees/employees.service");
+const documents_service_1 = require("../../../employee-service/src/documents/documents.service");
+const qualifications_service_1 = require("../../../employee-service/src/qualifications/qualifications.service");
+const emergency_contacts_service_1 = require("../../../employee-service/src/emergency-contacts/emergency-contacts.service");
+const family_service_1 = require("../../../employee-service/src/family/family.service");
 let EmployeeController = class EmployeeController {
-    client;
     empService;
     docService;
     qualService;
     ecService;
     famService;
-    constructor(client) {
-        this.client = client;
+    constructor(empService, docService, qualService, ecService, famService) {
+        this.empService = empService;
+        this.docService = docService;
+        this.qualService = qualService;
+        this.ecService = ecService;
+        this.famService = famService;
     }
-    onModuleInit() {
-        this.empService = this.client.getService('EmployeeService');
-        this.docService = this.client.getService('DocumentService');
-        this.qualService = this.client.getService('QualificationService');
-        this.ecService = this.client.getService('EmergencyContactService');
-        this.famService = this.client.getService('FamilyService');
-    }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.empService.CreateEmployee(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.empService.ListEmployees(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.empService.GetEmployee({ id })); }
-    getProfile(id) { return (0, rxjs_1.firstValueFrom)(this.empService.GetEmployeeProfile({ id })); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.empService.UpdateEmployee({ id, ...body })); }
-    remove(id) { return (0, rxjs_1.firstValueFrom)(this.empService.DeleteEmployee({ id })); }
-    advance(id) { return (0, rxjs_1.firstValueFrom)(this.empService.AdvanceApproval({ id })); }
-    approve(id) { return (0, rxjs_1.firstValueFrom)(this.empService.ApproveEmployee({ id })); }
-    uploadDoc(body) { return (0, rxjs_1.firstValueFrom)(this.docService.UploadDocument(body)); }
-    listDocs(employeeId) { return (0, rxjs_1.firstValueFrom)(this.docService.ListDocuments({ employeeId })); }
-    addEdu(body) { return (0, rxjs_1.firstValueFrom)(this.qualService.AddEducation(body)); }
-    addQual(body) { return (0, rxjs_1.firstValueFrom)(this.qualService.AddProfessionalQualification(body)); }
-    listEdu(employeeId) { return (0, rxjs_1.firstValueFrom)(this.qualService.ListEducation({ employeeId })); }
-    listQuals(employeeId) { return (0, rxjs_1.firstValueFrom)(this.qualService.ListQualifications({ employeeId })); }
-    addEC(body) { return (0, rxjs_1.firstValueFrom)(this.ecService.AddEmergencyContact(body)); }
-    listEC(employeeId) { return (0, rxjs_1.firstValueFrom)(this.ecService.ListEmergencyContacts({ employeeId })); }
-    addFam(body) { return (0, rxjs_1.firstValueFrom)(this.famService.AddFamilyMember(body)); }
-    listFam(employeeId) { return (0, rxjs_1.firstValueFrom)(this.famService.ListFamily({ employeeId })); }
+    create(body) { return this.empService.createEmployee(body); }
+    list(query) { return this.empService.listEmployees(query.companyId, query); }
+    get(id) { return this.empService.getEmployee(id); }
+    getProfile(id) { return this.empService.getEmployeeProfile(id); }
+    update(id, body) { return this.empService.updateEmployee(id, body); }
+    remove(id) { return this.empService.deleteEmployee(id); }
+    advance(id) { return this.empService.advanceApproval(id); }
+    approve(id) { return this.empService.approveEmployee(id); }
+    uploadDoc(body) { return this.docService.uploadDocument(body); }
+    listDocs(employeeId) { return this.docService.listDocuments(employeeId); }
+    addEdu(body) { return this.qualService.addEducation(body); }
+    addQual(body) { return this.qualService.addProfessionalQualification(body); }
+    listEdu(employeeId) { return this.qualService.listEducation(employeeId); }
+    listQuals(employeeId) { return this.qualService.listQualifications(employeeId); }
+    addEC(body) { return this.ecService.add(body); }
+    listEC(employeeId) { return this.ecService.list(employeeId); }
+    addFam(body) { return this.famService.add(body); }
+    listFam(employeeId) { return this.famService.list(employeeId); }
 };
 exports.EmployeeController = EmployeeController;
 __decorate([
@@ -292,7 +291,10 @@ exports.EmployeeController = EmployeeController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('employee'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.EMPLOYEE)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [employees_service_1.EmployeeService,
+        documents_service_1.DocumentService,
+        qualifications_service_1.QualificationService,
+        emergency_contacts_service_1.EmergencyContactService,
+        family_service_1.FamilyService])
 ], EmployeeController);
 //# sourceMappingURL=employee.controller.js.map

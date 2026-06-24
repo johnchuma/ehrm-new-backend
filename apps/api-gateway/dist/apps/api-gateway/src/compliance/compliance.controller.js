@@ -15,26 +15,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ComplianceController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const compliance_service_1 = require("../../../compliance-service/src/compliance/compliance.service");
+const statutory_service_1 = require("../../../compliance-service/src/statutory/statutory.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let ComplianceController = class ComplianceController {
-    client;
     compService;
     statService;
-    constructor(client) {
-        this.client = client;
+    constructor(compService, statService) {
+        this.compService = compService;
+        this.statService = statService;
     }
-    onModuleInit() {
-        this.compService = this.client.getService('ComplianceService');
-        this.statService = this.client.getService('StatutoryService');
-    }
-    createReq(body) { return (0, rxjs_1.firstValueFrom)(this.compService.CreateRequirement(body)); }
-    listReq(query) { return (0, rxjs_1.firstValueFrom)(this.compService.ListRequirements(query)); }
-    updateReq(id, body) { return (0, rxjs_1.firstValueFrom)(this.compService.UpdateRequirement({ id, ...body })); }
-    createFiling(body) { return (0, rxjs_1.firstValueFrom)(this.statService.CreateFiling(body)); }
-    listFilings(query) { return (0, rxjs_1.firstValueFrom)(this.statService.ListFilings(query)); }
-    updateFiling(id, body) { return (0, rxjs_1.firstValueFrom)(this.statService.UpdateFiling({ id, ...body })); }
+    createReq(body) { return this.compService.create(body); }
+    listReq(query) { return this.compService.list(query.companyId, query.status); }
+    updateReq(id, body) { return this.compService.update(id, body); }
+    createFiling(body) { return this.statService.create(body); }
+    listFilings(query) { return this.statService.list(query.companyId, query); }
+    updateFiling(id, body) { return this.statService.update(id, body); }
 };
 exports.ComplianceController = ComplianceController;
 __decorate([
@@ -138,7 +134,7 @@ exports.ComplianceController = ComplianceController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('compliance'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.COMPLIANCE)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [compliance_service_1.ComplianceService,
+        statutory_service_1.StatutoryService])
 ], ComplianceController);
 //# sourceMappingURL=compliance.controller.js.map

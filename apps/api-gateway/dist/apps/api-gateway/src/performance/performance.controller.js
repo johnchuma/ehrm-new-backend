@@ -15,35 +15,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PerformanceController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const reviews_service_1 = require("../../../performance-service/src/reviews/reviews.service");
+const goals_service_1 = require("../../../performance-service/src/goals/goals.service");
+const kpis_service_1 = require("../../../performance-service/src/kpis/kpis.service");
 let PerformanceController = class PerformanceController {
-    client;
     revService;
     goalService;
     kpiService;
-    constructor(client) {
-        this.client = client;
+    constructor(revService, goalService, kpiService) {
+        this.revService = revService;
+        this.goalService = goalService;
+        this.kpiService = kpiService;
     }
-    onModuleInit() {
-        this.revService = this.client.getService('ReviewService');
-        this.goalService = this.client.getService('GoalService');
-        this.kpiService = this.client.getService('KpiService');
-    }
-    createRev(body) { return (0, rxjs_1.firstValueFrom)(this.revService.CreateReview(body)); }
-    listRev(query) { return (0, rxjs_1.firstValueFrom)(this.revService.ListReviews(query)); }
-    getRev(id) { return (0, rxjs_1.firstValueFrom)(this.revService.GetReview({ id })); }
-    updateRev(id, body) { return (0, rxjs_1.firstValueFrom)(this.revService.UpdateReview({ id, ...body })); }
-    submitRev(id) { return (0, rxjs_1.firstValueFrom)(this.revService.SubmitReview({ id })); }
-    createGoal(body) { return (0, rxjs_1.firstValueFrom)(this.goalService.CreateGoal(body)); }
-    listGoals(query) { return (0, rxjs_1.firstValueFrom)(this.goalService.ListGoals(query)); }
-    getGoal(id) { return (0, rxjs_1.firstValueFrom)(this.goalService.GetGoal({ id })); }
-    updateGoal(id, body) { return (0, rxjs_1.firstValueFrom)(this.goalService.UpdateGoal({ id, ...body })); }
-    deleteGoal(id) { return (0, rxjs_1.firstValueFrom)(this.goalService.DeleteGoal({ id })); }
-    createKpi(body) { return (0, rxjs_1.firstValueFrom)(this.kpiService.CreateKpi(body)); }
-    listKpis(query) { return (0, rxjs_1.firstValueFrom)(this.kpiService.ListKpis(query)); }
-    updateKpi(id, body) { return (0, rxjs_1.firstValueFrom)(this.kpiService.UpdateKpi({ id, ...body })); }
+    createRev(body) { return this.revService.create(body); }
+    listRev(query) { return this.revService.list(query.companyId, query); }
+    getRev(id) { return this.revService.get(id); }
+    updateRev(id, body) { return this.revService.update(id, body); }
+    submitRev(id) { return this.revService.submit(id); }
+    createGoal(body) { return this.goalService.create(body); }
+    listGoals(query) { return this.goalService.list(query.companyId, query); }
+    getGoal(id) { return this.goalService.get(id); }
+    updateGoal(id, body) { return this.goalService.update(id, body); }
+    deleteGoal(id) { return this.goalService.delete(id); }
+    createKpi(body) { return this.kpiService.create(body); }
+    listKpis(query) { return this.kpiService.list(query.companyId, query.category); }
+    updateKpi(id, body) { return this.kpiService.update(id, body); }
 };
 exports.PerformanceController = PerformanceController;
 __decorate([
@@ -230,7 +227,8 @@ exports.PerformanceController = PerformanceController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('performance'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.PERFORMANCE)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [reviews_service_1.ReviewService,
+        goals_service_1.GoalService,
+        kpis_service_1.KpiService])
 ], PerformanceController);
 //# sourceMappingURL=performance.controller.js.map

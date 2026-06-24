@@ -15,26 +15,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.HRQueryController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const hr_query_service_1 = require("../../../hr-query-service/src/hr-query/hr-query.service");
+const tickets_service_1 = require("../../../hr-query-service/src/tickets/tickets.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let HRQueryController = class HRQueryController {
-    client;
     queryService;
     ticketService;
-    constructor(client) {
-        this.client = client;
+    constructor(queryService, ticketService) {
+        this.queryService = queryService;
+        this.ticketService = ticketService;
     }
-    onModuleInit() {
-        this.queryService = this.client.getService('HRQueryService');
-        this.ticketService = this.client.getService('HRQueryService');
-    }
-    ask(body) { return (0, rxjs_1.firstValueFrom)(this.queryService.AskQuestion(body)); }
-    faqs(query) { return (0, rxjs_1.firstValueFrom)(this.queryService.GetFAQs(query)); }
-    createFaq(body) { return (0, rxjs_1.firstValueFrom)(this.queryService.CreateFAQ(body)); }
-    listTickets(query) { return (0, rxjs_1.firstValueFrom)(this.ticketService.ListTickets(query)); }
-    createTicket(body) { return (0, rxjs_1.firstValueFrom)(this.ticketService.CreateTicket(body)); }
-    reply(id, body) { return (0, rxjs_1.firstValueFrom)(this.ticketService.ReplyTicket({ id, ...body })); }
+    ask(body) { return this.queryService.askQuestion(body); }
+    faqs(query) { return this.queryService.getFAQs(query.companyId, query.category); }
+    createFaq(body) { return this.queryService.createFAQ(body); }
+    listTickets(query) { return this.ticketService.list(query.companyId, query.userId, query.status); }
+    createTicket(body) { return this.ticketService.create(body); }
+    reply(id, body) { return this.ticketService.reply(id, body.message, body.repliedBy); }
 };
 exports.HRQueryController = HRQueryController;
 __decorate([
@@ -135,7 +131,7 @@ exports.HRQueryController = HRQueryController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('hr-query'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.HR_QUERY)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [hr_query_service_1.HRQueryService,
+        tickets_service_1.TicketService])
 ], HRQueryController);
 //# sourceMappingURL=hr-query.controller.js.map

@@ -15,22 +15,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContractsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const contracts_service_1 = require("../../../contracts-service/src/contracts/contracts.service");
 let ContractsController = class ContractsController {
-    client;
     service;
-    constructor(client) {
-        this.client = client;
+    constructor(service) {
+        this.service = service;
     }
-    onModuleInit() { this.service = this.client.getService('ContractService'); }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.service.CreateContract(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.service.ListContracts(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.service.GetContract({ id })); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.service.UpdateContract({ id, ...body })); }
-    terminate(id, body) { return (0, rxjs_1.firstValueFrom)(this.service.TerminateContract({ id, ...body })); }
-    renew(id, body) { return (0, rxjs_1.firstValueFrom)(this.service.RenewContract({ id, ...body })); }
+    create(body) { return this.service.create(body); }
+    list(query) { return this.service.list(query.companyId, query); }
+    get(id) { return this.service.get(id); }
+    update(id, body) { return this.service.update(id, body); }
+    terminate(id, body) { return this.service.terminate(id, body.reason, body.terminationDate); }
+    renew(id, body) { return this.service.renew(id, body.newEndDate, body.salary); }
 };
 exports.ContractsController = ContractsController;
 __decorate([
@@ -138,7 +135,6 @@ exports.ContractsController = ContractsController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('contracts'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.CONTRACTS)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [contracts_service_1.ContractService])
 ], ContractsController);
 //# sourceMappingURL=contracts.controller.js.map

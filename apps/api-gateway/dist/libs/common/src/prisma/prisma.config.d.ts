@@ -1,0 +1,28 @@
+export declare const DATABASE_URLS: {
+    iam: string;
+    company: string;
+    employee: string;
+    attendance: string;
+    leave: string;
+    payroll: string;
+    performance: string;
+    training: string;
+    onboarding: string;
+    offboarding: string;
+    movement: string;
+    contracts: string;
+    assets: string;
+    benefits: string;
+    disciplinary: string;
+    compliance: string;
+    announcements: string;
+    analytics: string;
+    'salary-intelligence': string;
+    exactai: string;
+    notifications: string;
+    tasks: string;
+    'hr-query': string;
+    documents: string;
+    integrations: string;
+};
+export declare function createPrismaClient(serviceName: string): any;

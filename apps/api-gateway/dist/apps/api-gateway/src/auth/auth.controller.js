@@ -15,49 +15,42 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const common_2 = require("@nestjs/common");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const decorators_1 = require("../../../../libs/common/src/decorators");
+const auth_service_1 = require("../../../iam-service/src/auth/auth.service");
+const companies_service_1 = require("../../../company-service/src/companies/companies.service");
 let AuthController = class AuthController {
-    client;
-    companyClient;
-    iamService;
+    iamAuthService;
     companyService;
-    constructor(client, companyClient) {
-        this.client = client;
-        this.companyClient = companyClient;
-    }
-    onModuleInit() {
-        this.iamService = this.client.getService('AuthService');
-        this.companyService = this.companyClient.getService('CompanyService');
+    constructor(iamAuthService, companyService) {
+        this.iamAuthService = iamAuthService;
+        this.companyService = companyService;
     }
     async loginWithEmail(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.Login(body));
+        return this.iamAuthService.loginWithEmail(body.email, body.password);
     }
     async loginWithPhone(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.LoginWithPhone(body));
+        return this.iamAuthService.loginWithPhone(body.phone, body.password);
     }
     async register(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.Register(body));
+        return this.iamAuthService.register(body);
     }
     async validateToken(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.ValidateToken(body));
+        return this.iamAuthService.validateToken(body.token);
     }
     async refreshToken(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.RefreshToken(body));
+        return this.iamAuthService.refreshToken(body.refreshToken);
     }
     async forgotPassword(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.ForgotPassword(body));
+        return this.iamAuthService.forgotPassword(body.email);
     }
     async resetPassword(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.ResetPassword(body));
+        return this.iamAuthService.resetPassword(body.token, body.newPassword);
     }
     async changePassword(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.ChangePassword(body));
+        return this.iamAuthService.changePassword(body.userId, body.oldPassword, body.newPassword);
     }
     async logout(body) {
-        return (0, rxjs_1.firstValueFrom)(this.iamService.Logout(body));
+        return this.iamAuthService.logout(body.userId);
     }
     async registerWorkspace(body) {
         const slug = body.company
@@ -65,7 +58,7 @@ let AuthController = class AuthController {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-|-$/g, '');
         const currencyCode = body.currency?.split(' ')[0] || 'TZS';
-        const company = await (0, rxjs_1.firstValueFrom)(this.companyService.CreateCompany({
+        const company = await this.companyService.createCompany({
             name: body.company,
             slug,
             email: body.email,
@@ -76,36 +69,15 @@ let AuthController = class AuthController {
             subscriptionPlan: body.plan || 'FREE',
             industry: body.sector || '',
             size: body.size || '',
-        }));
-        if (body.additionalCompanies?.length) {
-            for (const extra of body.additionalCompanies) {
-                const extraSlug = extra.company
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-|-$/g, '');
-                const extraCurrency = extra.currency?.split(' ')[0] || currencyCode;
-                await (0, rxjs_1.firstValueFrom)(this.companyService.CreateCompany({
-                    name: extra.company,
-                    slug: `${slug}-${extraSlug}`,
-                    email: body.email,
-                    phone: body.phone || '',
-                    country: extra.country || body.country || 'Tanzania',
-                    currency: extraCurrency,
-                    timezone: 'Africa/Dar_es_Salaam',
-                    subscriptionPlan: body.plan || 'FREE',
-                    industry: extra.sector || '',
-                    size: extra.size || '',
-                }));
-            }
-        }
-        const result = await (0, rxjs_1.firstValueFrom)(this.iamService.Register({
+        });
+        const result = await this.iamAuthService.register({
             email: body.email,
             phone: body.phone || '',
             password: body.password,
             firstName: body.fname,
             lastName: body.lname,
             companyId: company.id,
-        }));
+        });
         return {
             ...result,
             company,
@@ -312,19 +284,6 @@ __decorate([
                 size: { type: 'string', example: '201–500' },
                 country: { type: 'string', example: 'Tanzania' },
                 currency: { type: 'string', example: 'TZS (Tanzanian Shilling)' },
-                additionalCompanies: {
-                    type: 'array',
-                    items: {
-                        type: 'object',
-                        properties: {
-                            company: { type: 'string' },
-                            sector: { type: 'string' },
-                            size: { type: 'string' },
-                            country: { type: 'string' },
-                            currency: { type: 'string' },
-                        },
-                    },
-                },
                 fname: { type: 'string', example: 'Joyce' },
                 lname: { type: 'string', example: 'Massawe' },
                 email: { type: 'string', example: 'hr.admin@acaciagroup.co.tz' },
@@ -335,9 +294,6 @@ __decorate([
             },
         },
     }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Workspace created successfully' }),
-    (0, swagger_1.ApiResponse)({ status: 400, description: 'Validation error' }),
-    (0, swagger_1.ApiResponse)({ status: 409, description: 'Company or user already exists' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -355,8 +311,7 @@ __decorate([
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Controller)('auth'),
-    __param(0, (0, common_2.Inject)(grpc_module_1.GRPC_SERVICES.IAM)),
-    __param(1, (0, common_2.Inject)(grpc_module_1.GRPC_SERVICES.COMPANY)),
-    __metadata("design:paramtypes", [Object, Object])
+    __metadata("design:paramtypes", [auth_service_1.IamAuthService,
+        companies_service_1.CompanyService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

@@ -15,46 +15,43 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LeaveController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const leave_requests_service_1 = require("../../../leave-service/src/leave-requests/leave-requests.service");
+const leave_types_service_1 = require("../../../leave-service/src/leave-types/leave-types.service");
+const leave_balances_service_1 = require("../../../leave-service/src/leave-balances/leave-balances.service");
+const encashment_service_1 = require("../../../leave-service/src/encashment/encashment.service");
+const blackouts_service_1 = require("../../../leave-service/src/blackouts/blackouts.service");
 let LeaveController = class LeaveController {
-    client;
     reqService;
     typeService;
     balService;
     encService;
     boService;
-    liabService;
-    constructor(client) {
-        this.client = client;
+    constructor(reqService, typeService, balService, encService, boService) {
+        this.reqService = reqService;
+        this.typeService = typeService;
+        this.balService = balService;
+        this.encService = encService;
+        this.boService = boService;
     }
-    onModuleInit() {
-        this.reqService = this.client.getService('LeaveRequestService');
-        this.typeService = this.client.getService('LeaveTypeService');
-        this.balService = this.client.getService('LeaveBalanceService');
-        this.encService = this.client.getService('LeaveEncashmentService');
-        this.boService = this.client.getService('BlackoutPeriodService');
-        this.liabService = this.client.getService('LeaveLiabilityService');
-    }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.reqService.CreateRequest(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.reqService.ListRequests(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.reqService.GetRequest({ id })); }
-    approve(id, body) { return (0, rxjs_1.firstValueFrom)(this.reqService.ApproveRequest({ id, ...body })); }
-    reject(id, body) { return (0, rxjs_1.firstValueFrom)(this.reqService.RejectRequest({ id, ...body })); }
-    calendar(companyId, query) { return (0, rxjs_1.firstValueFrom)(this.reqService.GetCalendarEvents({ companyId, ...query })); }
-    createType(body) { return (0, rxjs_1.firstValueFrom)(this.typeService.CreateType(body)); }
-    listTypes(query) { return (0, rxjs_1.firstValueFrom)(this.typeService.ListTypes(query)); }
-    getType(id) { return (0, rxjs_1.firstValueFrom)(this.typeService.GetType({ id })); }
-    updateType(id, body) { return (0, rxjs_1.firstValueFrom)(this.typeService.UpdateType({ id, ...body })); }
-    deleteType(id) { return (0, rxjs_1.firstValueFrom)(this.typeService.DeleteType({ id })); }
-    listBalances(employeeId) { return (0, rxjs_1.firstValueFrom)(this.balService.ListBalances({ employeeId })); }
-    accrue(body) { return (0, rxjs_1.firstValueFrom)(this.balService.AccrueLeave(body)); }
-    createEnc(body) { return (0, rxjs_1.firstValueFrom)(this.encService.CreateEncashment(body)); }
-    listEnc(query) { return (0, rxjs_1.firstValueFrom)(this.encService.ListEncashments(query)); }
-    createBO(body) { return (0, rxjs_1.firstValueFrom)(this.boService.CreateBlackout(body)); }
-    listBO(query) { return (0, rxjs_1.firstValueFrom)(this.boService.ListBlackouts(query)); }
-    getLiability(companyId) { return (0, rxjs_1.firstValueFrom)(this.liabService.GetLiability({ companyId })); }
+    create(body) { return this.reqService.create(body); }
+    list(query) { return this.reqService.list(query.companyId, query); }
+    get(id) { return this.reqService.get(id); }
+    approve(id, body) { return this.reqService.approve(id, body.approvedBy, body.notes); }
+    reject(id, body) { return this.reqService.reject(id, body.rejectedBy, body.reason); }
+    calendar(companyId, query) { return this.reqService.getCalendarEvents(companyId, query.year, query.month); }
+    createType(body) { return this.typeService.create(body); }
+    listTypes(query) { return this.typeService.list(query.companyId); }
+    getType(id) { return this.typeService.get(id); }
+    updateType(id, body) { return this.typeService.update(id, body); }
+    deleteType(id) { return this.typeService.delete(id); }
+    listBalances(employeeId) { return this.balService.listBalances(undefined, employeeId); }
+    accrue(body) { return this.balService.accrue(body); }
+    createEnc(body) { return this.encService.create(body); }
+    listEnc(query) { return this.encService.list(query.companyId, query.status); }
+    createBO(body) { return this.boService.create(body); }
+    listBO(query) { return this.boService.list(query.companyId); }
+    getLiability(companyId) { return this.balService.getLiability(companyId); }
 };
 exports.LeaveController = LeaveController;
 __decorate([
@@ -291,7 +288,10 @@ exports.LeaveController = LeaveController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('leave'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.LEAVE)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [leave_requests_service_1.LeaveRequestService,
+        leave_types_service_1.LeaveTypeService,
+        leave_balances_service_1.LeaveBalanceService,
+        encashment_service_1.EncashmentService,
+        blackouts_service_1.BlackoutService])
 ], LeaveController);
 //# sourceMappingURL=leave.controller.js.map

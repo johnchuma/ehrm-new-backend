@@ -1,16 +1,66 @@
-import { ClientGrpc } from '@nestjs/microservices';
+import { IntegrationService } from '../../../integrations-service/src/integrations/integrations.service';
+import { WebhookService } from '../../../integrations-service/src/webhooks/webhooks.service';
 export declare class IntegrationsController {
-    private readonly client;
-    private intService;
-    private whService;
-    constructor(client: ClientGrpc);
-    onModuleInit(): void;
-    create(body: any): Promise<unknown>;
-    list(query: any): Promise<unknown>;
-    update(id: string, body: any): Promise<unknown>;
-    remove(id: string): Promise<unknown>;
-    toggle(id: string, body: any): Promise<unknown>;
-    createWh(body: any): Promise<unknown>;
-    listWh(query: any): Promise<unknown>;
-    removeWh(id: string): Promise<unknown>;
+    private readonly integrationService;
+    private readonly webhookService;
+    constructor(integrationService: IntegrationService, webhookService: WebhookService);
+    create(body: any): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        type: any;
+        provider: any;
+        config: any;
+        status: any;
+        enabled: any;
+        lastSyncAt: any;
+        createdAt: any;
+    }>;
+    list(query: any): Promise<{
+        integrations: any;
+    }>;
+    update(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        type: any;
+        provider: any;
+        config: any;
+        status: any;
+        enabled: any;
+        lastSyncAt: any;
+        createdAt: any;
+    }>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    toggle(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        type: any;
+        provider: any;
+        config: any;
+        status: any;
+        enabled: any;
+        lastSyncAt: any;
+        createdAt: any;
+    }>;
+    createWh(body: any): Promise<{
+        id: any;
+        companyId: any;
+        url: any;
+        events: any;
+        secret: any;
+        status: any;
+        createdAt: any;
+    }>;
+    listWh(query: any): Promise<{
+        webhooks: any;
+    }>;
+    removeWh(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
 }

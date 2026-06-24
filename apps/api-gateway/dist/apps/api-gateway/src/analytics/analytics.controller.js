@@ -15,21 +15,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnalyticsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const analytics_service_1 = require("../../../analytics-service/src/analytics/analytics.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let AnalyticsController = class AnalyticsController {
-    client;
     service;
-    constructor(client) {
-        this.client = client;
+    constructor(service) {
+        this.service = service;
     }
-    onModuleInit() { this.service = this.client.getService('AnalyticsService'); }
-    dashboard(companyId) { return (0, rxjs_1.firstValueFrom)(this.service.GetDashboard({ companyId })); }
-    headcount(companyId) { return (0, rxjs_1.firstValueFrom)(this.service.GetHeadcountAnalytics({ companyId })); }
-    attendance(companyId) { return (0, rxjs_1.firstValueFrom)(this.service.GetAttendanceAnalytics({ companyId })); }
-    leave(companyId) { return (0, rxjs_1.firstValueFrom)(this.service.GetLeaveAnalytics({ companyId })); }
-    payroll(companyId) { return (0, rxjs_1.firstValueFrom)(this.service.GetPayrollAnalytics({ companyId })); }
+    dashboard(companyId) { return this.service.getDashboard(companyId); }
+    headcount(companyId) { return this.service.getHeadcount(companyId); }
+    attendance(companyId) { return this.service.getAttendanceAnalytics(companyId); }
+    leave(companyId) { return this.service.getLeaveAnalytics(companyId); }
+    payroll(companyId) { return this.service.getPayrollAnalytics(companyId); }
 };
 exports.AnalyticsController = AnalyticsController;
 __decorate([
@@ -72,7 +69,6 @@ exports.AnalyticsController = AnalyticsController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('analytics'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.ANALYTICS)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [analytics_service_1.AnalyticsService])
 ], AnalyticsController);
 //# sourceMappingURL=analytics.controller.js.map

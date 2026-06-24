@@ -15,28 +15,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.IntegrationsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const integrations_service_1 = require("../../../integrations-service/src/integrations/integrations.service");
+const webhooks_service_1 = require("../../../integrations-service/src/webhooks/webhooks.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let IntegrationsController = class IntegrationsController {
-    client;
-    intService;
-    whService;
-    constructor(client) {
-        this.client = client;
+    integrationService;
+    webhookService;
+    constructor(integrationService, webhookService) {
+        this.integrationService = integrationService;
+        this.webhookService = webhookService;
     }
-    onModuleInit() {
-        this.intService = this.client.getService('IntegrationService');
-        this.whService = this.client.getService('WebhookService');
-    }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.intService.CreateIntegration(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.intService.ListIntegrations(query)); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.intService.UpdateIntegration({ id, ...body })); }
-    remove(id) { return (0, rxjs_1.firstValueFrom)(this.intService.DeleteIntegration({ id })); }
-    toggle(id, body) { return (0, rxjs_1.firstValueFrom)(this.intService.ToggleIntegration({ id, ...body })); }
-    createWh(body) { return (0, rxjs_1.firstValueFrom)(this.whService.CreateWebhook(body)); }
-    listWh(query) { return (0, rxjs_1.firstValueFrom)(this.whService.ListWebhooks(query)); }
-    removeWh(id) { return (0, rxjs_1.firstValueFrom)(this.whService.DeleteWebhook({ id })); }
+    create(body) { return this.integrationService.create(body); }
+    list(query) { return this.integrationService.list(query.companyId, query.type); }
+    update(id, body) { return this.integrationService.update(id, body); }
+    remove(id) { return this.integrationService.delete(id); }
+    toggle(id, body) { return this.integrationService.toggle(id, body.isActive); }
+    createWh(body) { return this.webhookService.create(body); }
+    listWh(query) { return this.webhookService.list(query.companyId); }
+    removeWh(id) { return this.webhookService.delete(id); }
 };
 exports.IntegrationsController = IntegrationsController;
 __decorate([
@@ -163,7 +159,7 @@ exports.IntegrationsController = IntegrationsController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('integrations'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.INTEGRATIONS)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [integrations_service_1.IntegrationService,
+        webhooks_service_1.WebhookService])
 ], IntegrationsController);
 //# sourceMappingURL=integrations.controller.js.map

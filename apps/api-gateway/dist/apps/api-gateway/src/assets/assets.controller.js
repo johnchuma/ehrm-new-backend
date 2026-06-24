@@ -15,28 +15,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AssetsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const assets_service_1 = require("../../../assets-service/src/assets/assets.service");
+const assignments_service_1 = require("../../../assets-service/src/assignments/assignments.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let AssetsController = class AssetsController {
-    client;
     assetService;
     assignService;
-    constructor(client) {
-        this.client = client;
+    constructor(assetService, assignService) {
+        this.assetService = assetService;
+        this.assignService = assignService;
     }
-    onModuleInit() {
-        this.assetService = this.client.getService('AssetService');
-        this.assignService = this.client.getService('AssetAssignmentService');
-    }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.assetService.CreateAsset(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.assetService.ListAssets(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.assetService.GetAsset({ id })); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.assetService.UpdateAsset({ id, ...body })); }
-    remove(id) { return (0, rxjs_1.firstValueFrom)(this.assetService.DeleteAsset({ id })); }
-    assign(body) { return (0, rxjs_1.firstValueFrom)(this.assignService.AssignAsset(body)); }
-    return(id, body) { return (0, rxjs_1.firstValueFrom)(this.assignService.ReturnAsset({ id, ...body })); }
-    listAssign(query) { return (0, rxjs_1.firstValueFrom)(this.assignService.ListAssignments(query)); }
+    create(body) { return this.assetService.create(body); }
+    list(query) { return this.assetService.list(query.companyId, query); }
+    get(id) { return this.assetService.get(id); }
+    update(id, body) { return this.assetService.update(id, body); }
+    remove(id) { return this.assetService.delete(id); }
+    assign(body) { return this.assignService.assign(body); }
+    return(id, body) { return this.assignService.returnAsset(id, body.returnDate, body.condition, body.notes); }
+    listAssign(query) { return this.assignService.list(query.companyId, query.employeeId); }
 };
 exports.AssetsController = AssetsController;
 __decorate([
@@ -156,7 +152,7 @@ exports.AssetsController = AssetsController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('assets'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.ASSETS)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [assets_service_1.AssetService,
+        assignments_service_1.AssignmentService])
 ], AssetsController);
 //# sourceMappingURL=assets.controller.js.map

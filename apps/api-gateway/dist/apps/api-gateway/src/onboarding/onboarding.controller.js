@@ -15,29 +15,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OnboardingController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const onboarding_service_1 = require("../../../onboarding-service/src/onboarding/onboarding.service");
+const tasks_service_1 = require("../../../onboarding-service/src/tasks/tasks.service");
 let OnboardingController = class OnboardingController {
-    client;
     onbService;
     taskService;
-    constructor(client) {
-        this.client = client;
+    constructor(onbService, taskService) {
+        this.onbService = onbService;
+        this.taskService = taskService;
     }
-    onModuleInit() {
-        this.onbService = this.client.getService('OnboardingService');
-        this.taskService = this.client.getService('OnboardingTaskService');
-    }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.onbService.CreateOnboarding(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.onbService.ListOnboardings(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.onbService.GetOnboarding({ id })); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.onbService.UpdateOnboarding({ id, ...body })); }
-    advance(id, body) { return (0, rxjs_1.firstValueFrom)(this.onbService.AdvanceStage({ id, ...body })); }
-    complete(id) { return (0, rxjs_1.firstValueFrom)(this.onbService.CompleteOnboarding({ id })); }
-    createTask(body) { return (0, rxjs_1.firstValueFrom)(this.taskService.CreateTask(body)); }
-    listTasks(onboardingId) { return (0, rxjs_1.firstValueFrom)(this.taskService.ListTasks({ onboardingId })); }
-    completeTask(id) { return (0, rxjs_1.firstValueFrom)(this.taskService.CompleteTask({ id })); }
+    create(body) { return this.onbService.create(body); }
+    list(query) { return this.onbService.list(query.companyId, query.status); }
+    get(id) { return this.onbService.get(id); }
+    update(id, body) { return this.onbService.update(id, body); }
+    advance(id, body) { return this.onbService.advanceStage(id, body.targetStage); }
+    complete(id) { return this.onbService.complete(id); }
+    createTask(body) { return this.taskService.create(body); }
+    listTasks(onboardingId) { return this.taskService.list(onboardingId); }
+    completeTask(id) { return this.taskService.complete(id); }
 };
 exports.OnboardingController = OnboardingController;
 __decorate([
@@ -160,7 +156,7 @@ exports.OnboardingController = OnboardingController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('onboarding'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.ONBOARDING)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [onboarding_service_1.OnboardingService,
+        tasks_service_1.OnboardingTaskService])
 ], OnboardingController);
 //# sourceMappingURL=onboarding.controller.js.map

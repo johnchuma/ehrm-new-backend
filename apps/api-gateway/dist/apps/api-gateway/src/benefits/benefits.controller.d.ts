@@ -1,15 +1,63 @@
-import { ClientGrpc } from '@nestjs/microservices';
+import { BenefitService } from '../../../benefits-service/src/benefits/benefits.service';
+import { EnrollmentService } from '../../../benefits-service/src/enrollments/enrollments.service';
 export declare class BenefitsController {
-    private readonly client;
-    private benService;
-    private enrService;
-    constructor(client: ClientGrpc);
-    onModuleInit(): void;
-    create(body: any): Promise<unknown>;
-    list(query: any): Promise<unknown>;
-    get(id: string): Promise<unknown>;
-    update(id: string, body: any): Promise<unknown>;
-    remove(id: string): Promise<unknown>;
-    enroll(body: any): Promise<unknown>;
-    listEnr(query: any): Promise<unknown>;
+    private readonly benService;
+    private readonly enrService;
+    constructor(benService: BenefitService, enrService: EnrollmentService);
+    create(body: any): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        type: any;
+        description: any;
+        employeeContribution: any;
+        employerContribution: any;
+        eligibility: any;
+        status: any;
+        createdAt: any;
+    }>;
+    list(query: any): Promise<{
+        benefits: any;
+    }>;
+    get(id: string): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        type: any;
+        description: any;
+        employeeContribution: any;
+        employerContribution: any;
+        eligibility: any;
+        status: any;
+        createdAt: any;
+    }>;
+    update(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        name: any;
+        type: any;
+        description: any;
+        employeeContribution: any;
+        employerContribution: any;
+        eligibility: any;
+        status: any;
+        createdAt: any;
+    }>;
+    remove(id: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    enroll(body: any): Promise<{
+        id: any;
+        benefitId: any;
+        benefitName: any;
+        employeeId: any;
+        employeeName: any;
+        effectiveDate: any;
+        status: any;
+        enrolledAt: any;
+    }>;
+    listEnr(query: any): Promise<{
+        enrollments: any;
+    }>;
 }

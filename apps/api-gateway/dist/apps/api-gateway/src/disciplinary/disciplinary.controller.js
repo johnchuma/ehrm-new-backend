@@ -15,27 +15,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DisciplinaryController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const cases_service_1 = require("../../../disciplinary-service/src/cases/cases.service");
+const actions_service_1 = require("../../../disciplinary-service/src/actions/actions.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let DisciplinaryController = class DisciplinaryController {
-    client;
     caseService;
     actService;
-    constructor(client) {
-        this.client = client;
+    constructor(caseService, actService) {
+        this.caseService = caseService;
+        this.actService = actService;
     }
-    onModuleInit() {
-        this.caseService = this.client.getService('DisciplinaryService');
-        this.actService = this.client.getService('DisciplinaryActionService');
-    }
-    createCase(body) { return (0, rxjs_1.firstValueFrom)(this.caseService.CreateCase(body)); }
-    listCases(query) { return (0, rxjs_1.firstValueFrom)(this.caseService.ListCases(query)); }
-    getCase(id) { return (0, rxjs_1.firstValueFrom)(this.caseService.GetCase({ id })); }
-    updateCase(id, body) { return (0, rxjs_1.firstValueFrom)(this.caseService.UpdateCase({ id, ...body })); }
-    createAction(body) { return (0, rxjs_1.firstValueFrom)(this.actService.CreateAction(body)); }
-    approveAction(id, body) { return (0, rxjs_1.firstValueFrom)(this.actService.ApproveAction({ id, ...body })); }
-    listActions(caseId) { return (0, rxjs_1.firstValueFrom)(this.actService.ListActions({ caseId })); }
+    createCase(body) { return this.caseService.create(body); }
+    listCases(query) { return this.caseService.list(query.companyId, query); }
+    getCase(id) { return this.caseService.get(id); }
+    updateCase(id, body) { return this.caseService.update(id, body); }
+    createAction(body) { return this.actService.create(body); }
+    approveAction(id, body) { return this.actService.approve(id, body.status || 'Approved'); }
+    listActions(caseId) { return this.actService.list(caseId); }
 };
 exports.DisciplinaryController = DisciplinaryController;
 __decorate([
@@ -145,7 +141,7 @@ exports.DisciplinaryController = DisciplinaryController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('disciplinary'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.DISCIPLINARY)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [cases_service_1.CaseService,
+        actions_service_1.ActionService])
 ], DisciplinaryController);
 //# sourceMappingURL=disciplinary.controller.js.map

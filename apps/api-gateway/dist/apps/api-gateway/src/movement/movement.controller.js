@@ -15,26 +15,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MovementController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const transfers_service_1 = require("../../../movement-service/src/transfers/transfers.service");
+const promotions_service_1 = require("../../../movement-service/src/promotions/promotions.service");
 let MovementController = class MovementController {
-    client;
     trService;
     prService;
-    constructor(client) {
-        this.client = client;
+    constructor(trService, prService) {
+        this.trService = trService;
+        this.prService = prService;
     }
-    onModuleInit() {
-        this.trService = this.client.getService('TransferService');
-        this.prService = this.client.getService('PromotionService');
-    }
-    createTr(body) { return (0, rxjs_1.firstValueFrom)(this.trService.CreateTransfer(body)); }
-    listTr(query) { return (0, rxjs_1.firstValueFrom)(this.trService.ListTransfers(query)); }
-    approveTr(id, body) { return (0, rxjs_1.firstValueFrom)(this.trService.ApproveTransfer({ id, ...body })); }
-    createPr(body) { return (0, rxjs_1.firstValueFrom)(this.prService.CreatePromotion(body)); }
-    listPr(query) { return (0, rxjs_1.firstValueFrom)(this.prService.ListPromotions(query)); }
-    approvePr(id, body) { return (0, rxjs_1.firstValueFrom)(this.prService.ApprovePromotion({ id, ...body })); }
+    createTr(body) { return this.trService.create(body); }
+    listTr(query) { return this.trService.list(query.companyId, query.status); }
+    approveTr(id, body) { return this.trService.approve(id, 'Approved'); }
+    createPr(body) { return this.prService.create(body); }
+    listPr(query) { return this.prService.list(query.companyId, query.status); }
+    approvePr(id, body) { return this.prService.approve(id, 'Approved'); }
 };
 exports.MovementController = MovementController;
 __decorate([
@@ -137,7 +133,7 @@ exports.MovementController = MovementController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('movement'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.MOVEMENT)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [transfers_service_1.TransferService,
+        promotions_service_1.PromotionService])
 ], MovementController);
 //# sourceMappingURL=movement.controller.js.map

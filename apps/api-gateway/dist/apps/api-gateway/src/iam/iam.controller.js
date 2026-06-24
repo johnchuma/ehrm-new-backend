@@ -15,36 +15,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.IamController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const users_service_1 = require("../../../iam-service/src/users/users.service");
+const roles_service_1 = require("../../../iam-service/src/roles/roles.service");
 let IamController = class IamController {
-    client;
     userService;
     roleService;
-    constructor(client) {
-        this.client = client;
+    constructor(userService, roleService) {
+        this.userService = userService;
+        this.roleService = roleService;
     }
-    onModuleInit() {
-        this.userService = this.client.getService('UserService');
-        this.roleService = this.client.getService('RoleService');
-    }
-    createUser(body) { return (0, rxjs_1.firstValueFrom)(this.userService.CreateUser(body)); }
-    listUsers(query) { return (0, rxjs_1.firstValueFrom)(this.userService.ListUsers(query)); }
-    getUser(id) { return (0, rxjs_1.firstValueFrom)(this.userService.GetUser({ id })); }
-    updateUser(id, body) { return (0, rxjs_1.firstValueFrom)(this.userService.UpdateUser({ id, ...body })); }
-    deleteUser(id) { return (0, rxjs_1.firstValueFrom)(this.userService.DeleteUser({ id })); }
+    createUser(body) { return this.userService.createUser(body); }
+    listUsers(query) { return this.userService.listUsers(query.companyId, query.page, query.pageSize, query.search); }
+    getUser(id) { return this.userService.getUser(id); }
+    updateUser(id, body) { return this.userService.updateUser(id, body); }
+    deleteUser(id) { return this.userService.deleteUser(id); }
     assignRole(userId, roleId) {
-        return (0, rxjs_1.firstValueFrom)(this.userService.AssignRole({ userId, roleId }));
+        return this.userService.assignRole(userId, roleId);
     }
     removeRole(userId, roleId) {
-        return (0, rxjs_1.firstValueFrom)(this.userService.RemoveRole({ userId, roleId }));
+        return this.userService.removeRole(userId, roleId);
     }
-    createRole(body) { return (0, rxjs_1.firstValueFrom)(this.roleService.CreateRole(body)); }
-    listRoles(query) { return (0, rxjs_1.firstValueFrom)(this.roleService.ListRoles(query)); }
-    getRole(id) { return (0, rxjs_1.firstValueFrom)(this.roleService.GetRole({ id })); }
-    updateRole(id, body) { return (0, rxjs_1.firstValueFrom)(this.roleService.UpdateRole({ id, ...body })); }
-    deleteRole(id) { return (0, rxjs_1.firstValueFrom)(this.roleService.DeleteRole({ id })); }
+    createRole(body) { return this.roleService.createRole(body); }
+    listRoles(query) { return this.roleService.listRoles(query.companyId); }
+    getRole(id) { return this.roleService.getRole(id); }
+    updateRole(id, body) { return this.roleService.updateRole(id, body); }
+    deleteRole(id) { return this.roleService.deleteRole(id); }
 };
 exports.IamController = IamController;
 __decorate([
@@ -201,7 +197,7 @@ exports.IamController = IamController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('iam'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.IAM)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [users_service_1.UserService,
+        roles_service_1.RoleService])
 ], IamController);
 //# sourceMappingURL=iam.controller.js.map

@@ -1,14 +1,71 @@
-import { ClientGrpc } from '@nestjs/microservices';
+import { TransferService } from '../../../movement-service/src/transfers/transfers.service';
+import { PromotionService } from '../../../movement-service/src/promotions/promotions.service';
 export declare class MovementController {
-    private readonly client;
-    private trService;
-    private prService;
-    constructor(client: ClientGrpc);
-    onModuleInit(): void;
-    createTr(body: any): Promise<unknown>;
-    listTr(query: any): Promise<unknown>;
-    approveTr(id: string, body: any): Promise<unknown>;
-    createPr(body: any): Promise<unknown>;
-    listPr(query: any): Promise<unknown>;
-    approvePr(id: string, body: any): Promise<unknown>;
+    private readonly trService;
+    private readonly prService;
+    constructor(trService: TransferService, prService: PromotionService);
+    createTr(body: any): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        employeeName: any;
+        fromBranchId: any;
+        fromDepartmentId: any;
+        toBranchId: any;
+        toDepartmentId: any;
+        effectiveDate: any;
+        reason: any;
+        status: any;
+        createdAt: any;
+    }>;
+    listTr(query: any): Promise<{
+        transfers: any;
+    }>;
+    approveTr(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        employeeName: any;
+        fromBranchId: any;
+        fromDepartmentId: any;
+        toBranchId: any;
+        toDepartmentId: any;
+        effectiveDate: any;
+        reason: any;
+        status: any;
+        createdAt: any;
+    }>;
+    createPr(body: any): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        employeeName: any;
+        fromTitle: any;
+        toTitle: any;
+        fromGrade: any;
+        toGrade: any;
+        newSalary: any;
+        effectiveDate: any;
+        reason: any;
+        status: any;
+        createdAt: any;
+    }>;
+    listPr(query: any): Promise<{
+        promotions: any;
+    }>;
+    approvePr(id: string, body: any): Promise<{
+        id: any;
+        companyId: any;
+        employeeId: any;
+        employeeName: any;
+        fromTitle: any;
+        toTitle: any;
+        fromGrade: any;
+        toGrade: any;
+        newSalary: any;
+        effectiveDate: any;
+        reason: any;
+        status: any;
+        createdAt: any;
+    }>;
 }

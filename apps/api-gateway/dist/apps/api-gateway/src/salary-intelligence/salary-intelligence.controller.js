@@ -15,20 +15,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SalaryIntelligenceController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const salary_intelligence_service_1 = require("../../../salary-intelligence-service/src/salary-intelligence/salary-intelligence.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let SalaryIntelligenceController = class SalaryIntelligenceController {
-    client;
-    service;
-    constructor(client) {
-        this.client = client;
+    salaryIntelligenceService;
+    constructor(salaryIntelligenceService) {
+        this.salaryIntelligenceService = salaryIntelligenceService;
     }
-    onModuleInit() { this.service = this.client.getService('SalaryIntelligenceService'); }
-    benchmarks(query) { return (0, rxjs_1.firstValueFrom)(this.service.GetBenchmarks(query)); }
-    compensation(query) { return (0, rxjs_1.firstValueFrom)(this.service.GetCompensationAnalysis(query)); }
-    structure(companyId) { return (0, rxjs_1.firstValueFrom)(this.service.GetSalaryStructure({ companyId })); }
-    simulate(body) { return (0, rxjs_1.firstValueFrom)(this.service.SimulateSalary(body)); }
+    benchmarks(query) { return this.salaryIntelligenceService.getBenchmarks(query.companyId, query.jobTitle, query.department); }
+    compensation(query) { return this.salaryIntelligenceService.getCompensationAnalysis(query.companyId, query.departmentId); }
+    structure(companyId) { return this.salaryIntelligenceService.getSalaryStructure(companyId); }
+    simulate(body) { return this.salaryIntelligenceService.simulateSalary(body.companyId, body.employeeId, body.newSalary); }
 };
 exports.SalaryIntelligenceController = SalaryIntelligenceController;
 __decorate([
@@ -78,7 +75,6 @@ exports.SalaryIntelligenceController = SalaryIntelligenceController = __decorate
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('salary-intelligence'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.SALARY_INTELLIGENCE)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [salary_intelligence_service_1.SalaryIntelligenceService])
 ], SalaryIntelligenceController);
 //# sourceMappingURL=salary-intelligence.controller.js.map

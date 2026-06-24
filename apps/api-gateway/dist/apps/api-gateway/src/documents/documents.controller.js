@@ -15,22 +15,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DocumentsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const documents_service_1 = require("../../../documents-service/src/documents/documents.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let DocumentsController = class DocumentsController {
-    client;
-    service;
-    constructor(client) {
-        this.client = client;
+    documentService;
+    constructor(documentService) {
+        this.documentService = documentService;
     }
-    onModuleInit() { this.service = this.client.getService('DocumentService'); }
-    upload(body) { return (0, rxjs_1.firstValueFrom)(this.service.UploadDocument(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.service.ListDocuments(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.service.GetDocument({ id })); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.service.UpdateDocument({ id, ...body })); }
-    remove(id) { return (0, rxjs_1.firstValueFrom)(this.service.DeleteDocument({ id })); }
-    share(id, body) { return (0, rxjs_1.firstValueFrom)(this.service.ShareDocument({ id, ...body })); }
+    upload(body) { return this.documentService.upload(body); }
+    list(query) { return this.documentService.list(query.companyId, query); }
+    get(id) { return this.documentService.get(id); }
+    update(id, body) { return this.documentService.update(id, body); }
+    remove(id) { return this.documentService.delete(id); }
+    share(id, body) { return this.documentService.share(id, [body.sharedWith], body.expiresAt); }
 };
 exports.DocumentsController = DocumentsController;
 __decorate([
@@ -119,7 +116,6 @@ exports.DocumentsController = DocumentsController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('documents'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.DOCUMENTS)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [documents_service_1.DocumentService])
 ], DocumentsController);
 //# sourceMappingURL=documents.controller.js.map

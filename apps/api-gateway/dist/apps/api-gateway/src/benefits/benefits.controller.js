@@ -15,27 +15,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BenefitsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const benefits_service_1 = require("../../../benefits-service/src/benefits/benefits.service");
+const enrollments_service_1 = require("../../../benefits-service/src/enrollments/enrollments.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let BenefitsController = class BenefitsController {
-    client;
     benService;
     enrService;
-    constructor(client) {
-        this.client = client;
+    constructor(benService, enrService) {
+        this.benService = benService;
+        this.enrService = enrService;
     }
-    onModuleInit() {
-        this.benService = this.client.getService('BenefitService');
-        this.enrService = this.client.getService('BenefitEnrollmentService');
-    }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.benService.CreateBenefit(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.benService.ListBenefits(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.benService.GetBenefit({ id })); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.benService.UpdateBenefit({ id, ...body })); }
-    remove(id) { return (0, rxjs_1.firstValueFrom)(this.benService.DeleteBenefit({ id })); }
-    enroll(body) { return (0, rxjs_1.firstValueFrom)(this.enrService.EnrollEmployee(body)); }
-    listEnr(query) { return (0, rxjs_1.firstValueFrom)(this.enrService.ListEnrollments(query)); }
+    create(body) { return this.benService.create(body); }
+    list(query) { return this.benService.list(query.companyId, query.type); }
+    get(id) { return this.benService.get(id); }
+    update(id, body) { return this.benService.update(id, body); }
+    remove(id) { return this.benService.delete(id); }
+    enroll(body) { return this.enrService.enroll(body); }
+    listEnr(query) { return this.enrService.list(query.companyId, query.employeeId); }
 };
 exports.BenefitsController = BenefitsController;
 __decorate([
@@ -144,7 +140,7 @@ exports.BenefitsController = BenefitsController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('benefits'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.BENEFITS)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [benefits_service_1.BenefitService,
+        enrollments_service_1.EnrollmentService])
 ], BenefitsController);
 //# sourceMappingURL=benefits.controller.js.map

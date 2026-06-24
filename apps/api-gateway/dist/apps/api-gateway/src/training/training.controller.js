@@ -15,32 +15,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TrainingController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const programs_service_1 = require("../../../training-service/src/programs/programs.service");
+const enrollments_service_1 = require("../../../training-service/src/enrollments/enrollments.service");
+const certifications_service_1 = require("../../../training-service/src/certifications/certifications.service");
 let TrainingController = class TrainingController {
-    client;
     progService;
     enrService;
     certService;
-    constructor(client) {
-        this.client = client;
+    constructor(progService, enrService, certService) {
+        this.progService = progService;
+        this.enrService = enrService;
+        this.certService = certService;
     }
-    onModuleInit() {
-        this.progService = this.client.getService('ProgramService');
-        this.enrService = this.client.getService('EnrollmentService');
-        this.certService = this.client.getService('CertificationService');
-    }
-    createProg(body) { return (0, rxjs_1.firstValueFrom)(this.progService.CreateProgram(body)); }
-    listProgs(query) { return (0, rxjs_1.firstValueFrom)(this.progService.ListPrograms(query)); }
-    getProg(id) { return (0, rxjs_1.firstValueFrom)(this.progService.GetProgram({ id })); }
-    updateProg(id, body) { return (0, rxjs_1.firstValueFrom)(this.progService.UpdateProgram({ id, ...body })); }
-    deleteProg(id) { return (0, rxjs_1.firstValueFrom)(this.progService.DeleteProgram({ id })); }
-    enroll(body) { return (0, rxjs_1.firstValueFrom)(this.enrService.EnrollEmployee(body)); }
-    listEnr(query) { return (0, rxjs_1.firstValueFrom)(this.enrService.ListEnrollments(query)); }
-    updateEnr(id, body) { return (0, rxjs_1.firstValueFrom)(this.enrService.UpdateEnrollment({ id, ...body })); }
-    issueCert(body) { return (0, rxjs_1.firstValueFrom)(this.certService.IssueCertification(body)); }
-    listCerts(query) { return (0, rxjs_1.firstValueFrom)(this.certService.ListCertifications(query)); }
+    createProg(body) { return this.progService.create(body); }
+    listProgs(query) { return this.progService.list(query.companyId, query); }
+    getProg(id) { return this.progService.get(id); }
+    updateProg(id, body) { return this.progService.update(id, body); }
+    deleteProg(id) { return this.progService.delete(id); }
+    enroll(body) { return this.enrService.enroll(body); }
+    listEnr(query) { return this.enrService.list(query.programId, query.employeeId); }
+    updateEnr(id, body) { return this.enrService.update(id, body); }
+    issueCert(body) { return this.certService.issue(body); }
+    listCerts(query) { return this.certService.list(query.employeeId, query.companyId); }
 };
 exports.TrainingController = TrainingController;
 __decorate([
@@ -185,7 +182,8 @@ exports.TrainingController = TrainingController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('training'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.TRAINING)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [programs_service_1.ProgramService,
+        enrollments_service_1.EnrollmentService,
+        certifications_service_1.CertificationService])
 ], TrainingController);
 //# sourceMappingURL=training.controller.js.map

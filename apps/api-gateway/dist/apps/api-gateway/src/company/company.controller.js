@@ -15,41 +15,39 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CompanyController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const companies_service_1 = require("../../../company-service/src/companies/companies.service");
+const branches_service_1 = require("../../../company-service/src/branches/branches.service");
+const departments_service_1 = require("../../../company-service/src/departments/departments.service");
+const settings_service_1 = require("../../../company-service/src/settings/settings.service");
 let CompanyController = class CompanyController {
-    client;
     companyService;
     branchService;
     departmentService;
     settingsService;
-    constructor(client) {
-        this.client = client;
+    constructor(companyService, branchService, departmentService, settingsService) {
+        this.companyService = companyService;
+        this.branchService = branchService;
+        this.departmentService = departmentService;
+        this.settingsService = settingsService;
     }
-    onModuleInit() {
-        this.companyService = this.client.getService('CompanyService');
-        this.branchService = this.client.getService('BranchService');
-        this.departmentService = this.client.getService('DepartmentService');
-        this.settingsService = this.client.getService('CompanySettingsService');
-    }
-    createCompany(body) { return (0, rxjs_1.firstValueFrom)(this.companyService.CreateCompany(body)); }
-    listCompanies(query) { return (0, rxjs_1.firstValueFrom)(this.companyService.ListCompanies(query)); }
-    getCompany(id) { return (0, rxjs_1.firstValueFrom)(this.companyService.GetCompany({ id })); }
-    updateCompany(id, body) { return (0, rxjs_1.firstValueFrom)(this.companyService.UpdateCompany({ id, ...body })); }
-    deleteCompany(id) { return (0, rxjs_1.firstValueFrom)(this.companyService.DeleteCompany({ id })); }
-    createBranch(body) { return (0, rxjs_1.firstValueFrom)(this.branchService.CreateBranch(body)); }
-    listBranches(query) { return (0, rxjs_1.firstValueFrom)(this.branchService.ListBranches(query)); }
-    getBranch(id) { return (0, rxjs_1.firstValueFrom)(this.branchService.GetBranch({ id })); }
-    updateBranch(id, body) { return (0, rxjs_1.firstValueFrom)(this.branchService.UpdateBranch({ id, ...body })); }
-    deleteBranch(id) { return (0, rxjs_1.firstValueFrom)(this.branchService.DeleteBranch({ id })); }
-    createDepartment(body) { return (0, rxjs_1.firstValueFrom)(this.departmentService.CreateDepartment(body)); }
-    listDepartments(query) { return (0, rxjs_1.firstValueFrom)(this.departmentService.ListDepartments(query)); }
-    getDepartment(id) { return (0, rxjs_1.firstValueFrom)(this.departmentService.GetDepartment({ id })); }
-    updateDepartment(id, body) { return (0, rxjs_1.firstValueFrom)(this.departmentService.UpdateDepartment({ id, ...body })); }
-    deleteDepartment(id) { return (0, rxjs_1.firstValueFrom)(this.departmentService.DeleteDepartment({ id })); }
-    getSettings(companyId) { return (0, rxjs_1.firstValueFrom)(this.settingsService.GetSettings({ companyId })); }
-    updateSettings(companyId, body) { return (0, rxjs_1.firstValueFrom)(this.settingsService.UpdateSettings({ companyId, ...body })); }
+    createCompany(body) { return this.companyService.createCompany(body); }
+    listCompanies(query) { return this.companyService.listCompanies(query.page, query.pageSize, query.search, query.status); }
+    getCompany(id) { return this.companyService.getCompany(id); }
+    updateCompany(id, body) { return this.companyService.updateCompany(id, body); }
+    deleteCompany(id) { return this.companyService.deleteCompany(id); }
+    createBranch(body) { return this.branchService.createBranch(body); }
+    listBranches(query) { return this.branchService.listBranches(query.companyId); }
+    getBranch(id) { return this.branchService.getBranch(id); }
+    updateBranch(id, body) { return this.branchService.updateBranch(id, body); }
+    deleteBranch(id) { return this.branchService.deleteBranch(id); }
+    createDepartment(body) { return this.departmentService.createDepartment(body); }
+    listDepartments(query) { return this.departmentService.listDepartments(query.companyId, query.branchId); }
+    getDepartment(id) { return this.departmentService.getDepartment(id); }
+    updateDepartment(id, body) { return this.departmentService.updateDepartment(id, body); }
+    deleteDepartment(id) { return this.departmentService.deleteDepartment(id); }
+    getSettings(companyId) { return this.settingsService.getSettings(companyId); }
+    updateSettings(companyId, body) { return this.settingsService.updateSettings(companyId, body); }
 };
 exports.CompanyController = CompanyController;
 __decorate([
@@ -278,7 +276,9 @@ exports.CompanyController = CompanyController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('company'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.COMPANY)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [companies_service_1.CompanyService,
+        branches_service_1.BranchService,
+        departments_service_1.DepartmentService,
+        settings_service_1.SettingsService])
 ], CompanyController);
 //# sourceMappingURL=company.controller.js.map

@@ -15,23 +15,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TasksController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const rxjs_1 = require("rxjs");
-const grpc_module_1 = require("../../../../libs/common/src/grpc/grpc.module");
+const tasks_service_1 = require("../../../tasks-service/src/tasks/tasks.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let TasksController = class TasksController {
-    client;
-    service;
-    constructor(client) {
-        this.client = client;
+    taskService;
+    constructor(taskService) {
+        this.taskService = taskService;
     }
-    onModuleInit() { this.service = this.client.getService('TaskService'); }
-    create(body) { return (0, rxjs_1.firstValueFrom)(this.service.CreateTask(body)); }
-    list(query) { return (0, rxjs_1.firstValueFrom)(this.service.ListTasks(query)); }
-    get(id) { return (0, rxjs_1.firstValueFrom)(this.service.GetTask({ id })); }
-    update(id, body) { return (0, rxjs_1.firstValueFrom)(this.service.UpdateTask({ id, ...body })); }
-    remove(id) { return (0, rxjs_1.firstValueFrom)(this.service.DeleteTask({ id })); }
-    assign(id, body) { return (0, rxjs_1.firstValueFrom)(this.service.AssignTask({ id, ...body })); }
-    complete(id) { return (0, rxjs_1.firstValueFrom)(this.service.CompleteTask({ id })); }
+    create(body) { return this.taskService.create(body); }
+    list(query) { return this.taskService.list(query.companyId, query); }
+    get(id) { return this.taskService.get(id); }
+    update(id, body) { return this.taskService.update(id, body); }
+    remove(id) { return this.taskService.delete(id); }
+    assign(id, body) { return this.taskService.assign(id, body.assigneeId); }
+    complete(id) { return this.taskService.complete(id); }
 };
 exports.TasksController = TasksController;
 __decorate([
@@ -129,7 +126,6 @@ exports.TasksController = TasksController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('tasks'),
-    __param(0, (0, common_1.Inject)(grpc_module_1.GRPC_SERVICES.TASKS)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [tasks_service_1.TaskService])
 ], TasksController);
 //# sourceMappingURL=tasks.controller.js.map
