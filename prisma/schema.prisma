@@ -145,6 +145,8 @@ model Company {
   currency            String   @default("TZS")
   timezone            String   @default("Africa/Dar_es_Salaam")
   logo                String?  @db.Text
+  primaryColor        String?  @default("#EC782B")
+  secondaryColor      String?  @default("#1E84B8")
   subscriptionPlan    String   @default("FREE")
   industry            String?
   size                String?

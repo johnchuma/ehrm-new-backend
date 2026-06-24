@@ -78,6 +78,12 @@ export class UpdateCompanyDto {
 
   @ApiPropertyOptional({ example: 'ACTIVE' })
   status?: string;
+
+  @ApiPropertyOptional({ example: '#EC782B' })
+  primaryColor?: string;
+
+  @ApiPropertyOptional({ example: '#1E84B8' })
+  secondaryColor?: string;
 }
 
 export class UpdateSettingsDto {

@@ -1,5 +1,8 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Body, Param, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateCompanyDto, UpdateCompanyDto, UpdateSettingsDto } from '../auth/dto';
 
@@ -48,6 +51,8 @@ export class CompanyController {
     if (body.currency !== undefined) data.currency = body.currency;
     if (body.subscriptionPlan !== undefined) data.subscriptionPlan = body.subscriptionPlan;
     if (body.status !== undefined) data.status = body.status;
+    if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor;
+    if (body.secondaryColor !== undefined) data.secondaryColor = body.secondaryColor;
     return this.prisma.company.update({ where: { id }, data });
   }
 
@@ -67,6 +72,24 @@ export class CompanyController {
       create: { companyId, generalSettings: body.generalSettings || '{}' },
       update: { generalSettings: body.generalSettings },
     });
+  }
+
+  @Post('upload')
+  @ApiOperation({ summary: 'Upload a file (logo, etc.)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads',
+      filename: (req, file, cb) => {
+        const name = Date.now() + '-' + Math.random().toString(36).slice(2) + extname(file.originalname);
+        cb(null, name);
+      },
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
+  uploadFile(@UploadedFile() file: any) {
+    if (!file) return { error: 'No file uploaded' };
+    return { url: `/uploads/${file.filename}`, filename: file.filename };
   }
 
   @Get('branches')
