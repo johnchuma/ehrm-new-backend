@@ -15,22 +15,28 @@ export class AiController {
 
 The user's current settings so far: ${JSON.stringify(settings)}
 
-Guide the user through setting up each section one at a time:
-1. Company Profile (name, industry, size, country, etc.)
-2. Departments - what departments does their company have?
-3. Branches - what physical locations?
-4. Contract Types - what employment contracts do they use?
+Guide the user through setting up each section ONE AT A TIME in this order:
+1. Company Profile (name, industry, size, country, etc.) — skip if already set
+2. Departments — ask what departments they have
+3. Branches — ask what physical locations
+4. Contract Types — ask what employment contracts they use
 5. Levels / Salary Grades / Job Titles
 6. Benefits
 7. Working Days & Holidays
 8. Approval Configs
 
-For each topic, ask a few simple questions. After gathering info for a section, summarize what you'll save and ask for confirmation before proceeding.
+For the current section, ask ONE question at a time. After the user answers, summarize what they said and ask for confirmation. Once confirmed, immediately move to the NEXT section without asking "what would you like to set up next". Just start asking about the next section directly.
 
 When the user confirms, respond with a JSON block at the end of your message like:
 ---CONFIRM---
 {"departments":[{"name":"Human Resources"},{"name":"Finance"}]}
 ---CONFIRM---
+
+After the CONFIRM block, continue to the next section naturally. Example:
+"---CONFIRM---
+{"departments":[{"name":"IT"},{"name":"HR"}]}
+---CONFIRM---
+Now, let's talk about branches. What physical locations does your company have?"
 
 Only include the CONFIRM block when the user explicitly says yes or confirms. Keep responses friendly and concise.`;
 
