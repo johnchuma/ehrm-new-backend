@@ -306,6 +306,9 @@ let IamAuthService = class IamAuthService {
             companyId: user.companyId,
             roles: roleNames,
         });
+        await this.prisma.refreshToken.deleteMany({
+            where: { userId: user.id },
+        });
         await this.prisma.refreshToken.create({
             data: {
                 userId: user.id,
