@@ -29,7 +29,7 @@ export const DATABASE_URLS = {
   integrations: process.env.INTEGRATIONS_DATABASE_URL || 'mysql://root@localhost:3306/ehrm-integrations',
 };
 
-const PROJECT_ROOT = path.resolve(__dirname, '../../../../../..');
+const PROJECT_ROOT = path.resolve(__dirname, '../../../../../../../..');
 
 export function createPrismaClient(serviceName: string): any {
   const url = DATABASE_URLS[serviceName];
