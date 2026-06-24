@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { ComplianceService } from '../../../compliance-service/src/compliance/compliance.service';
+import { StatutoryService } from '../../../compliance-service/src/statutory/statutory.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Compliance')
@@ -10,15 +9,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('compliance')
 export class ComplianceController {
-  private compService: any;
-  private statService: any;
-
-  constructor(@Inject(GRPC_SERVICES.COMPLIANCE) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.compService = this.client.getService('ComplianceService');
-    this.statService = this.client.getService('StatutoryService');
-  }
+  constructor(
+    private readonly compService: ComplianceService,
+    private readonly statService: StatutoryService,
+  ) {}
 
   @Post('requirements')
   @ApiBody({
@@ -36,10 +30,10 @@ export class ComplianceController {
       },
     },
   })
-  createReq(@Body() body: any) { return firstValueFrom(this.compService.CreateRequirement(body)); }
+  createReq(@Body() body: any) { return this.compService.create(body); }
 
   @Get('requirements')
-  listReq(@Query() query: any) { return firstValueFrom(this.compService.ListRequirements(query)); }
+  listReq(@Query() query: any) { return this.compService.list(query.companyId, query.status); }
 
   @Put('requirements/:id')
   @ApiBody({
@@ -54,7 +48,7 @@ export class ComplianceController {
       },
     },
   })
-  updateReq(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.compService.UpdateRequirement({ id, ...body })); }
+  updateReq(@Param('id') id: string, @Body() body: any) { return this.compService.update(id, body); }
 
   @Post('filings')
   @ApiBody({
@@ -70,10 +64,10 @@ export class ComplianceController {
       },
     },
   })
-  createFiling(@Body() body: any) { return firstValueFrom(this.statService.CreateFiling(body)); }
+  createFiling(@Body() body: any) { return this.statService.create(body); }
 
   @Get('filings')
-  listFilings(@Query() query: any) { return firstValueFrom(this.statService.ListFilings(query)); }
+  listFilings(@Query() query: any) { return this.statService.list(query.companyId, query); }
 
   @Put('filings/:id')
   @ApiBody({
@@ -88,5 +82,5 @@ export class ComplianceController {
       },
     },
   })
-  updateFiling(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.statService.UpdateFiling({ id, ...body })); }
+  updateFiling(@Param('id') id: string, @Body() body: any) { return this.statService.update(id, body); }
 }

@@ -1,8 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { AIService } from '../../../exactai-service/src/ai/ai.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('ExactAI')
@@ -10,11 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('ai')
 export class ExactAIController {
-  private service: any;
-
-  constructor(@Inject(GRPC_SERVICES.EXACTAI) private readonly client: ClientGrpc) {}
-
-  onModuleInit() { this.service = this.client.getService('AIService'); }
+  constructor(private readonly aiService: AIService) {}
 
   @Post('chat')
   @ApiBody({
@@ -30,16 +24,16 @@ export class ExactAIController {
       },
     },
   })
-  chat(@Body() body: any) { return firstValueFrom(this.service.Chat(body)); }
+  chat(@Body() body: any) { return this.aiService.chat(body); }
 
   @Get('summarize/:employeeId')
-  summarize(@Param('employeeId') employeeId: string) { return firstValueFrom(this.service.SummarizeEmployee({ employeeId })); }
+  summarize(@Param('employeeId') employeeId: string) { return this.aiService.summarizeEmployee(employeeId); }
 
   @Get('insights')
-  insights(@Query() query: any) { return firstValueFrom(this.service.GetInsights(query)); }
+  insights(@Query() query: any) { return this.aiService.getInsights(query.companyId, query.type); }
 
   @Get('attrition')
-  predict(@Query() query: any) { return firstValueFrom(this.service.PredictAttrition(query)); }
+  predict(@Query() query: any) { return this.aiService.predictAttrition(query.companyId, query.departmentId); }
 
   @Post('recommend')
   @ApiBody({
@@ -54,5 +48,5 @@ export class ExactAIController {
       },
     },
   })
-  recommend(@Body() body: any) { return firstValueFrom(this.service.RecommendActions(body)); }
+  recommend(@Body() body: any) { return this.aiService.recommendActions(body.companyId, body.scenario); }
 }

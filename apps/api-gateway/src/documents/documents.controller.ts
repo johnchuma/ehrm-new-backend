@@ -1,8 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { DocumentService } from '../../../documents-service/src/documents/documents.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Documents')
@@ -10,11 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('documents')
 export class DocumentsController {
-  private service: any;
-
-  constructor(@Inject(GRPC_SERVICES.DOCUMENTS) private readonly client: ClientGrpc) {}
-
-  onModuleInit() { this.service = this.client.getService('DocumentService'); }
+  constructor(private readonly documentService: DocumentService) {}
 
   @Post()
   @ApiBody({
@@ -33,13 +27,13 @@ export class DocumentsController {
       },
     },
   })
-  upload(@Body() body: any) { return firstValueFrom(this.service.UploadDocument(body)); }
+  upload(@Body() body: any) { return this.documentService.upload(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.service.ListDocuments(query)); }
+  list(@Query() query: any) { return this.documentService.list(query.companyId, query); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.service.GetDocument({ id })); }
+  get(@Param('id') id: string) { return this.documentService.get(id); }
 
   @Put(':id')
   @ApiBody({
@@ -52,10 +46,10 @@ export class DocumentsController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.service.UpdateDocument({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.documentService.update(id, body); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) { return firstValueFrom(this.service.DeleteDocument({ id })); }
+  remove(@Param('id') id: string) { return this.documentService.delete(id); }
 
   @Post(':id/share')
   @ApiBody({
@@ -69,5 +63,5 @@ export class DocumentsController {
       },
     },
   })
-  share(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.service.ShareDocument({ id, ...body })); }
+  share(@Param('id') id: string, @Body() body: any) { return this.documentService.share(id, [body.sharedWith], body.expiresAt); }
 }

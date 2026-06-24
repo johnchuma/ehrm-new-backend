@@ -1,26 +1,20 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ProgramService } from '../../../training-service/src/programs/programs.service';
+import { EnrollmentService } from '../../../training-service/src/enrollments/enrollments.service';
+import { CertificationService } from '../../../training-service/src/certifications/certifications.service';
 
 @ApiTags('Training')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('training')
 export class TrainingController {
-  private progService: any;
-  private enrService: any;
-  private certService: any;
-
-  constructor(@Inject(GRPC_SERVICES.TRAINING) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.progService = this.client.getService('ProgramService');
-    this.enrService = this.client.getService('EnrollmentService');
-    this.certService = this.client.getService('CertificationService');
-  }
+  constructor(
+    private readonly progService: ProgramService,
+    private readonly enrService: EnrollmentService,
+    private readonly certService: CertificationService,
+  ) {}
 
   @Post('programs')
   @ApiBody({
@@ -39,13 +33,13 @@ export class TrainingController {
       },
     },
   })
-  createProg(@Body() body: any) { return firstValueFrom(this.progService.CreateProgram(body)); }
+  createProg(@Body() body: any) { return this.progService.create(body); }
 
   @Get('programs')
-  listProgs(@Query() query: any) { return firstValueFrom(this.progService.ListPrograms(query)); }
+  listProgs(@Query() query: any) { return this.progService.list(query.companyId, query); }
 
   @Get('programs/:id')
-  getProg(@Param('id') id: string) { return firstValueFrom(this.progService.GetProgram({ id })); }
+  getProg(@Param('id') id: string) { return this.progService.get(id); }
 
   @Put('programs/:id')
   @ApiBody({
@@ -61,10 +55,10 @@ export class TrainingController {
       },
     },
   })
-  updateProg(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.progService.UpdateProgram({ id, ...body })); }
+  updateProg(@Param('id') id: string, @Body() body: any) { return this.progService.update(id, body); }
 
   @Delete('programs/:id')
-  deleteProg(@Param('id') id: string) { return firstValueFrom(this.progService.DeleteProgram({ id })); }
+  deleteProg(@Param('id') id: string) { return this.progService.delete(id); }
 
   @Post('enrollments')
   @ApiBody({
@@ -78,10 +72,10 @@ export class TrainingController {
       },
     },
   })
-  enroll(@Body() body: any) { return firstValueFrom(this.enrService.EnrollEmployee(body)); }
+  enroll(@Body() body: any) { return this.enrService.enroll(body); }
 
   @Get('enrollments')
-  listEnr(@Query() query: any) { return firstValueFrom(this.enrService.ListEnrollments(query)); }
+  listEnr(@Query() query: any) { return this.enrService.list(query.programId, query.employeeId); }
 
   @Put('enrollments/:id')
   @ApiBody({
@@ -95,7 +89,7 @@ export class TrainingController {
       },
     },
   })
-  updateEnr(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.enrService.UpdateEnrollment({ id, ...body })); }
+  updateEnr(@Param('id') id: string, @Body() body: any) { return this.enrService.update(id, body); }
 
   @Post('certifications')
   @ApiBody({
@@ -112,8 +106,8 @@ export class TrainingController {
       },
     },
   })
-  issueCert(@Body() body: any) { return firstValueFrom(this.certService.IssueCertification(body)); }
+  issueCert(@Body() body: any) { return this.certService.issue(body); }
 
   @Get('certifications')
-  listCerts(@Query() query: any) { return firstValueFrom(this.certService.ListCertifications(query)); }
+  listCerts(@Query() query: any) { return this.certService.list(query.employeeId, query.companyId); }
 }

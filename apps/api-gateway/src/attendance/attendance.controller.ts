@@ -1,34 +1,28 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AttendanceService } from '../../../attendance-service/src/attendance/attendance.service';
+import { ExceptionService } from '../../../attendance-service/src/exceptions/exceptions.service';
+import { ShiftService } from '../../../attendance-service/src/shifts/shifts.service';
+import { SwapService } from '../../../attendance-service/src/swap-requests/swap.service';
+import { OvertimeService } from '../../../attendance-service/src/overtime/overtime.service';
+import { GeofenceService } from '../../../attendance-service/src/geofencing/geofencing.service';
+import { ApprovalService } from '../../../attendance-service/src/attendance/approvals.service';
 
 @ApiTags('Attendance')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('attendance')
 export class AttendanceController {
-  private attService: any;
-  private excService: any;
-  private shiftService: any;
-  private swapService: any;
-  private otService: any;
-  private gfService: any;
-  private apprService: any;
-
-  constructor(@Inject(GRPC_SERVICES.ATTENDANCE) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.attService = this.client.getService('AttendanceService');
-    this.excService = this.client.getService('AttendanceExceptionService');
-    this.shiftService = this.client.getService('ShiftService');
-    this.swapService = this.client.getService('ShiftSwapService');
-    this.otService = this.client.getService('OvertimeService');
-    this.gfService = this.client.getService('GeofenceService');
-    this.apprService = this.client.getService('AttendanceApprovalService');
-  }
+  constructor(
+    private readonly attService: AttendanceService,
+    private readonly excService: ExceptionService,
+    private readonly shiftService: ShiftService,
+    private readonly swapService: SwapService,
+    private readonly otService: OvertimeService,
+    private readonly gfService: GeofenceService,
+    private readonly apprService: ApprovalService,
+  ) {}
 
   // Records
   @Post('check-in')
@@ -46,7 +40,7 @@ export class AttendanceController {
       },
     },
   })
-  checkIn(@Body() body: any) { return firstValueFrom(this.attService.CheckIn(body)); }
+  checkIn(@Body() body: any) { return this.attService.checkIn(body); }
 
   @Post('check-out')
   @ApiBody({
@@ -60,13 +54,13 @@ export class AttendanceController {
       },
     },
   })
-  checkOut(@Body() body: any) { return firstValueFrom(this.attService.CheckOut(body)); }
+  checkOut(@Body() body: any) { return this.attService.checkOut(body); }
 
   @Get('records')
-  listRecords(@Query() query: any) { return firstValueFrom(this.attService.ListRecords(query)); }
+  listRecords(@Query() query: any) { return this.attService.listRecords(query.companyId, query); }
 
   @Get('records/today/:companyId')
-  today(@Param('companyId') companyId: string) { return firstValueFrom(this.attService.GetTodayAttendance({ companyId })); }
+  today(@Param('companyId') companyId: string) { return this.attService.getTodayAttendance(companyId); }
 
   @Post('bulk-mark')
   @ApiBody({
@@ -82,7 +76,7 @@ export class AttendanceController {
       },
     },
   })
-  bulkMark(@Body() body: any) { return firstValueFrom(this.attService.BulkMarkAttendance(body)); }
+  bulkMark(@Body() body: any) { return this.attService.bulkMark(body); }
 
   // Exceptions
   @Post('exceptions')
@@ -99,10 +93,10 @@ export class AttendanceController {
       },
     },
   })
-  createException(@Body() body: any) { return firstValueFrom(this.excService.CreateException(body)); }
+  createException(@Body() body: any) { return this.excService.create(body); }
 
   @Get('exceptions')
-  listExceptions(@Query() query: any) { return firstValueFrom(this.excService.ListExceptions(query)); }
+  listExceptions(@Query() query: any) { return this.excService.list(query.companyId, query.status); }
 
   @Post('exceptions/:id/resolve')
   @ApiBody({
@@ -116,7 +110,7 @@ export class AttendanceController {
       },
     },
   })
-  resolveException(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.excService.ResolveException({ id, ...body })); }
+  resolveException(@Param('id') id: string, @Body() body: any) { return this.excService.resolve(id, body.notes); }
 
   // Shifts
   @Post('shifts')
@@ -133,10 +127,10 @@ export class AttendanceController {
       },
     },
   })
-  createShift(@Body() body: any) { return firstValueFrom(this.shiftService.CreateShift(body)); }
+  createShift(@Body() body: any) { return this.shiftService.create(body); }
 
   @Get('shifts')
-  listShifts(@Query() query: any) { return firstValueFrom(this.shiftService.ListShifts(query)); }
+  listShifts(@Query() query: any) { return this.shiftService.list(query.companyId); }
 
   @Post('shifts/assign')
   @ApiBody({
@@ -151,7 +145,7 @@ export class AttendanceController {
       },
     },
   })
-  assignShift(@Body() body: any) { return firstValueFrom(this.shiftService.AssignShift(body)); }
+  assignShift(@Body() body: any) { return this.shiftService.assign(body); }
 
   // Overtime
   @Post('overtime')
@@ -169,10 +163,10 @@ export class AttendanceController {
       },
     },
   })
-  createOT(@Body() body: any) { return firstValueFrom(this.otService.CreateOvertime(body)); }
+  createOT(@Body() body: any) { return this.otService.create(body); }
 
   @Get('overtime')
-  listOT(@Query() query: any) { return firstValueFrom(this.otService.ListOvertime(query)); }
+  listOT(@Query() query: any) { return this.otService.list(query.companyId, query.status); }
 
   @Post('overtime/:id/approve')
   @ApiBody({
@@ -186,7 +180,7 @@ export class AttendanceController {
       },
     },
   })
-  approveOT(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.otService.ApproveOvertime({ id, ...body })); }
+  approveOT(@Param('id') id: string, @Body() body: any) { return this.otService.approve(id, body.approved ? 'approved' : 'rejected'); }
 
   // Geofences
   @Post('geofences')
@@ -203,10 +197,10 @@ export class AttendanceController {
       },
     },
   })
-  createGF(@Body() body: any) { return firstValueFrom(this.gfService.CreateGeofence(body)); }
+  createGF(@Body() body: any) { return this.gfService.create(body); }
 
   @Get('geofences')
-  listGF(@Query() query: any) { return firstValueFrom(this.gfService.ListGeofences(query)); }
+  listGF(@Query() query: any) { return this.gfService.list(query.companyId); }
 
   // Approvals
   @Post('approvals')
@@ -224,8 +218,8 @@ export class AttendanceController {
       },
     },
   })
-  createAppr(@Body() body: any) { return firstValueFrom(this.apprService.CreateApproval(body)); }
+  createAppr(@Body() body: any) { return this.apprService.create(body); }
 
   @Get('approvals')
-  listAppr(@Query() query: any) { return firstValueFrom(this.apprService.ListApprovals(query)); }
+  listAppr(@Query() query: any) { return this.apprService.list(query.companyId, query.status); }
 }

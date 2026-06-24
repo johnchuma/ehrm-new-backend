@@ -1,8 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { TaskService } from '../../../tasks-service/src/tasks/tasks.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Tasks')
@@ -10,11 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
 export class TasksController {
-  private service: any;
-
-  constructor(@Inject(GRPC_SERVICES.TASKS) private readonly client: ClientGrpc) {}
-
-  onModuleInit() { this.service = this.client.getService('TaskService'); }
+  constructor(private readonly taskService: TaskService) {}
 
   @Post()
   @ApiBody({
@@ -32,13 +26,13 @@ export class TasksController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.service.CreateTask(body)); }
+  create(@Body() body: any) { return this.taskService.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.service.ListTasks(query)); }
+  list(@Query() query: any) { return this.taskService.list(query.companyId, query); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.service.GetTask({ id })); }
+  get(@Param('id') id: string) { return this.taskService.get(id); }
 
   @Put(':id')
   @ApiBody({
@@ -54,10 +48,10 @@ export class TasksController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.service.UpdateTask({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.taskService.update(id, body); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) { return firstValueFrom(this.service.DeleteTask({ id })); }
+  remove(@Param('id') id: string) { return this.taskService.delete(id); }
 
   @Post(':id/assign')
   @ApiBody({
@@ -71,8 +65,8 @@ export class TasksController {
       },
     },
   })
-  assign(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.service.AssignTask({ id, ...body })); }
+  assign(@Param('id') id: string, @Body() body: any) { return this.taskService.assign(id, body.assigneeId); }
 
   @Post(':id/complete')
-  complete(@Param('id') id: string) { return firstValueFrom(this.service.CompleteTask({ id })); }
+  complete(@Param('id') id: string) { return this.taskService.complete(id); }
 }

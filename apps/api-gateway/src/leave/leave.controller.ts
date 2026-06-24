@@ -1,32 +1,24 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { LeaveRequestService } from '../../../leave-service/src/leave-requests/leave-requests.service';
+import { LeaveTypeService } from '../../../leave-service/src/leave-types/leave-types.service';
+import { LeaveBalanceService } from '../../../leave-service/src/leave-balances/leave-balances.service';
+import { EncashmentService } from '../../../leave-service/src/encashment/encashment.service';
+import { BlackoutService } from '../../../leave-service/src/blackouts/blackouts.service';
 
 @ApiTags('Leave')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('leave')
 export class LeaveController {
-  private reqService: any;
-  private typeService: any;
-  private balService: any;
-  private encService: any;
-  private boService: any;
-  private liabService: any;
-
-  constructor(@Inject(GRPC_SERVICES.LEAVE) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.reqService = this.client.getService('LeaveRequestService');
-    this.typeService = this.client.getService('LeaveTypeService');
-    this.balService = this.client.getService('LeaveBalanceService');
-    this.encService = this.client.getService('LeaveEncashmentService');
-    this.boService = this.client.getService('BlackoutPeriodService');
-    this.liabService = this.client.getService('LeaveLiabilityService');
-  }
+  constructor(
+    private readonly reqService: LeaveRequestService,
+    private readonly typeService: LeaveTypeService,
+    private readonly balService: LeaveBalanceService,
+    private readonly encService: EncashmentService,
+    private readonly boService: BlackoutService,
+  ) {}
 
   // Requests
   @Post('requests')
@@ -44,13 +36,13 @@ export class LeaveController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.reqService.CreateRequest(body)); }
+  create(@Body() body: any) { return this.reqService.create(body); }
 
   @Get('requests')
-  list(@Query() query: any) { return firstValueFrom(this.reqService.ListRequests(query)); }
+  list(@Query() query: any) { return this.reqService.list(query.companyId, query); }
 
   @Get('requests/:id')
-  get(@Param('id') id: string) { return firstValueFrom(this.reqService.GetRequest({ id })); }
+  get(@Param('id') id: string) { return this.reqService.get(id); }
 
   @Post('requests/:id/approve')
   @ApiBody({
@@ -63,7 +55,7 @@ export class LeaveController {
       },
     },
   })
-  approve(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.reqService.ApproveRequest({ id, ...body })); }
+  approve(@Param('id') id: string, @Body() body: any) { return this.reqService.approve(id, body.approvedBy, body.notes); }
 
   @Post('requests/:id/reject')
   @ApiBody({
@@ -76,10 +68,10 @@ export class LeaveController {
       },
     },
   })
-  reject(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.reqService.RejectRequest({ id, ...body })); }
+  reject(@Param('id') id: string, @Body() body: any) { return this.reqService.reject(id, body.rejectedBy, body.reason); }
 
   @Get('calendar/:companyId')
-  calendar(@Param('companyId') companyId: string, @Query() query: any) { return firstValueFrom(this.reqService.GetCalendarEvents({ companyId, ...query })); }
+  calendar(@Param('companyId') companyId: string, @Query() query: any) { return this.reqService.getCalendarEvents(companyId, query.year, query.month); }
 
   // Types
   @Post('types')
@@ -97,13 +89,13 @@ export class LeaveController {
       },
     },
   })
-  createType(@Body() body: any) { return firstValueFrom(this.typeService.CreateType(body)); }
+  createType(@Body() body: any) { return this.typeService.create(body); }
 
   @Get('types')
-  listTypes(@Query() query: any) { return firstValueFrom(this.typeService.ListTypes(query)); }
+  listTypes(@Query() query: any) { return this.typeService.list(query.companyId); }
 
   @Get('types/:id')
-  getType(@Param('id') id: string) { return firstValueFrom(this.typeService.GetType({ id })); }
+  getType(@Param('id') id: string) { return this.typeService.get(id); }
 
   @Put('types/:id')
   @ApiBody({
@@ -118,14 +110,14 @@ export class LeaveController {
       },
     },
   })
-  updateType(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.typeService.UpdateType({ id, ...body })); }
+  updateType(@Param('id') id: string, @Body() body: any) { return this.typeService.update(id, body); }
 
   @Delete('types/:id')
-  deleteType(@Param('id') id: string) { return firstValueFrom(this.typeService.DeleteType({ id })); }
+  deleteType(@Param('id') id: string) { return this.typeService.delete(id); }
 
   // Balances
   @Get('balances/:employeeId')
-  listBalances(@Param('employeeId') employeeId: string) { return firstValueFrom(this.balService.ListBalances({ employeeId })); }
+  listBalances(@Param('employeeId') employeeId: string) { return this.balService.listBalances(undefined, employeeId); }
 
   @Post('balances/accrue')
   @ApiBody({
@@ -141,7 +133,7 @@ export class LeaveController {
       },
     },
   })
-  accrue(@Body() body: any) { return firstValueFrom(this.balService.AccrueLeave(body)); }
+  accrue(@Body() body: any) { return this.balService.accrue(body); }
 
   // Encashment
   @Post('encashments')
@@ -158,10 +150,10 @@ export class LeaveController {
       },
     },
   })
-  createEnc(@Body() body: any) { return firstValueFrom(this.encService.CreateEncashment(body)); }
+  createEnc(@Body() body: any) { return this.encService.create(body); }
 
   @Get('encashments')
-  listEnc(@Query() query: any) { return firstValueFrom(this.encService.ListEncashments(query)); }
+  listEnc(@Query() query: any) { return this.encService.list(query.companyId, query.status); }
 
   // Blackouts
   @Post('blackouts')
@@ -178,12 +170,12 @@ export class LeaveController {
       },
     },
   })
-  createBO(@Body() body: any) { return firstValueFrom(this.boService.CreateBlackout(body)); }
+  createBO(@Body() body: any) { return this.boService.create(body); }
 
   @Get('blackouts')
-  listBO(@Query() query: any) { return firstValueFrom(this.boService.ListBlackouts(query)); }
+  listBO(@Query() query: any) { return this.boService.list(query.companyId); }
 
   // Liability
   @Get('liability/:companyId')
-  getLiability(@Param('companyId') companyId: string) { return firstValueFrom(this.liabService.GetLiability({ companyId })); }
+  getLiability(@Param('companyId') companyId: string) { return this.balService.getLiability(companyId); }
 }

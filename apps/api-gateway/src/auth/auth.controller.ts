@@ -1,26 +1,16 @@
 import { Controller, Post, Body, HttpCode, UseGuards, Get, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { Inject } from '@nestjs/common';
-import { firstValueFrom, Observable } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { Public } from '../../../../libs/common/src/decorators';
+import { IamAuthService } from '../../../iam-service/src/auth/auth.service';
+import { CompanyService } from '../../../company-service/src/companies/companies.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  private iamService: any;
-  private companyService: any;
-
   constructor(
-    @Inject(GRPC_SERVICES.IAM) private readonly client: ClientGrpc,
-    @Inject(GRPC_SERVICES.COMPANY) private readonly companyClient: ClientGrpc,
+    private readonly iamAuthService: IamAuthService,
+    private readonly companyService: CompanyService,
   ) {}
-
-  onModuleInit() {
-    this.iamService = this.client.getService('AuthService');
-    this.companyService = this.companyClient.getService('CompanyService');
-  }
 
   @Public()
   @Post('login')
@@ -39,7 +29,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async loginWithEmail(@Body() body: { email: string; password: string; companyId?: string }) {
-    return firstValueFrom(this.iamService.Login(body));
+    return this.iamAuthService.loginWithEmail(body.email, body.password);
   }
 
   @Public()
@@ -57,7 +47,7 @@ export class AuthController {
     },
   })
   async loginWithPhone(@Body() body: { phone: string; password: string; companyId?: string }) {
-    return firstValueFrom(this.iamService.LoginWithPhone(body));
+    return this.iamAuthService.loginWithPhone(body.phone, body.password);
   }
 
   @Public()
@@ -77,7 +67,7 @@ export class AuthController {
     },
   })
   async register(@Body() body: any) {
-    return firstValueFrom(this.iamService.Register(body));
+    return this.iamAuthService.register(body);
   }
 
   @Post('validate')
@@ -93,7 +83,7 @@ export class AuthController {
     },
   })
   async validateToken(@Body() body: { token: string }) {
-    return firstValueFrom(this.iamService.ValidateToken(body));
+    return this.iamAuthService.validateToken(body.token);
   }
 
   @Public()
@@ -109,7 +99,7 @@ export class AuthController {
     },
   })
   async refreshToken(@Body() body: { refreshToken: string }) {
-    return firstValueFrom(this.iamService.RefreshToken(body));
+    return this.iamAuthService.refreshToken(body.refreshToken);
   }
 
   @Public()
@@ -126,7 +116,7 @@ export class AuthController {
     },
   })
   async forgotPassword(@Body() body: { email: string; companyId?: string }) {
-    return firstValueFrom(this.iamService.ForgotPassword(body));
+    return this.iamAuthService.forgotPassword(body.email);
   }
 
   @Public()
@@ -143,7 +133,7 @@ export class AuthController {
     },
   })
   async resetPassword(@Body() body: { token: string; newPassword: string }) {
-    return firstValueFrom(this.iamService.ResetPassword(body));
+    return this.iamAuthService.resetPassword(body.token, body.newPassword);
   }
 
   @Post('change-password')
@@ -161,7 +151,7 @@ export class AuthController {
     },
   })
   async changePassword(@Body() body: { userId: string; oldPassword: string; newPassword: string }) {
-    return firstValueFrom(this.iamService.ChangePassword(body));
+    return this.iamAuthService.changePassword(body.userId, body.oldPassword, body.newPassword);
   }
 
   @Post('logout')
@@ -177,7 +167,7 @@ export class AuthController {
     },
   })
   async logout(@Body() body: { userId: string }) {
-    return firstValueFrom(this.iamService.Logout(body));
+    return this.iamAuthService.logout(body.userId);
   }
 
   @Public()
@@ -196,19 +186,6 @@ export class AuthController {
         size: { type: 'string', example: '201–500' },
         country: { type: 'string', example: 'Tanzania' },
         currency: { type: 'string', example: 'TZS (Tanzanian Shilling)' },
-        additionalCompanies: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              company: { type: 'string' },
-              sector: { type: 'string' },
-              size: { type: 'string' },
-              country: { type: 'string' },
-              currency: { type: 'string' },
-            },
-          },
-        },
         fname: { type: 'string', example: 'Joyce' },
         lname: { type: 'string', example: 'Massawe' },
         email: { type: 'string', example: 'hr.admin@acaciagroup.co.tz' },
@@ -219,26 +196,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 201, description: 'Workspace created successfully' })
-  @ApiResponse({ status: 400, description: 'Validation error' })
-  @ApiResponse({ status: 409, description: 'Company or user already exists' })
-  async registerWorkspace(@Body() body: {
-    workspaceType: string;
-    company: string;
-    employees?: number;
-    sector?: string;
-    size?: string;
-    country?: string;
-    currency?: string;
-    additionalCompanies?: Array<{ company: string; sector?: string; size?: string; country?: string; currency?: string }>;
-    fname: string;
-    lname: string;
-    email: string;
-    phone?: string;
-    password: string;
-    plan: string;
-    billing?: string;
-  }) {
+  async registerWorkspace(@Body() body: any) {
     const slug = body.company
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -246,7 +204,7 @@ export class AuthController {
 
     const currencyCode = body.currency?.split(' ')[0] || 'TZS';
 
-    const company = await firstValueFrom(this.companyService.CreateCompany({
+    const company = await this.companyService.createCompany({
       name: body.company,
       slug,
       email: body.email,
@@ -257,38 +215,16 @@ export class AuthController {
       subscriptionPlan: body.plan || 'FREE',
       industry: body.sector || '',
       size: body.size || '',
-    })) as any;
+    });
 
-    if (body.additionalCompanies?.length) {
-      for (const extra of body.additionalCompanies) {
-        const extraSlug = extra.company
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '');
-        const extraCurrency = extra.currency?.split(' ')[0] || currencyCode;
-        await firstValueFrom(this.companyService.CreateCompany({
-          name: extra.company,
-          slug: `${slug}-${extraSlug}`,
-          email: body.email,
-          phone: body.phone || '',
-          country: extra.country || body.country || 'Tanzania',
-          currency: extraCurrency,
-          timezone: 'Africa/Dar_es_Salaam',
-          subscriptionPlan: body.plan || 'FREE',
-          industry: extra.sector || '',
-          size: extra.size || '',
-        }));
-      }
-    }
-
-    const result = await firstValueFrom(this.iamService.Register({
+    const result = await this.iamAuthService.register({
       email: body.email,
       phone: body.phone || '',
       password: body.password,
       firstName: body.fname,
       lastName: body.lname,
       companyId: company.id,
-    })) as any;
+    });
 
     return {
       ...result,

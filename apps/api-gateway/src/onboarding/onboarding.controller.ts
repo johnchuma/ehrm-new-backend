@@ -1,24 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OnboardingService } from '../../../onboarding-service/src/onboarding/onboarding.service';
+import { OnboardingTaskService } from '../../../onboarding-service/src/tasks/tasks.service';
 
 @ApiTags('Onboarding')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('onboarding')
 export class OnboardingController {
-  private onbService: any;
-  private taskService: any;
-
-  constructor(@Inject(GRPC_SERVICES.ONBOARDING) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.onbService = this.client.getService('OnboardingService');
-    this.taskService = this.client.getService('OnboardingTaskService');
-  }
+  constructor(
+    private readonly onbService: OnboardingService,
+    private readonly taskService: OnboardingTaskService,
+  ) {}
 
   @Post()
   @ApiBody({
@@ -35,13 +29,13 @@ export class OnboardingController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.onbService.CreateOnboarding(body)); }
+  create(@Body() body: any) { return this.onbService.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.onbService.ListOnboardings(query)); }
+  list(@Query() query: any) { return this.onbService.list(query.companyId, query.status); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.onbService.GetOnboarding({ id })); }
+  get(@Param('id') id: string) { return this.onbService.get(id); }
 
   @Put(':id')
   @ApiBody({
@@ -55,7 +49,7 @@ export class OnboardingController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.onbService.UpdateOnboarding({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.onbService.update(id, body); }
 
   @Post(':id/advance')
   @ApiBody({
@@ -69,10 +63,10 @@ export class OnboardingController {
       },
     },
   })
-  advance(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.onbService.AdvanceStage({ id, ...body })); }
+  advance(@Param('id') id: string, @Body() body: any) { return this.onbService.advanceStage(id, body.targetStage); }
 
   @Post(':id/complete')
-  complete(@Param('id') id: string) { return firstValueFrom(this.onbService.CompleteOnboarding({ id })); }
+  complete(@Param('id') id: string) { return this.onbService.complete(id); }
 
   @Post('tasks')
   @ApiBody({
@@ -89,11 +83,11 @@ export class OnboardingController {
       },
     },
   })
-  createTask(@Body() body: any) { return firstValueFrom(this.taskService.CreateTask(body)); }
+  createTask(@Body() body: any) { return this.taskService.create(body); }
 
   @Get('tasks/:onboardingId')
-  listTasks(@Param('onboardingId') onboardingId: string) { return firstValueFrom(this.taskService.ListTasks({ onboardingId })); }
+  listTasks(@Param('onboardingId') onboardingId: string) { return this.taskService.list(onboardingId); }
 
   @Post('tasks/:id/complete')
-  completeTask(@Param('id') id: string) { return firstValueFrom(this.taskService.CompleteTask({ id })); }
+  completeTask(@Param('id') id: string) { return this.taskService.complete(id); }
 }

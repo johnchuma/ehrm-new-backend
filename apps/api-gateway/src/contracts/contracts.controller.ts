@@ -1,20 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ContractService } from '../../../contracts-service/src/contracts/contracts.service';
 
 @ApiTags('Contracts')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
 export class ContractsController {
-  private service: any;
-
-  constructor(@Inject(GRPC_SERVICES.CONTRACTS) private readonly client: ClientGrpc) {}
-
-  onModuleInit() { this.service = this.client.getService('ContractService'); }
+  constructor(private readonly service: ContractService) {}
 
   @Post()
   @ApiBody({
@@ -34,13 +28,13 @@ export class ContractsController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.service.CreateContract(body)); }
+  create(@Body() body: any) { return this.service.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.service.ListContracts(query)); }
+  list(@Query() query: any) { return this.service.list(query.companyId, query); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.service.GetContract({ id })); }
+  get(@Param('id') id: string) { return this.service.get(id); }
 
   @Put(':id')
   @ApiBody({
@@ -56,7 +50,7 @@ export class ContractsController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.service.UpdateContract({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.service.update(id, body); }
 
   @Post(':id/terminate')
   @ApiBody({
@@ -72,7 +66,7 @@ export class ContractsController {
       },
     },
   })
-  terminate(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.service.TerminateContract({ id, ...body })); }
+  terminate(@Param('id') id: string, @Body() body: any) { return this.service.terminate(id, body.reason, body.terminationDate); }
 
   @Post(':id/renew')
   @ApiBody({
@@ -87,5 +81,5 @@ export class ContractsController {
       },
     },
   })
-  renew(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.service.RenewContract({ id, ...body })); }
+  renew(@Param('id') id: string, @Body() body: any) { return this.service.renew(id, body.newEndDate, body.salary); }
 }

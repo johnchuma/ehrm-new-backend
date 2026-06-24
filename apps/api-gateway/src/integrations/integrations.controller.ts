@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { IntegrationService } from '../../../integrations-service/src/integrations/integrations.service';
+import { WebhookService } from '../../../integrations-service/src/webhooks/webhooks.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Integrations')
@@ -10,15 +9,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('integrations')
 export class IntegrationsController {
-  private intService: any;
-  private whService: any;
-
-  constructor(@Inject(GRPC_SERVICES.INTEGRATIONS) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.intService = this.client.getService('IntegrationService');
-    this.whService = this.client.getService('WebhookService');
-  }
+  constructor(
+    private readonly integrationService: IntegrationService,
+    private readonly webhookService: WebhookService,
+  ) {}
 
   @Post()
   @ApiBody({
@@ -41,10 +35,10 @@ export class IntegrationsController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.intService.CreateIntegration(body)); }
+  create(@Body() body: any) { return this.integrationService.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.intService.ListIntegrations(query)); }
+  list(@Query() query: any) { return this.integrationService.list(query.companyId, query.type); }
 
   @Put(':id')
   @ApiBody({
@@ -64,10 +58,10 @@ export class IntegrationsController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.intService.UpdateIntegration({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.integrationService.update(id, body); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) { return firstValueFrom(this.intService.DeleteIntegration({ id })); }
+  remove(@Param('id') id: string) { return this.integrationService.delete(id); }
 
   @Post(':id/toggle')
   @ApiBody({
@@ -80,7 +74,7 @@ export class IntegrationsController {
       },
     },
   })
-  toggle(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.intService.ToggleIntegration({ id, ...body })); }
+  toggle(@Param('id') id: string, @Body() body: any) { return this.integrationService.toggle(id, body.isActive); }
 
   @Post('webhooks')
   @ApiBody({
@@ -97,11 +91,11 @@ export class IntegrationsController {
       },
     },
   })
-  createWh(@Body() body: any) { return firstValueFrom(this.whService.CreateWebhook(body)); }
+  createWh(@Body() body: any) { return this.webhookService.create(body); }
 
   @Get('webhooks')
-  listWh(@Query() query: any) { return firstValueFrom(this.whService.ListWebhooks(query)); }
+  listWh(@Query() query: any) { return this.webhookService.list(query.companyId); }
 
   @Delete('webhooks/:id')
-  removeWh(@Param('id') id: string) { return firstValueFrom(this.whService.DeleteWebhook({ id })); }
+  removeWh(@Param('id') id: string) { return this.webhookService.delete(id); }
 }

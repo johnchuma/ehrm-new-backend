@@ -1,8 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { NotificationService } from '../../../notifications-service/src/notifications/notifications.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Notifications')
@@ -10,11 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
-  private service: any;
-
-  constructor(@Inject(GRPC_SERVICES.NOTIFICATIONS) private readonly client: ClientGrpc) {}
-
-  onModuleInit() { this.service = this.client.getService('NotificationService'); }
+  constructor(private readonly notificationService: NotificationService) {}
 
   @Post()
   @ApiBody({
@@ -32,16 +26,16 @@ export class NotificationsController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.service.CreateNotification(body)); }
+  create(@Body() body: any) { return this.notificationService.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.service.ListNotifications(query)); }
+  list(@Query() query: any) { return this.notificationService.list(query.userId, query.unreadOnly, query.page, query.pageSize); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.service.GetNotification({ id })); }
+  get(@Param('id') id: string) { return this.notificationService.get(id); }
 
   @Post(':id/read')
-  markRead(@Param('id') id: string) { return firstValueFrom(this.service.MarkAsRead({ id })); }
+  markRead(@Param('id') id: string) { return this.notificationService.markAsRead(id); }
 
   @Post('read-all')
   @ApiBody({
@@ -55,11 +49,11 @@ export class NotificationsController {
       },
     },
   })
-  markAll(@Body() body: any) { return firstValueFrom(this.service.MarkAllAsRead(body)); }
+  markAll(@Body() body: any) { return this.notificationService.markAllAsRead(body.userId); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) { return firstValueFrom(this.service.DeleteNotification({ id })); }
+  remove(@Param('id') id: string) { return this.notificationService.delete(id); }
 
   @Get('unread/:userId')
-  unread(@Param('userId') userId: string) { return firstValueFrom(this.service.GetUnreadCount({ userId })); }
+  unread(@Param('userId') userId: string) { return this.notificationService.getUnreadCount(userId); }
 }

@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { AssetService } from '../../../assets-service/src/assets/assets.service';
+import { AssignmentService } from '../../../assets-service/src/assignments/assignments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Assets')
@@ -10,15 +9,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('assets')
 export class AssetsController {
-  private assetService: any;
-  private assignService: any;
-
-  constructor(@Inject(GRPC_SERVICES.ASSETS) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.assetService = this.client.getService('AssetService');
-    this.assignService = this.client.getService('AssetAssignmentService');
-  }
+  constructor(
+    private readonly assetService: AssetService,
+    private readonly assignService: AssignmentService,
+  ) {}
 
   @Post()
   @ApiBody({
@@ -38,13 +32,13 @@ export class AssetsController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.assetService.CreateAsset(body)); }
+  create(@Body() body: any) { return this.assetService.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.assetService.ListAssets(query)); }
+  list(@Query() query: any) { return this.assetService.list(query.companyId, query); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.assetService.GetAsset({ id })); }
+  get(@Param('id') id: string) { return this.assetService.get(id); }
 
   @Put(':id')
   @ApiBody({
@@ -59,10 +53,10 @@ export class AssetsController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.assetService.UpdateAsset({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.assetService.update(id, body); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) { return firstValueFrom(this.assetService.DeleteAsset({ id })); }
+  remove(@Param('id') id: string) { return this.assetService.delete(id); }
 
   @Post('assign')
   @ApiBody({
@@ -79,7 +73,7 @@ export class AssetsController {
       },
     },
   })
-  assign(@Body() body: any) { return firstValueFrom(this.assignService.AssignAsset(body)); }
+  assign(@Body() body: any) { return this.assignService.assign(body); }
 
   @Post('return/:id')
   @ApiBody({
@@ -93,8 +87,8 @@ export class AssetsController {
       },
     },
   })
-  return(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.assignService.ReturnAsset({ id, ...body })); }
+  return(@Param('id') id: string, @Body() body: any) { return this.assignService.returnAsset(id, body.returnDate, body.condition, body.notes); }
 
   @Get('assignments')
-  listAssign(@Query() query: any) { return firstValueFrom(this.assignService.ListAssignments(query)); }
+  listAssign(@Query() query: any) { return this.assignService.list(query.companyId, query.employeeId); }
 }

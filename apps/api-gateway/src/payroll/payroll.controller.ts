@@ -1,34 +1,28 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PayrollRunService } from '../../../payroll-service/src/payroll-runs/payroll-runs.service';
+import { AdvanceService } from '../../../payroll-service/src/salary-advance/salary-advance.service';
+import { DeductionService } from '../../../payroll-service/src/deductions/deductions.service';
+import { AllowanceService } from '../../../payroll-service/src/allowances/allowances.service';
+import { BonusService } from '../../../payroll-service/src/bonuses/bonuses.service';
+import { SettlementService } from '../../../payroll-service/src/settlements/settlements.service';
+import { JournalService } from '../../../payroll-service/src/journal/journal.service';
 
 @ApiTags('Payroll')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('payroll')
 export class PayrollController {
-  private runService: any;
-  private advService: any;
-  private dedService: any;
-  private alwService: any;
-  private bonService: any;
-  private setService: any;
-  private jService: any;
-
-  constructor(@Inject(GRPC_SERVICES.PAYROLL) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.runService = this.client.getService('PayrollRunService');
-    this.advService = this.client.getService('SalaryAdvanceService');
-    this.dedService = this.client.getService('DeductionService');
-    this.alwService = this.client.getService('AllowanceService');
-    this.bonService = this.client.getService('BonusService');
-    this.setService = this.client.getService('SettlementService');
-    this.jService = this.client.getService('PayrollJournalService');
-  }
+  constructor(
+    private readonly runService: PayrollRunService,
+    private readonly advService: AdvanceService,
+    private readonly dedService: DeductionService,
+    private readonly alwService: AllowanceService,
+    private readonly bonService: BonusService,
+    private readonly setService: SettlementService,
+    private readonly jService: JournalService,
+  ) {}
 
   @Post('runs')
   @ApiBody({
@@ -44,16 +38,16 @@ export class PayrollController {
       },
     },
   })
-  generate(@Body() body: any) { return firstValueFrom(this.runService.GeneratePayroll(body)); }
+  generate(@Body() body: any) { return this.runService.generate(body); }
 
   @Get('runs')
-  list(@Query() query: any) { return firstValueFrom(this.runService.ListRuns(query)); }
+  list(@Query() query: any) { return this.runService.list(query.companyId, query); }
 
   @Get('runs/:id')
-  getRun(@Param('id') id: string) { return firstValueFrom(this.runService.GetRun({ id })); }
+  getRun(@Param('id') id: string) { return this.runService.get(id); }
 
   @Get('runs/:id/details')
-  getRunDetails(@Param('id') id: string) { return firstValueFrom(this.runService.GetRunDetails({ id })); }
+  getRunDetails(@Param('id') id: string) { return this.runService.getDetails(id); }
 
   @Post('runs/:id/approve')
   @ApiBody({
@@ -66,10 +60,10 @@ export class PayrollController {
       },
     },
   })
-  approveRun(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.runService.ApproveRun({ id, ...body })); }
+  approveRun(@Param('id') id: string, @Body() body: any) { return this.runService.approve(id, body.approvedBy); }
 
   @Post('runs/:id/publish')
-  publish(@Param('id') id: string) { return firstValueFrom(this.runService.PublishPayslips({ id })); }
+  publish(@Param('id') id: string) { return this.runService.publishPayslips(id); }
 
   @Post('advances')
   @ApiBody({
@@ -85,10 +79,10 @@ export class PayrollController {
       },
     },
   })
-  createAdv(@Body() body: any) { return firstValueFrom(this.advService.CreateAdvance(body)); }
+  createAdv(@Body() body: any) { return this.advService.create(body); }
 
   @Get('advances')
-  listAdv(@Query() query: any) { return firstValueFrom(this.advService.ListAdvances(query)); }
+  listAdv(@Query() query: any) { return this.advService.list(query.companyId, query.status); }
 
   @Post('deductions')
   @ApiBody({
@@ -105,10 +99,10 @@ export class PayrollController {
       },
     },
   })
-  createDed(@Body() body: any) { return firstValueFrom(this.dedService.CreateDeduction(body)); }
+  createDed(@Body() body: any) { return this.dedService.create(body); }
 
   @Get('deductions')
-  listDed(@Query() query: any) { return firstValueFrom(this.dedService.ListDeductions(query)); }
+  listDed(@Query() query: any) { return this.dedService.list(query.companyId); }
 
   @Post('allowances')
   @ApiBody({
@@ -125,10 +119,10 @@ export class PayrollController {
       },
     },
   })
-  createAlw(@Body() body: any) { return firstValueFrom(this.alwService.CreateAllowance(body)); }
+  createAlw(@Body() body: any) { return this.alwService.create(body); }
 
   @Get('allowances')
-  listAlw(@Query() query: any) { return firstValueFrom(this.alwService.ListAllowances(query)); }
+  listAlw(@Query() query: any) { return this.alwService.list(query.companyId); }
 
   @Post('bonuses')
   @ApiBody({
@@ -145,10 +139,10 @@ export class PayrollController {
       },
     },
   })
-  createBon(@Body() body: any) { return firstValueFrom(this.bonService.CreateBonus(body)); }
+  createBon(@Body() body: any) { return this.bonService.create(body); }
 
   @Get('bonuses')
-  listBon(@Query() query: any) { return firstValueFrom(this.bonService.ListBonuses(query)); }
+  listBon(@Query() query: any) { return this.bonService.list(query.companyId, query.type); }
 
   @Post('settlements')
   @ApiBody({
@@ -165,13 +159,13 @@ export class PayrollController {
       },
     },
   })
-  createSet(@Body() body: any) { return firstValueFrom(this.setService.CreateSettlement(body)); }
+  createSet(@Body() body: any) { return this.setService.create(body); }
 
   @Get('settlements')
-  listSet(@Query() query: any) { return firstValueFrom(this.setService.ListSettlements(query)); }
+  listSet(@Query() query: any) { return this.setService.list(query.companyId, query.status); }
 
   @Get('journal')
-  getJournal(@Query() query: any) { return firstValueFrom(this.jService.GetJournal(query)); }
+  getJournal(@Query() query: any) { return this.jService.getJournal(query); }
 
   @Post('journal/export')
   @ApiBody({
@@ -187,5 +181,5 @@ export class PayrollController {
       },
     },
   })
-  exportJournal(@Body() body: any) { return firstValueFrom(this.jService.ExportJournal(body)); }
+  exportJournal(@Body() body: any) { return this.jService.exportJournal(body); }
 }

@@ -1,8 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { SalaryIntelligenceService } from '../../../salary-intelligence-service/src/salary-intelligence/salary-intelligence.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Salary Intelligence')
@@ -10,20 +8,16 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('salary-intelligence')
 export class SalaryIntelligenceController {
-  private service: any;
-
-  constructor(@Inject(GRPC_SERVICES.SALARY_INTELLIGENCE) private readonly client: ClientGrpc) {}
-
-  onModuleInit() { this.service = this.client.getService('SalaryIntelligenceService'); }
+  constructor(private readonly salaryIntelligenceService: SalaryIntelligenceService) {}
 
   @Get('benchmarks')
-  benchmarks(@Query() query: any) { return firstValueFrom(this.service.GetBenchmarks(query)); }
+  benchmarks(@Query() query: any) { return this.salaryIntelligenceService.getBenchmarks(query.companyId, query.jobTitle, query.department); }
 
   @Get('compensation')
-  compensation(@Query() query: any) { return firstValueFrom(this.service.GetCompensationAnalysis(query)); }
+  compensation(@Query() query: any) { return this.salaryIntelligenceService.getCompensationAnalysis(query.companyId, query.departmentId); }
 
   @Get('structure/:companyId')
-  structure(@Param('companyId') companyId: string) { return firstValueFrom(this.service.GetSalaryStructure({ companyId })); }
+  structure(@Param('companyId') companyId: string) { return this.salaryIntelligenceService.getSalaryStructure(companyId); }
 
   @Post('simulate')
   @ApiBody({
@@ -40,5 +34,5 @@ export class SalaryIntelligenceController {
       },
     },
   })
-  simulate(@Body() body: any) { return firstValueFrom(this.service.SimulateSalary(body)); }
+  simulate(@Body() body: any) { return this.salaryIntelligenceService.simulateSalary(body.companyId, body.employeeId, body.newSalary); }
 }

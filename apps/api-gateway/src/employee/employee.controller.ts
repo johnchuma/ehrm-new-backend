@@ -1,30 +1,24 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { EmployeeService } from '../../../employee-service/src/employees/employees.service';
+import { DocumentService } from '../../../employee-service/src/documents/documents.service';
+import { QualificationService } from '../../../employee-service/src/qualifications/qualifications.service';
+import { EmergencyContactService } from '../../../employee-service/src/emergency-contacts/emergency-contacts.service';
+import { FamilyService } from '../../../employee-service/src/family/family.service';
 
 @ApiTags('Employee')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('employee')
 export class EmployeeController {
-  private empService: any;
-  private docService: any;
-  private qualService: any;
-  private ecService: any;
-  private famService: any;
-
-  constructor(@Inject(GRPC_SERVICES.EMPLOYEE) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.empService = this.client.getService('EmployeeService');
-    this.docService = this.client.getService('DocumentService');
-    this.qualService = this.client.getService('QualificationService');
-    this.ecService = this.client.getService('EmergencyContactService');
-    this.famService = this.client.getService('FamilyService');
-  }
+  constructor(
+    private readonly empService: EmployeeService,
+    private readonly docService: DocumentService,
+    private readonly qualService: QualificationService,
+    private readonly ecService: EmergencyContactService,
+    private readonly famService: FamilyService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create employee' })
@@ -47,16 +41,16 @@ export class EmployeeController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.empService.CreateEmployee(body)); }
+  create(@Body() body: any) { return this.empService.createEmployee(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.empService.ListEmployees(query)); }
+  list(@Query() query: any) { return this.empService.listEmployees(query.companyId, query); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.empService.GetEmployee({ id })); }
+  get(@Param('id') id: string) { return this.empService.getEmployee(id); }
 
   @Get(':id/profile')
-  getProfile(@Param('id') id: string) { return firstValueFrom(this.empService.GetEmployeeProfile({ id })); }
+  getProfile(@Param('id') id: string) { return this.empService.getEmployeeProfile(id); }
 
   @Put(':id')
   @ApiBody({
@@ -74,16 +68,16 @@ export class EmployeeController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.empService.UpdateEmployee({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.empService.updateEmployee(id, body); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) { return firstValueFrom(this.empService.DeleteEmployee({ id })); }
+  remove(@Param('id') id: string) { return this.empService.deleteEmployee(id); }
 
   @Post(':id/advance-approval')
-  advance(@Param('id') id: string) { return firstValueFrom(this.empService.AdvanceApproval({ id })); }
+  advance(@Param('id') id: string) { return this.empService.advanceApproval(id); }
 
   @Post(':id/approve')
-  approve(@Param('id') id: string) { return firstValueFrom(this.empService.ApproveEmployee({ id })); }
+  approve(@Param('id') id: string) { return this.empService.approveEmployee(id); }
 
   @Post('documents')
   @ApiBody({
@@ -99,10 +93,10 @@ export class EmployeeController {
       },
     },
   })
-  uploadDoc(@Body() body: any) { return firstValueFrom(this.docService.UploadDocument(body)); }
+  uploadDoc(@Body() body: any) { return this.docService.uploadDocument(body); }
 
   @Get('documents/:employeeId')
-  listDocs(@Param('employeeId') employeeId: string) { return firstValueFrom(this.docService.ListDocuments({ employeeId })); }
+  listDocs(@Param('employeeId') employeeId: string) { return this.docService.listDocuments(employeeId); }
 
   @Post('qualifications/education')
   @ApiBody({
@@ -120,7 +114,7 @@ export class EmployeeController {
       },
     },
   })
-  addEdu(@Body() body: any) { return firstValueFrom(this.qualService.AddEducation(body)); }
+  addEdu(@Body() body: any) { return this.qualService.addEducation(body); }
 
   @Post('qualifications/professional')
   @ApiBody({
@@ -137,13 +131,13 @@ export class EmployeeController {
       },
     },
   })
-  addQual(@Body() body: any) { return firstValueFrom(this.qualService.AddProfessionalQualification(body)); }
+  addQual(@Body() body: any) { return this.qualService.addProfessionalQualification(body); }
 
   @Get('qualifications/education/:employeeId')
-  listEdu(@Param('employeeId') employeeId: string) { return firstValueFrom(this.qualService.ListEducation({ employeeId })); }
+  listEdu(@Param('employeeId') employeeId: string) { return this.qualService.listEducation(employeeId); }
 
   @Get('qualifications/professional/:employeeId')
-  listQuals(@Param('employeeId') employeeId: string) { return firstValueFrom(this.qualService.ListQualifications({ employeeId })); }
+  listQuals(@Param('employeeId') employeeId: string) { return this.qualService.listQualifications(employeeId); }
 
   @Post('emergency-contacts')
   @ApiBody({
@@ -160,10 +154,10 @@ export class EmployeeController {
       },
     },
   })
-  addEC(@Body() body: any) { return firstValueFrom(this.ecService.AddEmergencyContact(body)); }
+  addEC(@Body() body: any) { return this.ecService.add(body); }
 
   @Get('emergency-contacts/:employeeId')
-  listEC(@Param('employeeId') employeeId: string) { return firstValueFrom(this.ecService.ListEmergencyContacts({ employeeId })); }
+  listEC(@Param('employeeId') employeeId: string) { return this.ecService.list(employeeId); }
 
   @Post('family')
   @ApiBody({
@@ -180,8 +174,8 @@ export class EmployeeController {
       },
     },
   })
-  addFam(@Body() body: any) { return firstValueFrom(this.famService.AddFamilyMember(body)); }
+  addFam(@Body() body: any) { return this.famService.add(body); }
 
   @Get('family/:employeeId')
-  listFam(@Param('employeeId') employeeId: string) { return firstValueFrom(this.famService.ListFamily({ employeeId })); }
+  listFam(@Param('employeeId') employeeId: string) { return this.famService.list(employeeId); }
 }

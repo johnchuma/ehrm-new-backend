@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { CaseService } from '../../../disciplinary-service/src/cases/cases.service';
+import { ActionService } from '../../../disciplinary-service/src/actions/actions.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Disciplinary')
@@ -10,15 +9,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('disciplinary')
 export class DisciplinaryController {
-  private caseService: any;
-  private actService: any;
-
-  constructor(@Inject(GRPC_SERVICES.DISCIPLINARY) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.caseService = this.client.getService('DisciplinaryService');
-    this.actService = this.client.getService('DisciplinaryActionService');
-  }
+  constructor(
+    private readonly caseService: CaseService,
+    private readonly actService: ActionService,
+  ) {}
 
   @Post('cases')
   @ApiBody({
@@ -36,13 +30,13 @@ export class DisciplinaryController {
       },
     },
   })
-  createCase(@Body() body: any) { return firstValueFrom(this.caseService.CreateCase(body)); }
+  createCase(@Body() body: any) { return this.caseService.create(body); }
 
   @Get('cases')
-  listCases(@Query() query: any) { return firstValueFrom(this.caseService.ListCases(query)); }
+  listCases(@Query() query: any) { return this.caseService.list(query.companyId, query); }
 
   @Get('cases/:id')
-  getCase(@Param('id') id: string) { return firstValueFrom(this.caseService.GetCase({ id })); }
+  getCase(@Param('id') id: string) { return this.caseService.get(id); }
 
   @Put('cases/:id')
   @ApiBody({
@@ -57,7 +51,7 @@ export class DisciplinaryController {
       },
     },
   })
-  updateCase(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.caseService.UpdateCase({ id, ...body })); }
+  updateCase(@Param('id') id: string, @Body() body: any) { return this.caseService.update(id, body); }
 
   @Post('actions')
   @ApiBody({
@@ -74,7 +68,7 @@ export class DisciplinaryController {
       },
     },
   })
-  createAction(@Body() body: any) { return firstValueFrom(this.actService.CreateAction(body)); }
+  createAction(@Body() body: any) { return this.actService.create(body); }
 
   @Post('actions/:id/approve')
   @ApiBody({
@@ -87,8 +81,8 @@ export class DisciplinaryController {
       },
     },
   })
-  approveAction(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.actService.ApproveAction({ id, ...body })); }
+  approveAction(@Param('id') id: string, @Body() body: any) { return this.actService.approve(id, body.status || 'Approved'); }
 
   @Get('actions/:caseId')
-  listActions(@Param('caseId') caseId: string) { return firstValueFrom(this.actService.ListActions({ caseId })); }
+  listActions(@Param('caseId') caseId: string) { return this.actService.list(caseId); }
 }

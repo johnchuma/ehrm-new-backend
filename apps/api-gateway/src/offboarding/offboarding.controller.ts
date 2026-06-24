@@ -1,24 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OffboardingService } from '../../../offboarding-service/src/offboarding/offboarding.service';
+import { ClearanceService } from '../../../offboarding-service/src/clearance/clearance.service';
 
 @ApiTags('Offboarding')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('offboarding')
 export class OffboardingController {
-  private offService: any;
-  private clrService: any;
-
-  constructor(@Inject(GRPC_SERVICES.OFFBOARDING) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.offService = this.client.getService('OffboardingService');
-    this.clrService = this.client.getService('ClearanceService');
-  }
+  constructor(
+    private readonly offService: OffboardingService,
+    private readonly clrService: ClearanceService,
+  ) {}
 
   @Post()
   @ApiBody({
@@ -34,13 +28,13 @@ export class OffboardingController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.offService.CreateOffboarding(body)); }
+  create(@Body() body: any) { return this.offService.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.offService.ListOffboardings(query)); }
+  list(@Query() query: any) { return this.offService.list(query.companyId, query.status); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.offService.GetOffboarding({ id })); }
+  get(@Param('id') id: string) { return this.offService.get(id); }
 
   @Put(':id')
   @ApiBody({
@@ -54,7 +48,7 @@ export class OffboardingController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.offService.UpdateOffboarding({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.offService.update(id, body); }
 
   @Post(':id/clearance')
   @ApiBody({
@@ -72,10 +66,10 @@ export class OffboardingController {
       },
     },
   })
-  advance(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.offService.AdvanceClearance({ id, ...body })); }
+  advance(@Param('id') id: string, @Body() body: any) { return this.offService.advanceClearance(id, body.department); }
 
   @Post(':id/complete')
-  complete(@Param('id') id: string) { return firstValueFrom(this.offService.CompleteOffboarding({ id })); }
+  complete(@Param('id') id: string) { return this.offService.complete(id); }
 
   @Post('clearance')
   @ApiBody({
@@ -93,10 +87,10 @@ export class OffboardingController {
       },
     },
   })
-  createClr(@Body() body: any) { return firstValueFrom(this.clrService.CreateClearance(body)); }
+  createClr(@Body() body: any) { return this.clrService.create(body); }
 
   @Get('clearance/:offboardingId')
-  listClr(@Param('offboardingId') offboardingId: string) { return firstValueFrom(this.clrService.ListClearances({ offboardingId })); }
+  listClr(@Param('offboardingId') offboardingId: string) { return this.clrService.list(offboardingId); }
 
   @Post('clearance/:id/approve')
   @ApiBody({
@@ -109,5 +103,5 @@ export class OffboardingController {
       },
     },
   })
-  approveClr(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.clrService.ApproveClearance({ id, ...body })); }
+  approveClr(@Param('id') id: string, @Body() body: any) { return this.clrService.approve(id, 'Approved', body.notes); }
 }

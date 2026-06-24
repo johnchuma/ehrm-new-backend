@@ -1,24 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TransferService } from '../../../movement-service/src/transfers/transfers.service';
+import { PromotionService } from '../../../movement-service/src/promotions/promotions.service';
 
 @ApiTags('Movement')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('movement')
 export class MovementController {
-  private trService: any;
-  private prService: any;
-
-  constructor(@Inject(GRPC_SERVICES.MOVEMENT) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.trService = this.client.getService('TransferService');
-    this.prService = this.client.getService('PromotionService');
-  }
+  constructor(
+    private readonly trService: TransferService,
+    private readonly prService: PromotionService,
+  ) {}
 
   @Post('transfers')
   @ApiBody({
@@ -37,10 +31,10 @@ export class MovementController {
       },
     },
   })
-  createTr(@Body() body: any) { return firstValueFrom(this.trService.CreateTransfer(body)); }
+  createTr(@Body() body: any) { return this.trService.create(body); }
 
   @Get('transfers')
-  listTr(@Query() query: any) { return firstValueFrom(this.trService.ListTransfers(query)); }
+  listTr(@Query() query: any) { return this.trService.list(query.companyId, query.status); }
 
   @Post('transfers/:id/approve')
   @ApiBody({
@@ -53,7 +47,7 @@ export class MovementController {
       },
     },
   })
-  approveTr(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.trService.ApproveTransfer({ id, ...body })); }
+  approveTr(@Param('id') id: string, @Body() body: any) { return this.trService.approve(id, 'Approved'); }
 
   @Post('promotions')
   @ApiBody({
@@ -71,10 +65,10 @@ export class MovementController {
       },
     },
   })
-  createPr(@Body() body: any) { return firstValueFrom(this.prService.CreatePromotion(body)); }
+  createPr(@Body() body: any) { return this.prService.create(body); }
 
   @Get('promotions')
-  listPr(@Query() query: any) { return firstValueFrom(this.prService.ListPromotions(query)); }
+  listPr(@Query() query: any) { return this.prService.list(query.companyId, query.status); }
 
   @Post('promotions/:id/approve')
   @ApiBody({
@@ -87,5 +81,5 @@ export class MovementController {
       },
     },
   })
-  approvePr(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.prService.ApprovePromotion({ id, ...body })); }
+  approvePr(@Param('id') id: string, @Body() body: any) { return this.prService.approve(id, 'Approved'); }
 }

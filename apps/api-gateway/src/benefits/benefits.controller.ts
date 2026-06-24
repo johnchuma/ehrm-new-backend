@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { BenefitService } from '../../../benefits-service/src/benefits/benefits.service';
+import { EnrollmentService } from '../../../benefits-service/src/enrollments/enrollments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Benefits')
@@ -10,15 +9,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('benefits')
 export class BenefitsController {
-  private benService: any;
-  private enrService: any;
-
-  constructor(@Inject(GRPC_SERVICES.BENEFITS) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.benService = this.client.getService('BenefitService');
-    this.enrService = this.client.getService('BenefitEnrollmentService');
-  }
+  constructor(
+    private readonly benService: BenefitService,
+    private readonly enrService: EnrollmentService,
+  ) {}
 
   @Post()
   @ApiBody({
@@ -36,13 +30,13 @@ export class BenefitsController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.benService.CreateBenefit(body)); }
+  create(@Body() body: any) { return this.benService.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.benService.ListBenefits(query)); }
+  list(@Query() query: any) { return this.benService.list(query.companyId, query.type); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.benService.GetBenefit({ id })); }
+  get(@Param('id') id: string) { return this.benService.get(id); }
 
   @Put(':id')
   @ApiBody({
@@ -57,10 +51,10 @@ export class BenefitsController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.benService.UpdateBenefit({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.benService.update(id, body); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) { return firstValueFrom(this.benService.DeleteBenefit({ id })); }
+  remove(@Param('id') id: string) { return this.benService.delete(id); }
 
   @Post('enroll')
   @ApiBody({
@@ -87,8 +81,8 @@ export class BenefitsController {
       },
     },
   })
-  enroll(@Body() body: any) { return firstValueFrom(this.enrService.EnrollEmployee(body)); }
+  enroll(@Body() body: any) { return this.enrService.enroll(body); }
 
   @Get('enrollments')
-  listEnr(@Query() query: any) { return firstValueFrom(this.enrService.ListEnrollments(query)); }
+  listEnr(@Query() query: any) { return this.enrService.list(query.companyId, query.employeeId); }
 }

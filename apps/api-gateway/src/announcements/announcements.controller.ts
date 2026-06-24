@@ -1,8 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { AnnouncementService } from '../../../announcements-service/src/announcements/announcements.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Announcements')
@@ -10,11 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('announcements')
 export class AnnouncementsController {
-  private service: any;
-
-  constructor(@Inject(GRPC_SERVICES.ANNOUNCEMENTS) private readonly client: ClientGrpc) {}
-
-  onModuleInit() { this.service = this.client.getService('AnnouncementService'); }
+  constructor(private readonly service: AnnouncementService) {}
 
   @Post()
   @ApiBody({
@@ -32,13 +26,13 @@ export class AnnouncementsController {
       },
     },
   })
-  create(@Body() body: any) { return firstValueFrom(this.service.CreateAnnouncement(body)); }
+  create(@Body() body: any) { return this.service.create(body); }
 
   @Get()
-  list(@Query() query: any) { return firstValueFrom(this.service.ListAnnouncements(query)); }
+  list(@Query() query: any) { return this.service.list(query.companyId, query); }
 
   @Get(':id')
-  get(@Param('id') id: string) { return firstValueFrom(this.service.GetAnnouncement({ id })); }
+  get(@Param('id') id: string) { return this.service.get(id); }
 
   @Put(':id')
   @ApiBody({
@@ -54,8 +48,8 @@ export class AnnouncementsController {
       },
     },
   })
-  update(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.service.UpdateAnnouncement({ id, ...body })); }
+  update(@Param('id') id: string, @Body() body: any) { return this.service.update(id, body); }
 
   @Delete(':id')
-  remove(@Param('id') id: string) { return firstValueFrom(this.service.DeleteAnnouncement({ id })); }
+  remove(@Param('id') id: string) { return this.service.delete(id); }
 }

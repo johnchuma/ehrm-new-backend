@@ -1,26 +1,20 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ReviewService } from '../../../performance-service/src/reviews/reviews.service';
+import { GoalService } from '../../../performance-service/src/goals/goals.service';
+import { KpiService } from '../../../performance-service/src/kpis/kpis.service';
 
 @ApiTags('Performance')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('performance')
 export class PerformanceController {
-  private revService: any;
-  private goalService: any;
-  private kpiService: any;
-
-  constructor(@Inject(GRPC_SERVICES.PERFORMANCE) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.revService = this.client.getService('ReviewService');
-    this.goalService = this.client.getService('GoalService');
-    this.kpiService = this.client.getService('KpiService');
-  }
+  constructor(
+    private readonly revService: ReviewService,
+    private readonly goalService: GoalService,
+    private readonly kpiService: KpiService,
+  ) {}
 
   @Post('reviews')
   @ApiBody({
@@ -39,13 +33,13 @@ export class PerformanceController {
       },
     },
   })
-  createRev(@Body() body: any) { return firstValueFrom(this.revService.CreateReview(body)); }
+  createRev(@Body() body: any) { return this.revService.create(body); }
 
   @Get('reviews')
-  listRev(@Query() query: any) { return firstValueFrom(this.revService.ListReviews(query)); }
+  listRev(@Query() query: any) { return this.revService.list(query.companyId, query); }
 
   @Get('reviews/:id')
-  getRev(@Param('id') id: string) { return firstValueFrom(this.revService.GetReview({ id })); }
+  getRev(@Param('id') id: string) { return this.revService.get(id); }
 
   @Put('reviews/:id')
   @ApiBody({
@@ -60,10 +54,10 @@ export class PerformanceController {
       },
     },
   })
-  updateRev(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.revService.UpdateReview({ id, ...body })); }
+  updateRev(@Param('id') id: string, @Body() body: any) { return this.revService.update(id, body); }
 
   @Post('reviews/:id/submit')
-  submitRev(@Param('id') id: string) { return firstValueFrom(this.revService.SubmitReview({ id })); }
+  submitRev(@Param('id') id: string) { return this.revService.submit(id); }
 
   @Post('goals')
   @ApiBody({
@@ -81,13 +75,13 @@ export class PerformanceController {
       },
     },
   })
-  createGoal(@Body() body: any) { return firstValueFrom(this.goalService.CreateGoal(body)); }
+  createGoal(@Body() body: any) { return this.goalService.create(body); }
 
   @Get('goals')
-  listGoals(@Query() query: any) { return firstValueFrom(this.goalService.ListGoals(query)); }
+  listGoals(@Query() query: any) { return this.goalService.list(query.companyId, query); }
 
   @Get('goals/:id')
-  getGoal(@Param('id') id: string) { return firstValueFrom(this.goalService.GetGoal({ id })); }
+  getGoal(@Param('id') id: string) { return this.goalService.get(id); }
 
   @Put('goals/:id')
   @ApiBody({
@@ -104,10 +98,10 @@ export class PerformanceController {
       },
     },
   })
-  updateGoal(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.goalService.UpdateGoal({ id, ...body })); }
+  updateGoal(@Param('id') id: string, @Body() body: any) { return this.goalService.update(id, body); }
 
   @Delete('goals/:id')
-  deleteGoal(@Param('id') id: string) { return firstValueFrom(this.goalService.DeleteGoal({ id })); }
+  deleteGoal(@Param('id') id: string) { return this.goalService.delete(id); }
 
   @Post('kpis')
   @ApiBody({
@@ -126,10 +120,10 @@ export class PerformanceController {
       },
     },
   })
-  createKpi(@Body() body: any) { return firstValueFrom(this.kpiService.CreateKpi(body)); }
+  createKpi(@Body() body: any) { return this.kpiService.create(body); }
 
   @Get('kpis')
-  listKpis(@Query() query: any) { return firstValueFrom(this.kpiService.ListKpis(query)); }
+  listKpis(@Query() query: any) { return this.kpiService.list(query.companyId, query.category); }
 
   @Put('kpis/:id')
   @ApiBody({
@@ -144,5 +138,5 @@ export class PerformanceController {
       },
     },
   })
-  updateKpi(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.kpiService.UpdateKpi({ id, ...body })); }
+  updateKpi(@Param('id') id: string, @Body() body: any) { return this.kpiService.update(id, body); }
 }

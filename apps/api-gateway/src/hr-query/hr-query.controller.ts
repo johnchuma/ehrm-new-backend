@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
+import { HRQueryService } from '../../../hr-query-service/src/hr-query/hr-query.service';
+import { TicketService } from '../../../hr-query-service/src/tickets/tickets.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('HR Query')
@@ -10,15 +9,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('hr-query')
 export class HRQueryController {
-  private queryService: any;
-  private ticketService: any;
-
-  constructor(@Inject(GRPC_SERVICES.HR_QUERY) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.queryService = this.client.getService('HRQueryService');
-    this.ticketService = this.client.getService('HRQueryService');
-  }
+  constructor(
+    private readonly queryService: HRQueryService,
+    private readonly ticketService: TicketService,
+  ) {}
 
   @Post('ask')
   @ApiBody({
@@ -33,10 +27,10 @@ export class HRQueryController {
       },
     },
   })
-  ask(@Body() body: any) { return firstValueFrom(this.queryService.AskQuestion(body)); }
+  ask(@Body() body: any) { return this.queryService.askQuestion(body); }
 
   @Get('faqs')
-  faqs(@Query() query: any) { return firstValueFrom(this.queryService.GetFAQs(query)); }
+  faqs(@Query() query: any) { return this.queryService.getFAQs(query.companyId, query.category); }
 
   @Post('faqs')
   @ApiBody({
@@ -52,10 +46,10 @@ export class HRQueryController {
       },
     },
   })
-  createFaq(@Body() body: any) { return firstValueFrom(this.queryService.CreateFAQ(body)); }
+  createFaq(@Body() body: any) { return this.queryService.createFAQ(body); }
 
   @Get('tickets')
-  listTickets(@Query() query: any) { return firstValueFrom(this.ticketService.ListTickets(query)); }
+  listTickets(@Query() query: any) { return this.ticketService.list(query.companyId, query.userId, query.status); }
 
   @Post('tickets')
   @ApiBody({
@@ -72,7 +66,7 @@ export class HRQueryController {
       },
     },
   })
-  createTicket(@Body() body: any) { return firstValueFrom(this.ticketService.CreateTicket(body)); }
+  createTicket(@Body() body: any) { return this.ticketService.create(body); }
 
   @Post('tickets/:id/reply')
   @ApiBody({
@@ -86,5 +80,5 @@ export class HRQueryController {
       },
     },
   })
-  reply(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.ticketService.ReplyTicket({ id, ...body })); }
+  reply(@Param('id') id: string, @Body() body: any) { return this.ticketService.reply(id, body.message, body.repliedBy); }
 }

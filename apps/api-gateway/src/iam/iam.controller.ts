@@ -1,24 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { ClientGrpc } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { GRPC_SERVICES } from '../../../../libs/common/src/grpc/grpc.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UserService } from '../../../iam-service/src/users/users.service';
+import { RoleService } from '../../../iam-service/src/roles/roles.service';
 
 @ApiTags('IAM - Users & Roles')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('iam')
 export class IamController {
-  private userService: any;
-  private roleService: any;
-
-  constructor(@Inject(GRPC_SERVICES.IAM) private readonly client: ClientGrpc) {}
-
-  onModuleInit() {
-    this.userService = this.client.getService('UserService');
-    this.roleService = this.client.getService('RoleService');
-  }
+  constructor(
+    private readonly userService: UserService,
+    private readonly roleService: RoleService,
+  ) {}
 
   // Users
   @Post('users')
@@ -38,15 +32,15 @@ export class IamController {
       },
     },
   })
-  createUser(@Body() body: any) { return firstValueFrom(this.userService.CreateUser(body)); }
+  createUser(@Body() body: any) { return this.userService.createUser(body); }
 
   @Get('users')
   @ApiOperation({ summary: 'List users' })
-  listUsers(@Query() query: any) { return firstValueFrom(this.userService.ListUsers(query)); }
+  listUsers(@Query() query: any) { return this.userService.listUsers(query.companyId, query.page, query.pageSize, query.search); }
 
   @Get('users/:id')
   @ApiOperation({ summary: 'Get user by ID' })
-  getUser(@Param('id') id: string) { return firstValueFrom(this.userService.GetUser({ id })); }
+  getUser(@Param('id') id: string) { return this.userService.getUser(id); }
 
   @Put('users/:id')
   @ApiOperation({ summary: 'Update user' })
@@ -63,22 +57,22 @@ export class IamController {
       },
     },
   })
-  updateUser(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.userService.UpdateUser({ id, ...body })); }
+  updateUser(@Param('id') id: string, @Body() body: any) { return this.userService.updateUser(id, body); }
 
   @Delete('users/:id')
   @ApiOperation({ summary: 'Delete user' })
-  deleteUser(@Param('id') id: string) { return firstValueFrom(this.userService.DeleteUser({ id })); }
+  deleteUser(@Param('id') id: string) { return this.userService.deleteUser(id); }
 
   @Post('users/:userId/roles/:roleId')
   @ApiOperation({ summary: 'Assign role to user' })
   assignRole(@Param('userId') userId: string, @Param('roleId') roleId: string) {
-    return firstValueFrom(this.userService.AssignRole({ userId, roleId }));
+    return this.userService.assignRole(userId, roleId);
   }
 
   @Delete('users/:userId/roles/:roleId')
   @ApiOperation({ summary: 'Remove role from user' })
   removeRole(@Param('userId') userId: string, @Param('roleId') roleId: string) {
-    return firstValueFrom(this.userService.RemoveRole({ userId, roleId }));
+    return this.userService.removeRole(userId, roleId);
   }
 
   // Roles
@@ -95,15 +89,15 @@ export class IamController {
       },
     },
   })
-  createRole(@Body() body: any) { return firstValueFrom(this.roleService.CreateRole(body)); }
+  createRole(@Body() body: any) { return this.roleService.createRole(body); }
 
   @Get('roles')
   @ApiOperation({ summary: 'List roles' })
-  listRoles(@Query() query: any) { return firstValueFrom(this.roleService.ListRoles(query)); }
+  listRoles(@Query() query: any) { return this.roleService.listRoles(query.companyId); }
 
   @Get('roles/:id')
   @ApiOperation({ summary: 'Get role by ID' })
-  getRole(@Param('id') id: string) { return firstValueFrom(this.roleService.GetRole({ id })); }
+  getRole(@Param('id') id: string) { return this.roleService.getRole(id); }
 
   @Put('roles/:id')
   @ApiOperation({ summary: 'Update role' })
@@ -117,9 +111,9 @@ export class IamController {
       },
     },
   })
-  updateRole(@Param('id') id: string, @Body() body: any) { return firstValueFrom(this.roleService.UpdateRole({ id, ...body })); }
+  updateRole(@Param('id') id: string, @Body() body: any) { return this.roleService.updateRole(id, body); }
 
   @Delete('roles/:id')
   @ApiOperation({ summary: 'Delete role' })
-  deleteRole(@Param('id') id: string) { return firstValueFrom(this.roleService.DeleteRole({ id })); }
+  deleteRole(@Param('id') id: string) { return this.roleService.deleteRole(id); }
 }
