@@ -225,7 +225,7 @@ export class AdminImpersonationController {
   @ApiOperation({
     summary: 'Exchange super-admin JWT for a 1h scoped impersonation token',
     description:
-      'Returns a short-lived token that has COMPANY_ADMIN role for the target company. ' +
+      'Returns a short-lived token that has Company Admin role for the target company. ' +
       'Cannot be used to call /super-admin/* routes. All actions are logged.',
   })
   @RequirePermissions('super_admin.manage')

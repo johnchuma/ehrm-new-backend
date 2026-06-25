@@ -68,19 +68,19 @@ async function main() {
   }
 
   // Seed system roles
-  const systemRoles = ['System Administrator', 'Company Admin', 'Employee'];
-  for (const name of systemRoles) {
+  const systemRoles = [
+    { name: 'System Administrator', scope: 'GLOBAL', description: 'Full access to all system features across all companies' },
+    { name: 'Company Admin',        scope: 'TENANT', description: 'Full access to all features within their company' },
+    { name: 'Employee',             scope: 'TENANT', description: 'Basic self-service access — view own profile, submit leave, view payslips' },
+  ];
+  for (const { name, scope, description } of systemRoles) {
     const exists = await prisma.role.findFirst({ where: { name, isSystem: true } });
     if (!exists) {
       await prisma.role.create({
         data: {
           name,
-          description:
-            name === 'System Administrator'
-              ? 'Full access to all system features across all companies'
-              : name === 'Company Admin'
-                ? 'Full access to all features within their company'
-                : 'Basic self-service access — view own profile, submit leave, view payslips',
+          scope: scope as any,
+          description,
           isSystem: true,
         },
       });
@@ -105,7 +105,7 @@ async function main() {
     console.log('System admin created');
   }
   // Ensure System Administrator role is assigned
-  const adminRole = await prisma.role.findFirst({ where: { name: 'System Administrator', isSystem: true } });
+  const adminRole = await prisma.role.findFirst({ where: { name: 'System Administrator', scope: 'GLOBAL', isSystem: true } });
   if (adminRole) {
     const hasRole = await prisma.userRole.findUnique({
       where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
