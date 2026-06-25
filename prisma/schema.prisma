@@ -331,12 +331,12 @@ model Employee {
   branchId          String?
   departmentId      String?
   managerId         String?
-  employeeNumber    String
+  employeeNumber    String  @default("")
   jobTitle          String?
   grade             String?
   employmentType    String    @default("FULL_TIME")
   employmentMode    String    @default("ONSITE")
-  startDate         DateTime
+  startDate         DateTime?
   endDate           DateTime?
   status            String    @default("ACTIVE")
   basicSalary       Decimal   @default(0) @db.Decimal(15, 2)

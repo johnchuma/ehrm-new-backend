@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EmployeeService, UpdateProfileDto } from './employee.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import * as bcrypt from 'bcryptjs';
 
 function fileUrl(filename: string): string {
   const base = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
@@ -43,6 +44,20 @@ export class EmployeeController {
   @Post()
   @ApiOperation({ summary: 'Create employee' })
   async create(@Body() body: any) {
+    const extraMeta: any = {};
+    for (const k of ['prefix', 'middleName', 'username', 'mobile', 'locale', 'personalEmail',
+      'region', 'postalAddress', 'physicalAddress', 'businessUnit',
+      'healthInsuranceProvider', 'healthInsuranceOther', 'tradeUnion',
+      'inductionDate', 'inductionCompleted', 'termsAndConditions',
+      'contractFileName', 'profilePhotoName', 'yearsOfExperience',
+      'offerLetterDate', 'offerAccepted', 'offerAcceptedDate',
+      'candidateSource', 'candidateId', 'employmentCategory',
+      'modeOfEmployment', 'socialSecurityType', 'socialSecurityNumber',
+      'tinNumber', 'nidaNumber', 'passportNumber', 'manager',
+      'employmentId', 'employeeNumber']) {
+      if (body[k] !== undefined) extraMeta[k] = body[k];
+    }
+
     const employee = await this.prisma.employee.create({
       data: {
         companyId: body.companyId || '',
@@ -53,17 +68,12 @@ export class EmployeeController {
         phone: body.phone || null,
         gender: body.gender || null,
         maritalStatus: body.maritalStatus || null,
-        dateOfBirth: body.dateOfBirth || null,
+        dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
         nationality: body.nationality || null,
         branchId: body.branchId || body.branch || null,
         departmentId: body.departmentId || body.department || null,
         section: body.section || null,
         jobTitle: body.jobTitle || null,
-        manager: body.manager || null,
-        employmentId: body.employmentId || null,
-        employmentCategory: body.employmentCategory || null,
-        employmentType: body.employmentType || null,
-        modeOfEmployment: body.modeOfEmployment || null,
         modeOfPayment: body.modeOfPayment || null,
         joiningDate: body.joiningDate || null,
         status: body.status || 'Draft',
@@ -72,11 +82,6 @@ export class EmployeeController {
         contractStartDate: body.contractStartDate || null,
         contractEndDate: body.contractEndDate || null,
         probationEndDate: body.probationEndDate || null,
-        socialSecurityType: body.socialSecurityType || null,
-        socialSecurityNumber: body.socialSecurityNumber || null,
-        tinNumber: body.tinNumber || null,
-        nidaNumber: body.nidaNumber || null,
-        passportNumber: body.passportNumber || null,
         stage: body.stage || 'Draft',
         approvalStage: body.approvalStage || 0,
         checklist: body.checklist ? JSON.stringify(body.checklist) : null,
@@ -88,33 +93,8 @@ export class EmployeeController {
         languages: body.languages ? JSON.stringify(body.languages) : null,
         emergencyContacts: body.emergencyContacts ? JSON.stringify(body.emergencyContacts) : null,
         family: body.family ? JSON.stringify(body.family) : null,
-        metadata: body.metadata ? JSON.stringify(body.metadata) : null,
+        metadata: Object.keys(extraMeta).length ? JSON.stringify(extraMeta) : null,
         createdById: body.createdById || null,
-        // New onboarding fields
-        prefix: body.prefix || null,
-        middleName: body.middleName || null,
-        username: body.username || null,
-        mobile: body.mobile || null,
-        locale: body.locale || null,
-        personalEmail: body.personalEmail || null,
-        region: body.region || null,
-        postalAddress: body.postalAddress || null,
-        physicalAddress: body.physicalAddress || null,
-        businessUnit: body.businessUnit || null,
-        healthInsuranceProvider: body.healthInsuranceProvider || null,
-        healthInsuranceOther: body.healthInsuranceOther || null,
-        tradeUnion: body.tradeUnion || null,
-        inductionDate: body.inductionDate || null,
-        inductionCompleted: body.inductionCompleted ?? null,
-        termsAndConditions: body.termsAndConditions || null,
-        contractFileName: body.contractFileName || null,
-        profilePhotoName: body.profilePhotoName || null,
-        yearsOfExperience: body.yearsOfExperience || null,
-        offerLetterDate: body.offerLetterDate || null,
-        offerAccepted: body.offerAccepted ?? null,
-        offerAcceptedDate: body.offerAcceptedDate || null,
-        candidateSource: body.candidateSource || null,
-        candidateId: body.candidateId || null,
       },
     });
 
@@ -159,25 +139,20 @@ export class EmployeeController {
   async update(@Param('id') id: string, @Body() body: any) {
     const data: any = {};
     const fields = [
-      'firstName', 'lastName', 'email', 'phone', 'gender', 'maritalStatus',
-      'dateOfBirth', 'nationality', 'branchId', 'departmentId', 'section', 'jobTitle',
-      'manager', 'employmentId', 'employmentCategory', 'employmentType',
-      'modeOfEmployment', 'modeOfPayment', 'joiningDate', 'status', 'stage',
-      'contractType', 'contractStartDate', 'contractEndDate', 'probationEndDate',
-      'socialSecurityType', 'socialSecurityNumber', 'tinNumber', 'nidaNumber',
-      'passportNumber', 'createdById',
-      'prefix', 'middleName', 'username', 'mobile', 'locale',
-      'personalEmail', 'region', 'postalAddress', 'physicalAddress',
-      'businessUnit', 'healthInsuranceProvider', 'healthInsuranceOther',
-      'tradeUnion', 'inductionDate', 'termsAndConditions', 'contractFileName',
-      'profilePhotoName', 'yearsOfExperience', 'offerLetterDate',
-      'offerAcceptedDate', 'candidateSource', 'candidateId',
+      'firstName', 'lastName', 'email', 'phone', 'gender', 'nationality',
+      'maritalStatus', 'address', 'city', 'jobTitle', 'grade', 'status',
+      'branchId', 'departmentId', 'managerId', 'employeeNumber',
+      'employmentType', 'employmentMode', 'startDate', 'endDate',
+      'basicSalary', 'currency', 'gross', 'section', 'stage', 'approvalStage',
+      'joiningDate', 'contractType', 'contractStartDate', 'contractEndDate',
+      'probationEndDate', 'modeOfPayment', 'profilePhoto',
+      'bankName', 'bankAccount', 'bankBranch', 'mobileMoney', 'mobileMoneyName',
+      'emergencyName', 'emergencyPhone', 'emergencyRelation',
+      'dateOfBirth', 'nationalId', 'tin', 'nssfNumber', 'passportNumber',
     ];
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
-    if (body.inductionCompleted !== undefined) data.inductionCompleted = body.inductionCompleted;
-    if (body.offerAccepted !== undefined) data.offerAccepted = body.offerAccepted;
     if (body.firstName !== undefined || body.lastName !== undefined) {
       const current = await this.prisma.employee.findUnique({ where: { id } });
       data.fullName = `${body.firstName ?? current?.firstName ?? ''} ${body.lastName ?? current?.lastName ?? ''}`.trim();
