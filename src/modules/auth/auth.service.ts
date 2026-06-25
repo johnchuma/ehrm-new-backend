@@ -116,7 +116,7 @@ export class AuthService {
     if (!user) return { message: 'If the email exists, a reset link has been sent.' };
     const token = this.jwt.sign({ sub: user.id, type: 'reset' }, { expiresIn: '1h' });
     await this.prisma.passwordReset.create({ data: { userId: user.id, token, expiresAt: new Date(Date.now() + 60 * 60 * 1000) } });
-    const resetUrl = `${process.env.FRONTEND_URL || 'https://demo.exactehrm.co.tz'}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://test.exactehrm.co.tz'}/reset-password?token=${token}`;
     const bc = this.email.brandColor;
     this.email.send(email, 'Reset your ExactEHRM password', this.email.buildHtml(`
       <h2 style="color:${bc};margin:0 0 16px">Password Reset</h2>
@@ -154,7 +154,7 @@ export class AuthService {
     if (!user) return { message: 'If the email exists, a confirmation link has been sent.' };
     if (user.emailVerified) return { message: 'Email already confirmed.' };
     const confirmToken = this.jwt.sign({ sub: user.id, type: 'email_confirm' }, { expiresIn: '24h' });
-    const confirmUrl = `${process.env.FRONTEND_URL || 'https://demo.exactehrm.co.tz'}/confirm-email?token=${confirmToken}`;
+    const confirmUrl = `${process.env.FRONTEND_URL || 'https://test.exactehrm.co.tz'}/confirm-email?token=${confirmToken}`;
     const bc = this.email.brandColor;
     this.email.send(email, 'Confirm your ExactEHRM account', this.email.buildHtml(`
       <h2 style="color:${bc};margin:0 0 16px">Email Confirmation</h2>

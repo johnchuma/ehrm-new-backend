@@ -67,7 +67,7 @@ export class AuthController {
       },
     });
     const confirmToken = this.jwt.sign({ sub: user.id, type: 'email_confirm' }, { expiresIn: '24h' });
-    const confirmUrl = `${process.env.FRONTEND_URL || 'https://demo.exactehrm.co.tz'}/confirm-email?token=${confirmToken}`;
+    const confirmUrl = `${process.env.FRONTEND_URL || 'https://test.exactehrm.co.tz'}/confirm-email?token=${confirmToken}`;
     const bc = this.email.brandColor;
     this.email.send(body.email, 'Confirm your ExactEHRM account', this.email.buildHtml(`
       <h2 style="color:${bc};margin:0 0 16px">Welcome to ExactEHRM!</h2>
