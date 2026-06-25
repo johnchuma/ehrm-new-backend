@@ -9,6 +9,7 @@
     "start:dev": "nest build --watch",
     "start:prod": "node dist/main.js",
     "prisma:migrate": "node scripts/migrate-all.js",
+    "prisma:seed": "npx ts-node prisma/seed.ts",
     "format": "prettier --write \"**/*.ts\"",
     "lint": "eslint \"{src,apps,libs}/**/*.ts\" --fix",
     "test": "jest",

@@ -49,8 +49,6 @@ async function main() {
           jobTitles: [],
           positions: [],
           benefits: [],
-          roles: [],
-          accessRights: [],
           workingDays: [
             { day: 'Monday', working: true, start: '08:00', end: '17:00' },
             { day: 'Tuesday', working: true, start: '08:00', end: '17:00' },
@@ -69,26 +67,54 @@ async function main() {
     console.log('Default settings created');
   }
 
-  // Check if user already exists
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    console.log('System admin already exists');
-    return;
+  // Seed system roles
+  const systemRoles = ['System Administrator', 'Company Admin', 'Employee'];
+  for (const name of systemRoles) {
+    const exists = await prisma.role.findFirst({ where: { name, isSystem: true } });
+    if (!exists) {
+      await prisma.role.create({
+        data: {
+          name,
+          description:
+            name === 'System Administrator'
+              ? 'Full access to all system features across all companies'
+              : name === 'Company Admin'
+                ? 'Full access to all features within their company'
+                : 'Basic self-service access — view own profile, submit leave, view payslips',
+          isSystem: true,
+        },
+      });
+      console.log('Role created:', name);
+    }
   }
 
-  await prisma.user.create({
-    data: {
-      email,
-      password: hashed,
-      firstName: 'System',
-      lastName: 'Admin',
-      fullName: 'System Admin',
-      companyId: company.id,
-      isActive: true,
-    },
-  });
-  console.log('System admin created:', email);
-  console.log('Password:', password);
+  // Create or update system admin user
+  let adminUser = await prisma.user.findUnique({ where: { email } });
+  if (!adminUser) {
+    adminUser = await prisma.user.create({
+      data: {
+        email,
+        password: hashed,
+        firstName: 'System',
+        lastName: 'Admin',
+        fullName: 'System Admin',
+        companyId: company.id,
+        isActive: true,
+      },
+    });
+    console.log('System admin created');
+  }
+  // Ensure System Administrator role is assigned
+  const adminRole = await prisma.role.findFirst({ where: { name: 'System Administrator', isSystem: true } });
+  if (adminRole) {
+    const hasRole = await prisma.userRole.findUnique({
+      where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
+    });
+    if (!hasRole) {
+      await prisma.userRole.create({ data: { userId: adminUser.id, roleId: adminRole.id } });
+      console.log('System Administrator role assigned to system admin');
+    }
+  }
 }
 
 main()

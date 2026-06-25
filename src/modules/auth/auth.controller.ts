@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Put, Body, HttpCode, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './auth.dto';
 import { RegisterWorkspaceDto } from './dto';
@@ -14,6 +15,7 @@ export class AuthController {
     private readonly auth: AuthService,
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly jwt: JwtService,
   ) {}
 
   @Post('login')
@@ -51,19 +53,42 @@ export class AuthController {
         lastName: body.lname || body.lastName || '',
         fullName: `${body.fname || body.firstName || ''} ${body.lname || body.lastName || ''}`.trim(),
         companyId: company.id,
-        isActive: true,
+        isActive: false,
       },
     });
-    // Send welcome email
-    this.email.send(body.email, 'Welcome to ExactEHRM — Your workspace is ready',
-      `<h2>Welcome to ExactEHRM!</h2><p>Hi ${body.fname}, your company <strong>${body.company}</strong> workspace has been created.</p><p>You can now log in and start managing your HR.</p>`
+    const confirmToken = this.jwt.sign({ sub: user.id, type: 'email_confirm' }, { expiresIn: '24h' });
+    const confirmUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/confirm-email?token=${confirmToken}`;
+    const bc = this.email.brandColor;
+    this.email.send(body.email, 'Confirm your ExactEHRM account',
+      this.email.buildHtml(`
+        <h2 style="color:${bc};margin:0 0 16px">Welcome to ExactEHRM!</h2>
+        <p>Hi ${body.fname}, your company <strong>${body.company}</strong> workspace has been created.</p>
+        <p>Please confirm your email by clicking the button below:</p>
+        <p style="text-align:center;margin:24px 0">
+          <a href="${confirmUrl}" style="display:inline-block;background:${bc};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Confirm my account</a>
+        </p>
+        <p style="color:#888;font-size:13px">This link expires in 24 hours.</p>
+      `)
     ).catch(() => {});
-    const tokens = this.auth.generateTokens({ sub: user.id, email: user.email });
     return {
-      ...tokens, user,
+      message: 'Registration successful. Please check your email to confirm your account.',
       company: { id: company.id, name: company.name, subscriptionPlan: company.subscriptionPlan },
       workspaceType: body.workspaceType || 'single', plan: body.plan || '', billing: body.billing || 'monthly',
     };
+  }
+
+  @Post('confirm-email')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Confirm email address with token' })
+  async confirmEmail(@Body() body: { token: string }) {
+    return this.auth.confirmEmail(body.token);
+  }
+
+  @Post('resend-confirmation')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Resend email confirmation link' })
+  async resendConfirmation(@Body() body: { email: string }) {
+    return this.auth.resendConfirmation(body.email);
   }
 
   @Get('me')
