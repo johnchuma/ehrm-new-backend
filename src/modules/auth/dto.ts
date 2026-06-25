@@ -84,6 +84,33 @@ export class UpdateCompanyDto {
 
   @ApiPropertyOptional({ example: '#1E84B8' })
   secondaryColor?: string;
+
+  @ApiPropertyOptional({ example: '123-456-789' })
+  tin?: string;
+
+  @ApiPropertyOptional({ example: '123 Nyerere Road' })
+  address?: string;
+
+  @ApiPropertyOptional({ example: 'Dar es Salaam' })
+  city?: string;
+
+  @ApiPropertyOptional({ example: 'Africa/Dar_es_Salaam' })
+  timezone?: string;
+
+  @ApiPropertyOptional()
+  logo?: string;
+
+  @ApiPropertyOptional({ example: 'https://acacia.co.tz' })
+  website?: string;
+
+  @ApiPropertyOptional({ example: 'REG-2024-001' })
+  registrationNumber?: string;
+
+  @ApiPropertyOptional()
+  tradingName?: string;
+
+  @ApiPropertyOptional({ example: '50-200' })
+  size?: string;
 }
 
 export class UpdateSettingsDto {

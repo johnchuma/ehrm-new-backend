@@ -53,6 +53,15 @@ export class CompanyController {
     if (body.status !== undefined) data.status = body.status;
     if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor;
     if (body.secondaryColor !== undefined) data.secondaryColor = body.secondaryColor;
+    if (body.tin !== undefined) data.tin = body.tin;
+    if (body.address !== undefined) data.address = body.address;
+    if (body.city !== undefined) data.city = body.city;
+    if (body.timezone !== undefined) data.timezone = body.timezone;
+    if (body.logo !== undefined) data.logo = body.logo;
+    if (body.website !== undefined) data.website = body.website;
+    if (body.registrationNumber !== undefined) data.registrationNumber = body.registrationNumber;
+    if (body.tradingName !== undefined) data.tradingName = body.tradingName;
+    if (body.size !== undefined) data.size = body.size;
     return this.prisma.company.update({ where: { id }, data });
   }
 
