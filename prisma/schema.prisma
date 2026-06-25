@@ -182,6 +182,7 @@ model Branch {
   updatedAt DateTime @updatedAt
   company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   departments Department[]
+  employees Employee[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -203,6 +204,7 @@ model Department {
   updatedAt   DateTime @updatedAt
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   branch      Branch?  @relation(fields: [branchId], references: [id])
+  employees   Employee[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -235,6 +237,93 @@ model DemoRequest {
   createdAt DateTime @default(now())
 
   @@map("demo_requests")
+}
+
+model Employee {
+  id                    String    @id @default(cuid())
+  companyId             String
+  firstName             String
+  lastName              String
+  fullName              String
+  email                 String?
+  phone                 String?
+  gender                String?
+  maritalStatus         String?
+  dateOfBirth           String?
+  nationality           String?
+  section               String?
+  jobTitle              String?
+  manager               String?
+  employmentId          String?
+  employmentCategory    String?
+  employmentType        String?
+  modeOfEmployment      String?
+  modeOfPayment         String?
+  joiningDate           String?
+  status                String    @default("Draft")
+  gross                 Float?
+  contractType          String?
+  contractStartDate     String?
+  contractEndDate       String?
+  probationEndDate      String?
+  socialSecurityType    String?
+  socialSecurityNumber  String?
+  tinNumber             String?
+  nidaNumber            String?
+  passportNumber        String?
+  stage                 String    @default("Draft")
+  approvalStage         Int       @default(0)
+  checklist             String?   @db.Text
+  complianceStatus      String?   @db.Text
+  documents             String?   @db.Text
+  education             String?   @db.Text
+  qualifications        String?   @db.Text
+  skills                String?   @db.Text
+  languages             String?   @db.Text
+  emergencyContacts     String?   @db.Text
+  family                String?   @db.Text
+  metadata              String?   @db.Text
+  createdById           String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  userId                String?
+
+  // Relations
+  branchId              String?
+  branch                Branch?   @relation(fields: [branchId], references: [id])
+  departmentId          String?
+  department            Department? @relation(fields: [departmentId], references: [id])
+
+  // Additional onboarding fields
+  prefix                String?
+  middleName            String?
+  username              String?
+  mobile                String?
+  locale                String?
+  personalEmail         String?
+  region                String?
+  postalAddress         String?
+  physicalAddress       String?
+  businessUnit          String?
+  healthInsuranceProvider String?
+  healthInsuranceOther  String?
+  tradeUnion            String?
+  inductionDate         String?
+  inductionCompleted    Boolean?
+  termsAndConditions    String?   @db.Text
+  contractFileName      String?
+  profilePhotoName      String?
+  yearsOfExperience     String?
+  offerLetterDate       String?
+  offerAccepted         Boolean?
+  offerAcceptedDate     String?
+  candidateSource       String?
+  candidateId           String?
+
+  @@index([companyId])
+  @@index([status])
+  @@index([stage])
+  @@map("employees")
 }
 
 model CompanySettings {

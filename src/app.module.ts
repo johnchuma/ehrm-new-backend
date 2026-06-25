@@ -8,9 +8,10 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { DemoModule } from './modules/demo/demo.module';
 import { AiModule } from './modules/ai/ai.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { EmployeeModule } from './modules/employee/employee.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, CompanyModule, SubscriptionsModule, DemoModule, AiModule, NotificationsModule],
+  imports: [PrismaModule, AuthModule, CompanyModule, SubscriptionsModule, DemoModule, AiModule, NotificationsModule, EmployeeModule],
   controllers: [IamController],
   providers: [IamService],
 })
