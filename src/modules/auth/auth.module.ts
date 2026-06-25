@@ -14,5 +14,6 @@ import { SmsService } from '../notifications/sms.service';
   ],
   controllers: [AuthController],
   providers: [AuthService, EmailService, SmsService],
+  exports: [JwtModule, AuthService],
 })
 export class AuthModule {}
