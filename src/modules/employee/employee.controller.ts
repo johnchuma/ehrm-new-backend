@@ -4,6 +4,11 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
 import * as bcrypt from 'bcryptjs';
 
+function fileUrl(filename: string): string {
+  const base = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  return `${base}/uploads/${filename}`;
+}
+
 @ApiTags('Employees')
 @Controller('employees')
 export class EmployeeController {
@@ -310,7 +315,7 @@ export class EmployeeController {
               type: key,
               label: key,
               uploadedAt: emp.updatedAt,
-              url: `/uploads/${v.fileName}`,
+              url: fileUrl(v.fileName),
             });
           }
         }
@@ -331,7 +336,7 @@ export class EmployeeController {
               type: d.type || '',
               label: d.label || d.name || '',
               uploadedAt: d.uploadedAt || emp.updatedAt,
-              url: d.url || `/uploads/${d.fileName || d.name}`,
+              url: d.url || fileUrl(d.fileName || d.name),
             });
           }
         }
@@ -362,7 +367,7 @@ export class EmployeeController {
       type: body.type || '',
       label: body.label || body.name || fileName,
       uploadedAt: new Date().toISOString(),
-      url: body.url || `/uploads/${fileName}`,
+      url: body.url || fileUrl(fileName),
     };
     docs.push(newDoc);
 

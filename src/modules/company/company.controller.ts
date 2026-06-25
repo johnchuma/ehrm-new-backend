@@ -89,7 +89,8 @@ export class CompanyController {
   }))
   uploadFile(@UploadedFile() file: any) {
     if (!file) return { error: 'No file uploaded' };
-    return { url: `/uploads/${file.filename}`, filename: file.filename };
+    const baseUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    return { url: `${baseUrl}/uploads/${file.filename}`, filename: file.filename };
   }
 
   @Get('branches')
