@@ -105,7 +105,7 @@ model RefreshToken {
 model PasswordReset {
   id        String   @id @default(cuid())
   userId    String
-  token     String   @unique
+  token     String   @unique @db.VarChar(500)
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -210,6 +210,19 @@ model Department {
   @@map("departments")
 }
 
+
+model PhoneOtp {
+  id        String   @id @default(cuid())
+  phone     String
+  otp       String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@index([otp])
+  @@map("phone_otps")
+}
 
 model DemoRequest {
   id        String   @id @default(cuid())

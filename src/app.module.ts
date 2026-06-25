@@ -6,9 +6,10 @@ import { IamController } from './modules/auth/iam.controller';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { DemoModule } from './modules/demo/demo.module';
 import { AiModule } from './modules/ai/ai.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, CompanyModule, SubscriptionsModule, DemoModule, AiModule],
+  imports: [PrismaModule, AuthModule, CompanyModule, SubscriptionsModule, DemoModule, AiModule, NotificationsModule],
   controllers: [IamController],
 })
 export class AppModule {}

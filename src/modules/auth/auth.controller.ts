@@ -1,9 +1,10 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, Query, HttpCode, Req } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, HttpCode, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './auth.dto';
 import { RegisterWorkspaceDto } from './dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { EmailService } from '../notifications/email.service';
 import * as bcrypt from 'bcryptjs';
 
 @ApiTags('Authentication')
@@ -12,6 +13,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly prisma: PrismaService,
+    private readonly email: EmailService,
   ) {}
 
   @Post('login')
@@ -52,6 +54,10 @@ export class AuthController {
         isActive: true,
       },
     });
+    // Send welcome email
+    this.email.send(body.email, 'Welcome to ExactEHRM — Your workspace is ready',
+      `<h2>Welcome to ExactEHRM!</h2><p>Hi ${body.fname}, your company <strong>${body.company}</strong> workspace has been created.</p><p>You can now log in and start managing your HR.</p>`
+    ).catch(() => {});
     const tokens = this.auth.generateTokens({ sub: user.id, email: user.email });
     return {
       ...tokens, user,
@@ -67,5 +73,37 @@ export class AuthController {
     const authHeader = req.headers?.authorization;
     if (!authHeader) throw new Error('Unauthorized');
     return this.auth.validateToken(authHeader.replace('Bearer ', ''));
+  }
+
+  // ── Phone OTP Login ──
+
+  @Post('login/phone')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Send OTP to phone number' })
+  async sendOtp(@Body() body: { phone: string }) {
+    return this.auth.sendOtp(body.phone);
+  }
+
+  @Post('login/phone/verify')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Verify OTP and login' })
+  async verifyOtp(@Body() body: { phone: string; otp: string }) {
+    return this.auth.verifyOtp(body.phone, body.otp);
+  }
+
+  // ── Forgot / Reset Password ──
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Send password reset email' })
+  async forgotPassword(@Body() body: { email: string }) {
+    return this.auth.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reset password with token' })
+  async resetPassword(@Body() body: { token: string; password: string }) {
+    return this.auth.resetPassword(body.token, body.password);
   }
 }
