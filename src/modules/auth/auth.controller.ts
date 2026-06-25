@@ -1,12 +1,19 @@
-import { Controller, Post, Get, Put, Body, HttpCode, Req, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from 'class-validator';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './auth.dto';
 import { RegisterWorkspaceDto } from './dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { Public } from '../../common/decorators/public.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { EmailService } from '../notifications/email.service';
 import * as bcrypt from 'bcryptjs';
+
+class RefreshDto {
+  @IsNotEmpty() @IsString() refreshToken: string;
+}
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -18,6 +25,7 @@ export class AuthController {
     private readonly jwt: JwtService,
   ) {}
 
+  @Public()
   @Post('login')
   @HttpCode(200)
   @ApiOperation({ summary: 'Login with email and password' })
@@ -26,6 +34,7 @@ export class AuthController {
     return this.auth.login(body.email, body.password);
   }
 
+  @Public()
   @Post('register')
   @HttpCode(201)
   @ApiOperation({ summary: 'Register a new user' })
@@ -34,6 +43,7 @@ export class AuthController {
     return this.auth.register(body);
   }
 
+  @Public()
   @Post('register-workspace')
   @HttpCode(201)
   @ApiOperation({ summary: 'Register a new workspace (company + admin)' })
@@ -59,17 +69,14 @@ export class AuthController {
     const confirmToken = this.jwt.sign({ sub: user.id, type: 'email_confirm' }, { expiresIn: '24h' });
     const confirmUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/confirm-email?token=${confirmToken}`;
     const bc = this.email.brandColor;
-    this.email.send(body.email, 'Confirm your ExactEHRM account',
-      this.email.buildHtml(`
-        <h2 style="color:${bc};margin:0 0 16px">Welcome to ExactEHRM!</h2>
-        <p>Hi ${body.fname}, your company <strong>${body.company}</strong> workspace has been created.</p>
-        <p>Please confirm your email by clicking the button below:</p>
-        <p style="text-align:center;margin:24px 0">
-          <a href="${confirmUrl}" style="display:inline-block;background:${bc};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Confirm my account</a>
-        </p>
-        <p style="color:#888;font-size:13px">This link expires in 24 hours.</p>
-      `)
-    ).catch(() => {});
+    this.email.send(body.email, 'Confirm your ExactEHRM account', this.email.buildHtml(`
+      <h2 style="color:${bc};margin:0 0 16px">Welcome to ExactEHRM!</h2>
+      <p>Hi ${body.fname || body.firstName}, your company <strong>${body.company}</strong> workspace has been created.</p>
+      <p>Please confirm your email:</p>
+      <p style="text-align:center;margin:24px 0">
+        <a href="${confirmUrl}" style="display:inline-block;background:${bc};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Confirm my account</a>
+      </p>
+    `)).catch(() => {});
     return {
       message: 'Registration successful. Please check your email to confirm your account.',
       company: { id: company.id, name: company.name, subscriptionPlan: company.subscriptionPlan },
@@ -77,20 +84,23 @@ export class AuthController {
     };
   }
 
-  @Post('confirm-email')
+  @Public()
+  @Post('refresh')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Confirm email address with token' })
-  async confirmEmail(@Body() body: { token: string }) {
-    return this.auth.confirmEmail(body.token);
+  @ApiOperation({ summary: 'Exchange a refresh token for a new token pair' })
+  refresh(@Body() body: RefreshDto) {
+    return this.auth.refresh(body.refreshToken);
   }
 
-  @Post('resend-confirmation')
+  @Post('logout')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Resend email confirmation link' })
-  async resendConfirmation(@Body() body: { email: string }) {
-    return this.auth.resendConfirmation(body.email);
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoke all refresh tokens (logout)' })
+  logout(@CurrentUser() user: any) {
+    return this.auth.logout(user.sub);
   }
 
+  @Public()
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
@@ -100,35 +110,51 @@ export class AuthController {
     return this.auth.validateToken(authHeader.replace('Bearer ', ''));
   }
 
-  // ── Phone OTP Login ──
-
+  @Public()
   @Post('login/phone')
   @HttpCode(200)
   @ApiOperation({ summary: 'Send OTP to phone number' })
-  async sendOtp(@Body() body: { phone: string }) {
+  sendOtp(@Body() body: { phone: string }) {
     return this.auth.sendOtp(body.phone);
   }
 
+  @Public()
   @Post('login/phone/verify')
   @HttpCode(200)
   @ApiOperation({ summary: 'Verify OTP and login' })
-  async verifyOtp(@Body() body: { phone: string; otp: string }) {
+  verifyOtp(@Body() body: { phone: string; otp: string }) {
     return this.auth.verifyOtp(body.phone, body.otp);
   }
 
-  // ── Forgot / Reset Password ──
-
+  @Public()
   @Post('forgot-password')
   @HttpCode(200)
   @ApiOperation({ summary: 'Send password reset email' })
-  async forgotPassword(@Body() body: { email: string }) {
+  forgotPassword(@Body() body: { email: string }) {
     return this.auth.forgotPassword(body.email);
   }
 
+  @Public()
   @Post('reset-password')
   @HttpCode(200)
   @ApiOperation({ summary: 'Reset password with token' })
-  async resetPassword(@Body() body: { token: string; password: string }) {
+  resetPassword(@Body() body: { token: string; password: string }) {
     return this.auth.resetPassword(body.token, body.password);
+  }
+
+  @Public()
+  @Post('confirm-email')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Confirm email address with token' })
+  confirmEmail(@Body() body: { token: string }) {
+    return this.auth.confirmEmail(body.token);
+  }
+
+  @Public()
+  @Post('resend-confirmation')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Resend email confirmation link' })
+  resendConfirmation(@Body() body: { email: string }) {
+    return this.auth.resendConfirmation(body.email);
   }
 }

@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
-import { EmployeeController } from './employee.controller';
+import { AuthModule } from '../auth/auth.module';
 import { EmailService } from '../notifications/email.service';
-import { PrismaModule } from '../../common/prisma/prisma.module';
+import { EmployeeController } from './employee.controller';
+import { EmployeeCrudController } from './employee-crud.controller';
+import { EmployeeService } from './employee.service';
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [EmployeeController],
-  providers: [EmailService],
+  imports: [AuthModule],
+  controllers: [EmployeeController, EmployeeCrudController],
+  providers: [EmployeeService, EmailService],
+  exports: [EmployeeService],
 })
 export class EmployeeModule {}
