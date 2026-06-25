@@ -36,6 +36,95 @@ export class EmployeeController {
     return { total, active, draft, onboarding };
   }
 
+  @Get('signals')
+  @ApiOperation({ summary: 'AI signals based on employee data' })
+  async getSignals(@Query('companyId') companyId: string) {
+    const where = companyId ? { companyId } : {};
+    const employees = await this.prisma.employee.findMany({ where });
+
+    const signals: any[] = [];
+    const now = new Date();
+
+    // Onboarding bottleneck — check employees stuck in Documentation/Induction > 14 days
+    const stuck = employees.filter((e) => {
+      if (!e.joiningDate || e.stage === 'Approved' || e.stage === 'Draft') return false;
+      const joined = new Date(e.joiningDate);
+      const days = Math.floor((now.getTime() - joined.getTime()) / 86400000);
+      return days > 14 && (e.stage === 'Documentation' || e.stage === 'Induction');
+    });
+    if (stuck.length > 0) {
+      const avgDays = Math.round(stuck.reduce((sum, e) => {
+        return sum + Math.floor((now.getTime() - new Date(e.joiningDate).getTime()) / 86400000);
+      }, 0) / stuck.length);
+      signals.push({
+        id: 'sig-onb-bottleneck',
+        signal: 'Onboarding bottleneck',
+        entity: `${stuck.length} employee(s) stuck in ${stuck[0]?.stage || 'onboarding'} (avg ${avgDays} days)`,
+        confidence: Math.min(95, 70 + stuck.length * 5),
+        action: 'Review onboarding workflow',
+      });
+    }
+
+    // Doc compliance — check employees missing checklist items
+    const missingDocs = employees.filter((e) => {
+      if (!e.checklist) return false;
+      try {
+        const cl = JSON.parse(e.checklist);
+        return Object.values(cl).some((v: any) => v?.requiresUpload !== false && !v?.fileName);
+      } catch { return false; }
+    });
+    if (missingDocs.length > 0) {
+      signals.push({
+        id: 'sig-doc-gap',
+        signal: 'Doc compliance gap',
+        entity: `${missingDocs.length} employee(s) missing required documents`,
+        confidence: Math.min(90, 65 + missingDocs.length * 5),
+        action: 'Send reminders',
+      });
+    }
+
+    // Pending approvals
+    const pendingApproval = employees.filter((e) => e.stage === 'Pending Approval');
+    if (pendingApproval.length > 0) {
+      signals.push({
+        id: 'sig-pending-approval',
+        signal: 'Pending approvals',
+        entity: `${pendingApproval.length} employee(s) waiting for approval`,
+        confidence: 85,
+        action: 'Review approval queue',
+      });
+    }
+
+    // Expired probation
+    const expiredProbation = employees.filter((e) => {
+      if (!e.probationEndDate || e.stage === 'Approved') return false;
+      return new Date(e.probationEndDate) < now;
+    });
+    if (expiredProbation.length > 0) {
+      signals.push({
+        id: 'sig-probation-expired',
+        signal: 'Probation review overdue',
+        entity: `${expiredProbation.length} employee(s) past probation end date`,
+        confidence: 88,
+        action: 'Schedule review',
+      });
+    }
+
+    // Inductions not scheduled
+    const noInduction = employees.filter((e) => !e.inductionDate && e.stage !== 'Approved' && e.stage !== 'Draft');
+    if (noInduction.length > 0) {
+      signals.push({
+        id: 'sig-no-induction',
+        signal: 'Induction not scheduled',
+        entity: `${noInduction.length} employee(s) without induction date`,
+        confidence: 75,
+        action: 'Schedule induction',
+      });
+    }
+
+    return { signals };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get employee by ID' })
   async get(@Param('id') id: string) {
