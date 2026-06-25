@@ -14,6 +14,13 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
 import { HRQueryModule } from './modules/hrquery/hrquery.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { TrainingModule } from './modules/training/training.module';
+import { BenefitsModule } from './modules/benefits/benefits.module';
+import { ScheduleModule } from './modules/schedule/schedule.module';
+import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { PerformanceModule } from './modules/performance/performance.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -30,6 +37,13 @@ import { TasksModule } from './modules/tasks/tasks.module';
     PayrollModule,
     HRQueryModule,
     TasksModule,
+    TrainingModule,
+    BenefitsModule,
+    ScheduleModule,
+    AnnouncementsModule,
+    PerformanceModule,
+    ExpensesModule,
+    DashboardModule,
   ],
   controllers: [IamController],
   providers: [IamService],

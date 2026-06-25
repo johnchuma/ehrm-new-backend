@@ -286,9 +286,16 @@ model Employee {
   attendance      Attendance[]
   payslips        Payslip[]
   salaryAdvances  SalaryAdvance[]
-  hrQueries       HRQuery[]
-  shiftAssignments ShiftAssignment[]
-  documents       EmployeeDocument[]
+  hrQueries          HRQuery[]
+  shiftAssignments   ShiftAssignment[]
+  documents          EmployeeDocument[]
+  trainingEnrollments TrainingEnrollment[]
+  benefitEnrollments BenefitEnrollment[]
+  expenseClaims      ExpenseClaim[]
+  performanceReviews PerformanceReview[]
+  performanceGoals   PerformanceGoal[]
+  swapRequestsSent   ShiftSwapRequest[] @relation("SwapRequester")
+  swapRequestsReceived ShiftSwapRequest[] @relation("SwapTarget")
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])
@@ -613,6 +620,250 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@map("notifications")
+}
+
+// ─── TRAINING ────────────────────────────────────────────────────────────────
+
+model Training {
+  id          String   @id @default(cuid())
+  companyId   String
+  title       String
+  description String?  @db.Text
+  instructor  String?
+  category    String   @default("GENERAL") // GENERAL | COMPLIANCE | TECHNICAL | SOFT_SKILLS | SAFETY
+  mode        String   @default("ONLINE")  // ONLINE | OFFLINE | BLENDED
+  startDate   DateTime?
+  endDate     DateTime?
+  duration    Int?     // hours
+  maxSlots    Int?
+  venue       String?
+  materials   String?  @db.Text // JSON array of links/attachments
+  isActive    Boolean  @default(true)
+  isMandatory Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  enrollments TrainingEnrollment[]
+
+  @@index([companyId])
+  @@map("trainings")
+}
+
+model TrainingEnrollment {
+  id          String    @id @default(cuid())
+  employeeId  String
+  companyId   String
+  trainingId  String
+  status      String    @default("ENROLLED") // ENROLLED | IN_PROGRESS | COMPLETED | CANCELLED | FAILED
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  score       Int?
+  certificate String?   @db.Text
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  training Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, trainingId])
+  @@index([companyId])
+  @@map("training_enrollments")
+}
+
+// ─── BENEFITS ────────────────────────────────────────────────────────────────
+
+model Benefit {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?  @db.Text
+  type        String   @default("HEALTH")  // HEALTH | DENTAL | PENSION | TRANSPORT | MEAL | LIFE | OTHER
+  coverage    String?  @db.Text // JSON — what's covered
+  maxAmount   Decimal? @db.Decimal(15, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  enrollments BenefitEnrollment[]
+
+  @@index([companyId])
+  @@map("benefits")
+}
+
+model BenefitEnrollment {
+  id         String   @id @default(cuid())
+  employeeId String
+  companyId  String
+  benefitId  String
+  startDate  DateTime
+  endDate    DateTime?
+  status     String   @default("ACTIVE") // ACTIVE | SUSPENDED | EXPIRED
+  enrolledAt DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  benefit  Benefit  @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+  claims   BenefitClaim[]
+
+  @@unique([employeeId, benefitId])
+  @@index([companyId])
+  @@map("benefit_enrollments")
+}
+
+model BenefitClaim {
+  id           String    @id @default(cuid())
+  enrollmentId String
+  employeeId   String
+  companyId    String
+  amount       Decimal   @db.Decimal(15, 2)
+  description  String    @db.Text
+  documents    String?   @db.Text // JSON array of uploaded doc URLs
+  status       String    @default("PENDING") // PENDING | APPROVED | REJECTED | PAID
+  approvedBy   String?
+  approvedAt   DateTime?
+  rejectionReason String? @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  enrollment BenefitEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([companyId])
+  @@map("benefit_claims")
+}
+
+// ─── SCHEDULE ────────────────────────────────────────────────────────────────
+
+model ShiftSwapRequest {
+  id             String    @id @default(cuid())
+  requesterId    String    // Employee asking for swap
+  targetId       String    // Employee being asked
+  companyId      String
+  requesterDate  DateTime  @db.Date
+  targetDate     DateTime  @db.Date
+  reason         String?   @db.Text
+  status         String    @default("PENDING") // PENDING | ACCEPTED | REJECTED | CANCELLED | APPROVED_BY_HR
+  approvedBy     String?
+  approvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  requester Employee @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target    Employee @relation("SwapTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId])
+  @@index([targetId])
+  @@index([companyId])
+  @@map("shift_swap_requests")
+}
+
+// ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
+
+model Announcement {
+  id          String   @id @default(cuid())
+  companyId   String
+  title       String
+  body        String   @db.Text
+  type        String   @default("GENERAL") // GENERAL | URGENT | EVENT | POLICY | OTHER
+  targetAudience String @default("ALL")   // ALL | DEPARTMENT | BRANCH — scope
+  targetId    String?  // departmentId or branchId if not ALL
+  pinned      Boolean  @default(false)
+  publishedAt DateTime @default(now())
+  expiresAt   DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([publishedAt])
+  @@map("announcements")
+}
+
+// ─── PERFORMANCE ─────────────────────────────────────────────────────────────
+
+model PerformanceReview {
+  id           String    @id @default(cuid())
+  employeeId   String
+  reviewerId   String?   // manager's employeeId
+  companyId    String
+  period       String    // e.g. "Q1 2025" or "Annual 2025"
+  startDate    DateTime
+  endDate      DateTime
+  status       String    @default("PENDING") // PENDING | SELF_REVIEW | MANAGER_REVIEW | COMPLETED
+  selfRating   Int?      // 1-5
+  selfComment  String?   @db.Text
+  managerRating Int?
+  managerComment String? @db.Text
+  overallRating Int?
+  strengths    String?   @db.Text
+  improvements String?   @db.Text
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  employee Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  goals    PerformanceGoal[]
+
+  @@index([employeeId])
+  @@index([companyId])
+  @@map("performance_reviews")
+}
+
+model PerformanceGoal {
+  id          String    @id @default(cuid())
+  employeeId  String
+  reviewId    String?
+  companyId   String
+  title       String
+  description String?   @db.Text
+  targetDate  DateTime?
+  weight      Int       @default(100) // percentage weight
+  status      String    @default("IN_PROGRESS") // IN_PROGRESS | ACHIEVED | PARTIALLY | MISSED
+  progress    Int       @default(0) // 0-100%
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  employee Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  review   PerformanceReview? @relation(fields: [reviewId], references: [id])
+
+  @@index([employeeId])
+  @@index([companyId])
+  @@map("performance_goals")
+}
+
+// ─── EXPENSES ────────────────────────────────────────────────────────────────
+
+model ExpenseClaim {
+  id           String    @id @default(cuid())
+  employeeId   String
+  companyId    String
+  title        String
+  description  String?   @db.Text
+  totalAmount  Decimal   @db.Decimal(15, 2)
+  currency     String    @default("TZS")
+  status       String    @default("PENDING") // PENDING | APPROVED | REJECTED | PAID
+  approvedBy   String?
+  approvedAt   DateTime?
+  rejectionReason String? @db.Text
+  paidAt       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  employee Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  items    ExpenseItem[]
+
+  @@index([employeeId])
+  @@index([companyId])
+  @@map("expense_claims")
+}
+
+model ExpenseItem {
+  id          String   @id @default(cuid())
+  claimId     String
+  category    String   @default("OTHER") // TRAVEL | MEALS | ACCOMMODATION | SUPPLIES | OTHER
+  description String
+  amount      Decimal  @db.Decimal(15, 2)
+  date        DateTime @db.Date
+  receipt     String?  @db.Text // URL
+
+  claim ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@map("expense_items")
 }
 
 // ─── MISC ─────────────────────────────────────────────────────────────────────
