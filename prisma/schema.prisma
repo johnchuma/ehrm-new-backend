@@ -424,6 +424,31 @@ model Employee {
   @@map("employees")
 }
 
+model EmployeeMovement {
+  id              String   @id @default(cuid())
+  companyId       String
+  employeeId      String
+  employeeName    String?
+  movementType    String   // Promotion, Transfer, Salary Change, Acting Appointment, Reassignment
+  fromValue       String?  // previous grade, branch, department, salary, etc.
+  toValue         String?  // proposed grade, branch, department, salary, etc.
+  reason          String?  @db.Text
+  effectiveDate   String?
+  status          String   @default("Pending") // Pending, Approved, Rejected
+  approvedBy      String?
+  approvedAt      DateTime?
+  metadata        String?  @db.Text
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([movementType])
+  @@index([status])
+  @@map("employee_movements")
+}
+
 model EmployeeDocument {
   id         String   @id @default(cuid())
   employeeId String

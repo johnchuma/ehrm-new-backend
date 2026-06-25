@@ -13,6 +13,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
 import { EmployeeModule } from './modules/employee/employee.module';
+import { MovementModule } from './modules/movement/movement.module';
 import { LeaveModule } from './modules/leave/leave.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
