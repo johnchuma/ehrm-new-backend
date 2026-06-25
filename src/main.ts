@@ -15,7 +15,7 @@ async function bootstrap() {
   // CORS — whitelist from env; allow * only in development
   const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-    : ['http://localhost:3001', 'http://localhost:5173', 'https://test.exactehrm.co.tz', 'https://exactehrm.co.tz'];
+    : ['http://localhost:3001', 'http://localhost:5173','http://localhost:5174', 'https://test.exactehrm.co.tz', 'https://exactehrm.co.tz'];
   app.enableCors({
     origin: (origin, cb) => {
       if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
