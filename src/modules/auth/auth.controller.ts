@@ -1,11 +1,17 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, Query, HttpCode, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from 'class-validator';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './auth.dto';
 import { RegisterWorkspaceDto } from './dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Public } from '../../common/decorators/public.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import * as bcrypt from 'bcryptjs';
+
+class RefreshDto {
+  @IsNotEmpty() @IsString() refreshToken: string;
+}
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -56,12 +62,28 @@ export class AuthController {
         isActive: true,
       },
     });
-    const tokens = this.auth.generateTokens({ sub: user.id, email: user.email });
+    const tokens = await this.auth.generateTokens({ sub: user.id, email: user.email ?? '' });
     return {
       ...tokens, user,
       company: { id: company.id, name: company.name, subscriptionPlan: company.subscriptionPlan },
       workspaceType: body.workspaceType || 'single', plan: body.plan || '', billing: body.billing || 'monthly',
     };
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Exchange a refresh token for a new token pair' })
+  refresh(@Body() body: RefreshDto) {
+    return this.auth.refresh(body.refreshToken);
+  }
+
+  @Post('logout')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoke all refresh tokens for the current user' })
+  logout(@CurrentUser() user: any) {
+    return this.auth.logout(user.sub);
   }
 
   @Get('me')

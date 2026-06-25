@@ -2,19 +2,17 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { getTenantContext } from '../tenant/tenant.context';
 
-// Models that have a companyId column and must be scoped per tenant
+// Models that have a companyId column and must be scoped per tenant.
+// Only include models where companyId physically exists in the schema —
+// Prisma will reject an unknown field in WHERE at runtime.
 const TENANT_MODELS = new Set([
-  'user',
-  'role',
-  'userRole',
-  'rolePermission',
-  'refreshToken',
-  'passwordReset',
-  'auditLog',
-  'branch',
-  'department',
-  'companySettings',
-  'subscription',
+  'user',            // companyId?
+  'role',            // companyId?
+  'auditLog',        // companyId?
+  'branch',          // companyId
+  'department',      // companyId
+  'companySettings', // companyId
+  'subscription',    // companyId
 ]);
 
 // Operations where we inject companyId into the WHERE clause
