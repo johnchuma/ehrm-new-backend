@@ -58,7 +58,7 @@ export class EmployeeService {
         jobTitle: true,
         status: true,
         department: { select: { id: true, name: true } },
-        user: { select: { id: true, firstName: true, lastName: true, fullName: true, email: true, profilePhoto: false } },
+        user: { select: { id: true, firstName: true, lastName: true, fullName: true, email: true } },
       },
     });
   }

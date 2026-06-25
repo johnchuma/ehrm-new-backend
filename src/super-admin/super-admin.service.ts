@@ -75,10 +75,9 @@ export class SuperAdminService {
         take: 10,
         select: {
           id: true,
-          actorId: true,
+          userId: true,
           action: true,
           resource: true,
-          resourceId: true,
           companyId: true,
           createdAt: true,
         },
@@ -153,7 +152,7 @@ export class SuperAdminService {
         orderBy: { createdAt: 'desc' },
         include: {
           settings: {
-            select: { currency: true, timezone: true, payrollCycle: true },
+            select: { id: true, payrollCycle: true },
           },
           _count: {
             select: { branches: true, departments: true },
@@ -205,7 +204,7 @@ export class SuperAdminService {
         where: { companyId: id },
         orderBy: { createdAt: 'desc' },
         take: 5,
-        select: { id: true, action: true, resource: true, actorId: true, createdAt: true },
+        select: { id: true, action: true, resource: true, userId: true, createdAt: true },
       }),
     ]);
 

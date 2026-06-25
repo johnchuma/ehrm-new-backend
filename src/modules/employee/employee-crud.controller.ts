@@ -111,7 +111,13 @@ export class EmployeeCrudController {
     }
 
     // Inductions not scheduled
-    const noInduction = employees.filter((e) => !e.inductionDate && e.stage !== 'Approved' && e.stage !== 'Draft');
+    const noInduction = employees.filter((e) => {
+      if (e.stage === 'Approved' || e.stage === 'Draft') return false;
+      if (e.metadata) {
+        try { const m = JSON.parse(e.metadata); if (m.inductionDate) return false; } catch {}
+      }
+      return true;
+    });
     if (noInduction.length > 0) {
       signals.push({
         id: 'sig-no-induction',
@@ -150,11 +156,8 @@ export class EmployeeCrudController {
         departmentId: body.departmentId || body.department || null,
         section: body.section || null,
         jobTitle: body.jobTitle || null,
-        manager: body.manager || null,
-        employmentId: body.employmentId || null,
-        employmentCategory: body.employmentCategory || null,
+        employmentMode: body.employmentMode || body.employmentType || null,
         employmentType: body.employmentType || null,
-        modeOfEmployment: body.modeOfEmployment || null,
         modeOfPayment: body.modeOfPayment || null,
         joiningDate: body.joiningDate || null,
         status: body.status || 'Draft',
@@ -163,11 +166,6 @@ export class EmployeeCrudController {
         contractStartDate: body.contractStartDate || null,
         contractEndDate: body.contractEndDate || null,
         probationEndDate: body.probationEndDate || null,
-        socialSecurityType: body.socialSecurityType || null,
-        socialSecurityNumber: body.socialSecurityNumber || null,
-        tinNumber: body.tinNumber || null,
-        nidaNumber: body.nidaNumber || null,
-        passportNumber: body.passportNumber || null,
         stage: body.stage || 'Draft',
         approvalStage: body.approvalStage || 0,
         checklist: body.checklist ? JSON.stringify(body.checklist) : null,
@@ -181,31 +179,6 @@ export class EmployeeCrudController {
         family: body.family ? JSON.stringify(body.family) : null,
         metadata: body.metadata ? JSON.stringify(body.metadata) : null,
         createdById: body.createdById || null,
-        // New onboarding fields
-        prefix: body.prefix || null,
-        middleName: body.middleName || null,
-        username: body.username || null,
-        mobile: body.mobile || null,
-        locale: body.locale || null,
-        personalEmail: body.personalEmail || null,
-        region: body.region || null,
-        postalAddress: body.postalAddress || null,
-        physicalAddress: body.physicalAddress || null,
-        businessUnit: body.businessUnit || null,
-        healthInsuranceProvider: body.healthInsuranceProvider || null,
-        healthInsuranceOther: body.healthInsuranceOther || null,
-        tradeUnion: body.tradeUnion || null,
-        inductionDate: body.inductionDate || null,
-        inductionCompleted: body.inductionCompleted ?? null,
-        termsAndConditions: body.termsAndConditions || null,
-        contractFileName: body.contractFileName || null,
-        profilePhotoName: body.profilePhotoName || null,
-        yearsOfExperience: body.yearsOfExperience || null,
-        offerLetterDate: body.offerLetterDate || null,
-        offerAccepted: body.offerAccepted ?? null,
-        offerAcceptedDate: body.offerAcceptedDate || null,
-        candidateSource: body.candidateSource || null,
-        candidateId: body.candidateId || null,
       },
     });
 

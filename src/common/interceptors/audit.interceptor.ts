@@ -50,16 +50,11 @@ export class AuditInterceptor implements NestInterceptor {
           await this.prisma.auditLog.create({
             data: {
               companyId: user.selectedCompanyId ?? null,
-              actorId: user.sub,
-              actorType: 'USER',
-              originalActorId: user.originalAdminId ?? null,
+              userId: user.sub,
               action,
               resource,
-              resourceId,
-              after: this.mask(responseData),
               ipAddress: req.ip,
               userAgent: req.headers['user-agent'] ?? null,
-              requestId: req.headers['x-request-id'] ?? null,
             },
           });
         } catch {
