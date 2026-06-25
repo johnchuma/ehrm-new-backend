@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsOptional, Allow } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'john@company.co.tz' })
@@ -129,21 +129,27 @@ export class RegisterWorkspaceDto {
   company: string;
 
   @ApiPropertyOptional({ example: 1284 })
+  @IsOptional()
   employees?: number;
 
   @ApiPropertyOptional({ example: 'Manufacturing' })
+  @IsOptional()
   sector?: string;
 
   @ApiPropertyOptional({ example: '201–500' })
+  @IsOptional()
   size?: string;
 
   @ApiPropertyOptional({ example: 'Tanzania' })
+  @IsOptional()
   country?: string;
 
   @ApiPropertyOptional({ example: 'TZS' })
+  @IsOptional()
   currency?: string;
 
   @ApiPropertyOptional({ example: [] })
+  @IsOptional()
   additionalCompanies?: Array<{
     company: string;
     sector?: string;
@@ -153,9 +159,11 @@ export class RegisterWorkspaceDto {
   }>;
 
   @ApiPropertyOptional({ example: 'John' })
+  @IsOptional()
   firstName?: string;
 
   @ApiPropertyOptional({ example: 'Doe' })
+  @IsOptional()
   lastName?: string;
 
   @ApiProperty({ example: 'John' })
@@ -175,11 +183,14 @@ export class RegisterWorkspaceDto {
   password: string;
 
   @ApiPropertyOptional({ example: 'HR Professional' })
+  @IsOptional()
   plan?: string;
 
   @ApiPropertyOptional({ example: 'monthly' })
+  @IsOptional()
   billing?: string;
 
   @ApiPropertyOptional({ example: '+255712345678' })
+  @IsOptional()
   phone?: string;
 }
