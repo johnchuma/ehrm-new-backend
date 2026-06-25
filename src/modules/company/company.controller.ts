@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -96,9 +96,11 @@ export class CompanyController {
     }),
     limits: { fileSize: 5 * 1024 * 1024 },
   }))
-  uploadFile(@UploadedFile() file: any) {
+  uploadFile(@UploadedFile() file: any, @Req() req: any) {
     if (!file) return { error: 'No file uploaded' };
-    const baseUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     return { url: `${baseUrl}/uploads/${file.filename}`, filename: file.filename };
   }
 

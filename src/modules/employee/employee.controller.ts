@@ -3,19 +3,21 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EmployeeService, UpdateProfileDto } from './employee.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 
 function fileUrl(filename: string): string {
-  const base = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
-  return `${base}/uploads/${filename}`;
+  return `/uploads/${filename}`;
 }
 
 @ApiTags('Employees')
 @Controller('employees')
 export class EmployeeController {
-  prisma: any;
   email: any;
-  constructor(private readonly svc: EmployeeService) {}
+  constructor(
+    private readonly svc: EmployeeService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Get my employee profile' })
