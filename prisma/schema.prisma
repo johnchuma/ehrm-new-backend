@@ -341,6 +341,12 @@ model Employee {
   status            String    @default("ACTIVE")
   basicSalary       Decimal   @default(0) @db.Decimal(15, 2)
   currency          String    @default("TZS")
+  // Personal info
+  firstName         String?
+  lastName          String?
+  fullName          String?
+  email             String?
+  phone             String?
   gender            String?
   dateOfBirth       DateTime?
   nationalId        String?
@@ -352,14 +358,42 @@ model Employee {
   address           String?   @db.Text
   city              String?
   profilePhoto      String?
+  // Banking
   bankName          String?
   bankAccount       String?
   bankBranch        String?
   mobileMoney       String?
   mobileMoneyName   String?
+  // Emergency contact
   emergencyName     String?
   emergencyPhone    String?
   emergencyRelation String?
+  // Compensation
+  gross             Float?
+  // Onboarding workflow (company admin)
+  stage             String    @default("Draft")
+  approvalStage     Int       @default(0)
+  joiningDate       String?
+  contractType      String?
+  contractStartDate String?
+  contractEndDate   String?
+  probationEndDate  String?
+  section           String?
+  modeOfPayment     String?
+  // Rich JSON data blobs
+  checklist         String?   @db.Text
+  complianceStatus  String?   @db.Text
+  documents         String?   @db.Text
+  education         String?   @db.Text
+  qualifications    String?   @db.Text
+  skills            String?   @db.Text
+  languages         String?   @db.Text
+  emergencyContacts String?   @db.Text
+  family            String?   @db.Text
+  metadata          String?   @db.Text
+  // System
+  userId            String?
+  createdById       String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -374,7 +408,7 @@ model Employee {
   salaryAdvances       SalaryAdvance[]
   hrQueries            HRQuery[]
   shiftAssignments     ShiftAssignment[]
-  documents            EmployeeDocument[]
+  employeeDocuments    EmployeeDocument[]   @relation("EmployeeDocuments")
   trainingEnrollments  TrainingEnrollment[]
   benefitEnrollments   BenefitEnrollment[]
   expenseClaims        ExpenseClaim[]
@@ -401,7 +435,7 @@ model EmployeeDocument {
   mimeType   String?
   uploadedAt DateTime @default(now())
 
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade, name: "EmployeeDocuments")
 
   @@index([employeeId])
   @@index([companyId])

@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { EmailService } from '../notifications/email.service';
 import { EmployeeController } from './employee.controller';
+import { EmployeeCrudController } from './employee-crud.controller';
 import { EmployeeService } from './employee.service';
 
 @Module({
   imports: [AuthModule],
-  controllers: [EmployeeController],
-  providers: [EmployeeService],
+  controllers: [EmployeeController, EmployeeCrudController],
+  providers: [EmployeeService, EmailService],
   exports: [EmployeeService],
 })
 export class EmployeeModule {}
