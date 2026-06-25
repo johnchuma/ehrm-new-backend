@@ -79,23 +79,24 @@ export class BootstrapService implements OnModuleInit {
 
   private async ensureSuperAdminRole(createdBy: string) {
     const existing = await this.prisma.role.findFirst({
-      where: { name: 'HRM_SUPER_ADMIN', scope: 'GLOBAL' },
+      where: { name: 'System Administrator', scope: 'GLOBAL' },
     });
     if (existing) {
-      this.logger.log('HRM_SUPER_ADMIN role exists');
+      this.logger.log('System Administrator role exists');
       return existing;
     }
 
     const role = await this.prisma.role.create({
       data: {
-        name: 'HRM_SUPER_ADMIN',
-        slug: 'hrm-super-admin',
+        name: 'System Administrator',
+        slug: 'system-administrator',
         scope: 'GLOBAL',
-        description: 'Platform super admin with all permissions',
+        description: 'Full access to all system features across all companies',
+        isSystem: true,
         isActive: true,
       },
     });
-    this.logger.log('HRM_SUPER_ADMIN role created');
+    this.logger.log('System Administrator role created');
     return role;
   }
 
@@ -116,7 +117,7 @@ export class BootstrapService implements OnModuleInit {
         data: toAdd.map((p) => ({ roleId, permissionId: p.id })),
         skipDuplicates: true,
       });
-      this.logger.log(`Granted ${toAdd.length} new permissions to HRM_SUPER_ADMIN`);
+      this.logger.log(`Granted ${toAdd.length} new permissions to System Administrator`);
     }
   }
 
@@ -126,7 +127,7 @@ export class BootstrapService implements OnModuleInit {
       update: {},
       create: { userId, roleId },
     });
-    this.logger.log('HRM_SUPER_ADMIN role assigned to super admin user');
+    this.logger.log('System Administrator role assigned to super admin user');
   }
 
   private async ensureDefaultPlans() {

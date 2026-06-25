@@ -197,7 +197,7 @@ export class SuperAdminService {
     const [userCount, adminRole, recentActivity] = await Promise.all([
       this.prisma.user.count({ where: { companyId: id } }),
       this.prisma.role.findFirst({
-        where: { companyId: id, name: 'COMPANY_ADMIN' },
+        where: { name: 'Company Admin', isSystem: true },
         select: { id: true, name: true },
       }),
       this.prisma.auditLog.findMany({
@@ -278,38 +278,13 @@ export class SuperAdminService {
           },
         });
 
-        // 3. Fetch all permissions from DB
-        const allPermissions = await tx.permission.findMany({
-          select: { id: true, name: true },
+        // 3. Find the system Company Admin role
+        const companyAdminRole = await tx.role.findFirst({
+          where: { name: 'Company Admin', isSystem: true },
         });
+        if (!companyAdminRole) throw new Error('Company Admin system role not found. Run bootstrap first.');
 
-        // 4. Create COMPANY_ADMIN role (TENANT scope)
-        const companyAdminRole = await tx.role.create({
-          data: {
-            name: 'COMPANY_ADMIN',
-            slug: 'company-admin',
-            scope: 'TENANT',
-            companyId: company.id,
-            description: 'Company administrator with full tenant access',
-            isActive: true,
-          },
-        });
-
-        // 5. Grant all non-super-admin permissions to COMPANY_ADMIN
-        const tenantPerms = allPermissions.filter(
-          (p) => !p.name.startsWith('super_admin') && !p.name.startsWith('companies'),
-        );
-        if (tenantPerms.length > 0) {
-          await tx.rolePermission.createMany({
-            data: tenantPerms.map((p) => ({
-              roleId: companyAdminRole.id,
-              permissionId: p.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
-
-        // 6. Create or find admin user
+        // 4. Create or find admin user
         let adminUser = await tx.user.findUnique({
           where: { email: dto.companyAdminEmail },
         });
@@ -340,14 +315,14 @@ export class SuperAdminService {
           }
         }
 
-        // 7. Assign COMPANY_ADMIN role to admin user
+        // 5. Assign Company Admin role to admin user
         await tx.userRole.upsert({
           where: { userId_roleId: { userId: adminUser.id, roleId: companyAdminRole.id } },
           update: {},
           create: { userId: adminUser.id, roleId: companyAdminRole.id },
         });
 
-        // 8. Link subscription if plan provided
+        // 6. Link subscription if plan provided
         let subscription = null;
         if (dto.planSlug) {
           const plan = await tx.plan.findUnique({ where: { slug: dto.planSlug } });
@@ -473,7 +448,7 @@ export class SuperAdminService {
     }
 
     const companyAdminRole = await this.prisma.role.findFirst({
-      where: { companyId: targetCompanyId, name: 'COMPANY_ADMIN' },
+      where: { name: 'Company Admin', isSystem: true },
       include: {
         permissions: { include: { permission: true } },
       },
@@ -481,7 +456,7 @@ export class SuperAdminService {
 
     if (!companyAdminRole) {
       throw new NotFoundException(
-        'COMPANY_ADMIN role not found for this company. Provision an admin first.',
+        'Company Admin role not found. Run bootstrap first.',
       );
     }
 
@@ -498,7 +473,7 @@ export class SuperAdminService {
       roles: [
         {
           roleId: companyAdminRole.id,
-          roleName: 'COMPANY_ADMIN',
+          roleName: 'Company Admin',
           scope: 'TENANT',
           companyId: targetCompanyId,
         },
@@ -593,10 +568,10 @@ export class SuperAdminService {
     if (existing) throw new ConflictException('Email already exists');
 
     const superAdminRole = await this.prisma.role.findFirst({
-      where: { name: 'HRM_SUPER_ADMIN', scope: 'GLOBAL' },
+      where: { name: 'System Administrator', scope: 'GLOBAL' },
     });
     if (!superAdminRole) {
-      throw new NotFoundException('HRM_SUPER_ADMIN role not found. Run bootstrap first.');
+      throw new NotFoundException('System Administrator role not found. Run bootstrap first.');
     }
 
     const tempPassword = await bcrypt.hash('ChangeMe@2026!', 12);
@@ -652,7 +627,7 @@ export class SuperAdminService {
     if (!user) throw new NotFoundException('User not found');
 
     const isSuperAdmin = user.roles.some(
-      (ur) => ur.role.scope === 'GLOBAL' && ur.role.name === 'HRM_SUPER_ADMIN',
+      (ur) => ur.role.scope === 'GLOBAL' && ur.role.name === 'System Administrator',
     );
     if (isSuperAdmin) {
       throw new ForbiddenException('Cannot delete a super admin user');

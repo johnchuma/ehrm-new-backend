@@ -53,7 +53,7 @@ export class AuthService {
       new Set(user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.name))),
     );
 
-    const isSuperAdmin = user.roles.some((ur) => ur.role.scope === 'GLOBAL' && ur.role.name === 'HRM_SUPER_ADMIN');
+    const isSuperAdmin = user.roles.some((ur) => ur.role.scope === 'GLOBAL' && ur.role.name === 'System Administrator');
 
     const tokens = await this.generateTokens({
       sub: user.id,
@@ -191,7 +191,7 @@ export class AuthService {
 
     const roles = user.roles.map((ur) => ({ roleId: ur.role.id, roleName: ur.role.name, scope: ur.role.scope, companyId: ur.role.companyId }));
     const permissions: string[] = Array.from(new Set(user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.name))));
-    const isSuperAdmin = user.roles.some((ur) => ur.role.scope === 'GLOBAL' && ur.role.name === 'HRM_SUPER_ADMIN');
+    const isSuperAdmin = user.roles.some((ur) => ur.role.scope === 'GLOBAL' && ur.role.name === 'System Administrator');
 
     return this.generateTokens({ sub: user.id, email: user.email ?? '', roles, permissions, selectedCompanyId: user.companyId ?? undefined, isSuperAdmin, isImpersonating: false });
   }
