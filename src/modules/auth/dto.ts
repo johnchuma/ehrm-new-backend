@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'john@company.co.tz' })
@@ -120,9 +121,11 @@ export class UpdateSettingsDto {
 
 export class RegisterWorkspaceDto {
   @ApiProperty({ example: 'single' })
+  @IsNotEmpty()
   workspaceType: string;
 
   @ApiProperty({ example: 'Acacia Group Ltd' })
+  @IsNotEmpty()
   company: string;
 
   @ApiPropertyOptional({ example: 1284 })
@@ -156,15 +159,19 @@ export class RegisterWorkspaceDto {
   lastName?: string;
 
   @ApiProperty({ example: 'John' })
+  @IsNotEmpty()
   fname: string;
 
   @ApiProperty({ example: 'Doe' })
+  @IsNotEmpty()
   lname: string;
 
   @ApiProperty({ example: 'john@acacia.co.tz' })
+  @IsNotEmpty()
   email: string;
 
   @ApiProperty({ example: 'demo1234' })
+  @IsNotEmpty()
   password: string;
 
   @ApiPropertyOptional({ example: 'HR Professional' })
