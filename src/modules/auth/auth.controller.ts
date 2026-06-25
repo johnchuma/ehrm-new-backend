@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './auth.dto';
 import { RegisterWorkspaceDto } from './dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { Public } from '../../common/decorators/public.decorator';
 import * as bcrypt from 'bcryptjs';
 
 @ApiTags('Authentication')
@@ -14,6 +15,7 @@ export class AuthController {
     private readonly prisma: PrismaService,
   ) {}
 
+  @Public()
   @Post('login')
   @HttpCode(200)
   @ApiOperation({ summary: 'Login with email and password' })
@@ -22,6 +24,7 @@ export class AuthController {
     return this.auth.login(body.email, body.password);
   }
 
+  @Public()
   @Post('register')
   @HttpCode(201)
   @ApiOperation({ summary: 'Register a new user' })
@@ -30,6 +33,7 @@ export class AuthController {
     return this.auth.register(body);
   }
 
+  @Public()
   @Post('register-workspace')
   @HttpCode(201)
   @ApiOperation({ summary: 'Register a new workspace (company + admin)' })
@@ -63,6 +67,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
+  @Public()
   getProfile(@Req() req: any) {
     const authHeader = req.headers?.authorization;
     if (!authHeader) throw new Error('Unauthorized');

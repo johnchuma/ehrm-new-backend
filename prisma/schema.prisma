@@ -7,26 +7,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum RoleScope {
+  GLOBAL
+  TENANT
+}
+
 model User {
-  id              String   @id @default(cuid())
-  email           String?  @unique
-  phone           String?  @unique
+  id              String    @id @default(cuid())
+  email           String?   @unique
+  phone           String?   @unique
   password        String
   firstName       String
   lastName        String
   fullName        String
-  companyId       String
+  companyId       String?
   employeeId      String?
-  isActive        Boolean  @default(true)
-  emailVerified   Boolean  @default(false)
-  phoneVerified   Boolean  @default(false)
-  mfaEnabled      Boolean  @default(false)
+  isActive        Boolean   @default(true)
+  emailVerified   Boolean   @default(false)
+  phoneVerified   Boolean   @default(false)
+  mfaEnabled      Boolean   @default(false)
   mfaSecret       String?
   lastLoginAt     DateTime?
-  failedAttempts  Int      @default(0)
+  failedAttempts  Int       @default(0)
   lockedUntil     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   roles           UserRole[]
   refreshTokens   RefreshToken[]
   passwordResets  PasswordReset[]
@@ -38,18 +44,23 @@ model User {
 }
 
 model Role {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
+  slug        String?
   description String?
+  scope       RoleScope  @default(TENANT)
   companyId   String?
-  isSystem    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isSystem    Boolean    @default(false)
+  isActive    Boolean    @default(true)
+  createdBy   String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   users       UserRole[]
   permissions RolePermission[]
 
   @@unique([name, companyId])
   @@index([companyId])
+  @@index([scope])
   @@map("roles")
 }
 
@@ -92,6 +103,7 @@ model RefreshToken {
   id        String   @id @default(cuid())
   userId    String
   token     String   @unique
+  jti       String?  @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
   revoked   Boolean  @default(false)
@@ -117,54 +129,79 @@ model PasswordReset {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  companyId String?
-  action    String
-  resource  String
-  details   String?  @db.Text
-  ipAddress String?
-  userAgent String?  @db.Text
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  actorId         String?
+  originalActorId String?
+  companyId       String?
+  action          String
+  resource        String
+  resourceId      String?
+  before          String?  @db.Text
+  after           String?  @db.Text
+  details         String?  @db.Text
+  ipAddress       String?
+  userAgent       String?  @db.Text
+  requestId       String?
+  createdAt       DateTime @default(now())
 
-  @@index([userId])
+  @@index([actorId])
   @@index([companyId])
   @@index([action])
+  @@index([resource])
   @@index([createdAt])
   @@map("audit_logs")
 }
 
+model ImpersonationAudit {
+  id              String    @id @default(cuid())
+  superAdminId    String
+  targetCompanyId String
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  expiresAt       DateTime
+  ipAddress       String?
+  createdAt       DateTime  @default(now())
+
+  @@index([superAdminId])
+  @@index([targetCompanyId])
+  @@map("impersonation_audits")
+}
+
 model Company {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   name                String
-  slug                String   @unique
+  slug                String    @unique
   email               String
-  phone               String
-  address             String?  @db.Text
-  country             String   @default("Tanzania")
-  currency            String   @default("TZS")
-  timezone            String   @default("Africa/Dar_es_Salaam")
-  logo                String?  @db.Text
-  primaryColor        String?  @default("#EC782B")
-  secondaryColor      String?  @default("#1E84B8")
-  subscriptionPlan    String   @default("FREE")
+  phone               String    @default("")
+  tin                 String?   @unique
+  address             String?   @db.Text
+  city                String?
+  country             String    @default("Tanzania")
+  currency            String    @default("TZS")
+  timezone            String    @default("Africa/Dar_es_Salaam")
+  logo                String?   @db.Text
+  primaryColor        String?   @default("#EC782B")
+  secondaryColor      String?   @default("#1E84B8")
+  subscriptionPlan    String    @default("FREE")
   industry            String?
   size                String?
   website             String?
-  taxId               String?
+  workspaceType       String    @default("SaaS")
   registrationNumber  String?
-  status              String   @default("ACTIVE")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  status              String    @default("ACTIVE")
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
   branches            Branch[]
   departments         Department[]
   settings            CompanySettings?
+  subscriptions       Subscription[]
 
   @@index([slug])
   @@index([status])
+  @@index([deletedAt])
   @@map("companies")
 }
-
 
 model Branch {
   id        String   @id @default(cuid())
@@ -188,7 +225,6 @@ model Branch {
   @@map("branches")
 }
 
-
 model Department {
   id          String   @id @default(cuid())
   companyId   String
@@ -209,7 +245,6 @@ model Department {
   @@index([branchId])
   @@map("departments")
 }
-
 
 model DemoRequest {
   id        String   @id @default(cuid())
@@ -242,3 +277,43 @@ model CompanySettings {
   @@map("company_settings")
 }
 
+model Plan {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  slug         String    @unique
+  description  String?   @db.Text
+  monthlyPrice Decimal   @db.Decimal(10, 2) @default(0)
+  annualPrice  Decimal   @db.Decimal(10, 2) @default(0)
+  maxEmployees Int       @default(-1)
+  features     String?   @db.Text
+  isActive     Boolean   @default(true)
+  isPublic     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  subscriptions Subscription[]
+
+  @@index([slug])
+  @@map("plans")
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  companyId            String
+  planId               String
+  status               String    @default("ACTIVE")
+  billingInterval      String    @default("MONTHLY")
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelledAt          DateTime?
+  cancelReason         String?
+  trialEndsAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  company              Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan                 Plan      @relation(fields: [planId], references: [id])
+
+  @@index([companyId])
+  @@index([planId])
+  @@index([status])
+  @@map("subscriptions")
+}
