@@ -14,7 +14,7 @@ export class SmsService {
   async send(to: string, message: string) {
     try {
       const data = {
-        from: 'ExactOnline',
+        from: 'Exact EHRM',
         to: addPrefixToPhoneNumber(to),
         text: message,
       };
