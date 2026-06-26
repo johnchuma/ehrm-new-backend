@@ -88,25 +88,30 @@ async function main() {
     }
   }
 
-  // Create or update system admin user
-  let adminUser = await prisma.user.findUnique({ where: { email } });
-  if (!adminUser) {
-    adminUser = await prisma.user.create({
-      data: {
-        email,
-        password: hashed,
-        firstName: 'System',
-        lastName: 'Admin',
-        fullName: 'System Admin',
-        companyId: company.id,
-        role: 'System Administrator',
-        isActive: true,
-      },
-    });
-    console.log('System admin created');
-  } else {
-    // Ensure role is set
-    await prisma.user.update({ where: { id: adminUser.id }, data: { role: 'System Administrator' } });
+  // Create or update system admin users
+  const adminEmails = [
+    { email: 'exactonlinesoftware@gmail.com', firstName: 'System', lastName: 'Admin', fullName: 'System Admin' },
+    { email: 'kaaya.nd@gmail.com', firstName: 'Kaaya', lastName: 'Nd', fullName: 'Kaaya Nd' },
+  ];
+  for (const ae of adminEmails) {
+    let au = await prisma.user.findUnique({ where: { email: ae.email } });
+    if (!au) {
+      au = await prisma.user.create({
+        data: {
+          email: ae.email,
+          password: hashed,
+          firstName: ae.firstName,
+          lastName: ae.lastName,
+          fullName: ae.fullName,
+          companyId: company.id,
+          role: 'System Administrator',
+          isActive: true,
+        },
+      });
+      console.log('System admin created:', ae.email);
+    } else {
+      await prisma.user.update({ where: { id: au.id }, data: { role: 'System Administrator' } });
+    }
   }
 }
 
