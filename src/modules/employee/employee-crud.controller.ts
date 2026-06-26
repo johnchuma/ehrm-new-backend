@@ -143,7 +143,7 @@ export class EmployeeCrudController {
   @ApiOperation({ summary: 'Create employee' })
   async create(@Body() body: any) {
         // Collect extra fields into metadata
-    const extraFields = ['companyRoles', 'role', 'prefix', 'middleName', 'username', 'mobile', 'locale',
+    const extraFields = ['companyRole', 'role', 'prefix', 'middleName', 'username', 'mobile', 'locale',
       'personalEmail', 'region', 'postalAddress', 'physicalAddress', 'businessUnit',
       'healthInsuranceProvider', 'healthInsuranceOther', 'tradeUnion', 'inductionDate',
       'inductionCompleted', 'termsAndConditions', 'contractFileName', 'profilePhotoName',
