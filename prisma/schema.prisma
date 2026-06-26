@@ -24,6 +24,7 @@ model User {
   fullName       String
   companyId      String?
   employeeId     String?   @unique
+  role           String    @default("Employee") // System Admin, Company Admin, Employee
   isActive       Boolean   @default(true)
   emailVerified  Boolean   @default(false)
   phoneVerified  Boolean   @default(false)

@@ -40,18 +40,10 @@ export class IamController {
         fullName: `${body.firstName || ''} ${body.lastName || ''}`.trim() || body.email,
         companyId: body.companyId || '',
         isActive: true,
+        role: 'Employee',
       },
     });
-    // Assign Employee role by default
-    if (body.companyId) {
-      const employeeRole = await this.prisma.role.findFirst({
-        where: { name: 'Employee', isSystem: true },
-      });
-      if (employeeRole) {
-        await this.prisma.userRole.create({ data: { userId: user.id, roleId: employeeRole.id } }).catch(() => {});
-      }
-    }
-    return { ...user, roles: await this.iam.getUserRoles(user.id) };
+    return { ...user };
   }
 
   @Get('users/:id')

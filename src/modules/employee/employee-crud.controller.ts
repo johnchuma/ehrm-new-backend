@@ -185,7 +185,6 @@ export class EmployeeCrudController {
     // Create user account if email provided
     if (body.email && body.companyId) {
       try {
-        const empRole = await this.prisma.role.findFirst({ where: { name: 'Employee', isSystem: true } });
         const existingUser = await this.prisma.user.findUnique({ where: { email: body.email.toLowerCase() } });
         if (!existingUser) {
           const hashed = await bcrypt.hash(body.password || 'employee123', 12);
@@ -197,13 +196,11 @@ export class EmployeeCrudController {
               lastName: body.lastName || '',
               fullName: `${body.firstName || ''} ${body.lastName || ''}`.trim(),
               companyId: body.companyId,
+              role: 'Employee',
               isActive: true,
             },
           });
           await this.prisma.employee.update({ where: { id: employee.id }, data: { userId: user.id } });
-          if (empRole) {
-            await this.prisma.userRole.create({ data: { userId: user.id, roleId: empRole.id } }).catch(() => {});
-          }
           // Send welcome email
           this.email.send(body.email, 'Welcome to ExactEHRM', this.email.buildHtml(`
             <h2>Welcome to ExactEHRM!</h2>

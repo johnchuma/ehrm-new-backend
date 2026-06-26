@@ -99,21 +99,14 @@ async function main() {
         lastName: 'Admin',
         fullName: 'System Admin',
         companyId: company.id,
+        role: 'System Administrator',
         isActive: true,
       },
     });
     console.log('System admin created');
-  }
-  // Ensure System Administrator role is assigned
-  const adminRole = await prisma.role.findFirst({ where: { name: 'System Administrator', scope: 'GLOBAL', isSystem: true } });
-  if (adminRole) {
-    const hasRole = await prisma.userRole.findUnique({
-      where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
-    });
-    if (!hasRole) {
-      await prisma.userRole.create({ data: { userId: adminUser.id, roleId: adminRole.id } });
-      console.log('System Administrator role assigned to system admin');
-    }
+  } else {
+    // Ensure role is set
+    await prisma.user.update({ where: { id: adminUser.id }, data: { role: 'System Administrator' } });
   }
 }
 

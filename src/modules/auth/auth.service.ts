@@ -18,13 +18,6 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
-      include: {
-        roles: {
-          include: {
-            role: { include: { permissions: { include: { permission: true } } } },
-          },
-        },
-      },
     });
 
     if (!user || !user.isActive) throw new UnauthorizedException('Invalid email or password');
@@ -42,24 +35,14 @@ export class AuthService {
 
     await this.prisma.user.update({ where: { id: user.id }, data: { failedAttempts: 0, lockedUntil: null, lastLoginAt: new Date() } });
 
-    const roles = user.roles.map((ur) => ({
-      roleId: ur.role.id,
-      roleName: ur.role.name,
-      scope: ur.role.scope,
-      companyId: ur.role.companyId,
-    }));
-
-    const permissions: string[] = Array.from(
-      new Set(user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.name))),
-    );
-
-    const isSuperAdmin = user.roles.some((ur) => ur.role.scope === 'GLOBAL' && ur.role.name === 'System Administrator');
+    const roleName = user.role || 'Employee';
+    const isSuperAdmin = roleName === 'System Administrator';
 
     const tokens = await this.generateTokens({
       sub: user.id,
       email: user.email ?? '',
-      roles,
-      permissions,
+      roles: [],
+      permissions: [],
       selectedCompanyId: user.companyId ?? undefined,
       isSuperAdmin,
       isImpersonating: false,
@@ -181,19 +164,14 @@ export class AuthService {
     if (!stored || stored.revoked || stored.expiresAt < new Date())
       throw new UnauthorizedException('Refresh token has been revoked or expired');
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: stored.userId },
-      include: { roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } } },
-    });
+    const user = await this.prisma.user.findUnique({ where: { id: stored.userId } });
     if (!user || !user.isActive) throw new UnauthorizedException('Account inactive');
 
     await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
 
-    const roles = user.roles.map((ur) => ({ roleId: ur.role.id, roleName: ur.role.name, scope: ur.role.scope, companyId: ur.role.companyId }));
-    const permissions: string[] = Array.from(new Set(user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.name))));
-    const isSuperAdmin = user.roles.some((ur) => ur.role.scope === 'GLOBAL' && ur.role.name === 'System Administrator');
+    const isSuperAdmin = user.role === 'System Administrator';
 
-    return this.generateTokens({ sub: user.id, email: user.email ?? '', roles, permissions, selectedCompanyId: user.companyId ?? undefined, isSuperAdmin, isImpersonating: false });
+    return this.generateTokens({ sub: user.id, email: user.email ?? '', roles: [], permissions: [], selectedCompanyId: user.companyId ?? undefined, isSuperAdmin, isImpersonating: false });
   }
 
   async logout(userId: string) {
