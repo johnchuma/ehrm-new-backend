@@ -151,7 +151,9 @@ export class EmployeeController {
       'bankName', 'bankAccount', 'bankBranch', 'mobileMoney', 'mobileMoneyName',
       'emergencyName', 'emergencyPhone', 'emergencyRelation',
       'dateOfBirth', 'nationalId', 'tin', 'nssfNumber', 'passportNumber',
+      'role',
     ];
+    if (body.role !== undefined) data.role = body.role;
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }

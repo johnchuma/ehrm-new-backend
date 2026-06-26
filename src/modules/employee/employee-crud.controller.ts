@@ -185,7 +185,7 @@ export class EmployeeCrudController {
         probationEndDate: body.probationEndDate || null,
         stage: body.stage || 'Draft',
         approvalStage: body.approvalStage || 0,
-        role: body.companyRole || body.role || null,
+        role: body.role || body.companyRole || null,
         checklist: body.checklist ? JSON.stringify(body.checklist) : null,
         complianceStatus: body.complianceStatus ? JSON.stringify(body.complianceStatus) : null,
         documents: body.documents ? JSON.stringify(body.documents) : null,
@@ -249,6 +249,7 @@ export class EmployeeCrudController {
   @ApiOperation({ summary: 'Update employee' })
   async update(@Param('id') id: string, @Body() body: any) {
     const data: any = {};
+    console.log('[UPDATE] body.role:', body.role, 'body.companyRole:', body.companyRole);
     const fields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'maritalStatus',
       'dateOfBirth', 'nationality', 'branchId', 'departmentId', 'section', 'jobTitle',
