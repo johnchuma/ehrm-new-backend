@@ -63,6 +63,7 @@ export class AuthController {
         lastName: body.lname || body.lastName || '',
         fullName: `${body.fname || body.firstName || ''} ${body.lname || body.lastName || ''}`.trim(),
         companyId: company.id,
+        role: 'Company Admin',
         isActive: false,
       },
     });
