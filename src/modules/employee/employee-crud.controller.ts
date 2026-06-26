@@ -21,7 +21,7 @@ export class EmployeeCrudController {
     if (query.companyId) where.companyId = query.companyId;
     if (query.status) where.status = query.status;
     if (query.stage) where.stage = query.stage;
-    const employees = await this.prisma.employee.findMany({ where, orderBy: { createdAt: 'desc' } });
+    const employees = await this.prisma.employee.findMany({ where, orderBy: { createdAt: 'desc' }, include: { branch: true, department: true, jobTitle: { select: { id: true, name: true } }, grade: { select: { id: true, name: true } }, section: { select: { id: true, name: true } }, businessUnit: { select: { id: true, name: true } }, contractType: { select: { id: true, name: true } } } });
     return { employees };
   }
 
@@ -141,7 +141,7 @@ export class EmployeeCrudController {
 
   @Post()
   @ApiOperation({ summary: 'Create employee' })
-  async create(@Body() body: any) {
+  async create(@Body() body: Record<string, any>) {
         // Collect extra fields into metadata
     const extraFields = ['prefix', 'middleName', 'username', 'mobile', 'locale',
       'personalEmail', 'region', 'postalAddress', 'physicalAddress', 'businessUnit',
@@ -156,8 +156,7 @@ export class EmployeeCrudController {
       if (body[k] !== undefined) extraMeta[k] = body[k];
     }
 
-    const employee = await this.prisma.employee.create({
-      data: {
+    const empData: any = {
         companyId: body.companyId || '',
         firstName: body.firstName || '',
         lastName: body.lastName || '',
@@ -170,8 +169,11 @@ export class EmployeeCrudController {
         nationality: body.nationality || null,
         branchId: body.branchId || body.branch || null,
         departmentId: body.departmentId || body.department || null,
-        section: body.section || null,
-        jobTitle: body.jobTitle || null,
+        sectionId: body.sectionId || body.section || null,
+        jobTitleId: body.jobTitleId || null,
+        gradeId: body.gradeId || body.grade || null,
+        businessUnitId: body.businessUnitId || body.businessUnit || null,
+        contractTypeId: body.contractTypeId || body.contractType || null,
         employeeNumber: body.employeeNumber || body.employmentId || null,
         employmentMode: body.employmentMode || body.employmentType || null,
         employmentType: body.employmentType || null,
@@ -197,8 +199,9 @@ export class EmployeeCrudController {
         family: body.family ? JSON.stringify(body.family) : null,
         metadata: JSON.stringify({ ...(body.metadata ? (typeof body.metadata === 'string' ? JSON.parse(body.metadata) : body.metadata) : {}), ...extraMeta }),
         createdById: body.createdById || null,
-      },
-    });
+    };
+
+    const employee = await this.prisma.employee.create({ data: empData });
 
     // Create user account if email provided
     if (body.email && body.companyId) {
@@ -247,12 +250,13 @@ export class EmployeeCrudController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update employee' })
-  async update(@Param('id') id: string, @Body() body: any) {
+  async update(@Param('id') id: string, @Body() body: Record<string, any>) {
     const data: any = {};
     console.log('[UPDATE] body.role:', body.role, 'body.companyRole:', body.companyRole);
     const fields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'maritalStatus',
-      'dateOfBirth', 'nationality', 'branchId', 'departmentId', 'section', 'jobTitle',
+      'dateOfBirth', 'nationality', 'branchId', 'departmentId', 'sectionId', 'jobTitleId',
+      'gradeId', 'businessUnitId', 'contractTypeId',
       'manager', 'employmentId', 'employmentCategory', 'employmentType',
       'modeOfEmployment', 'modeOfPayment', 'joiningDate', 'status', 'stage',
       'contractType', 'contractStartDate', 'contractEndDate', 'probationEndDate',

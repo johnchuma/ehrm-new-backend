@@ -190,6 +190,12 @@ model Company {
   shifts        Shift[]
   holidays      PublicHoliday[]
   tasks         Task[]
+  businessUnits BusinessUnit[]
+  sections      Section[]
+  jobTitles     JobTitle[]
+  grades        Grade[]
+  positions     Position[]
+  contractTypes ContractType[]
   announcements Announcement[]
 
   @@index([slug])
@@ -243,6 +249,106 @@ model Department {
   @@index([companyId])
   @@index([branchId])
   @@map("departments")
+}
+
+model BusinessUnit {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  code      String?
+  lead      String?
+  notes     String?  @db.Text
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("business_units")
+}
+
+model Section {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  code      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("sections")
+}
+
+model JobTitle {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  code        String?
+  grade       String?
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees   Employee[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("job_titles")
+}
+
+model Grade {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  rank      Int      @default(0)
+  code      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("grades")
+}
+
+model Position {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  code      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("positions")
+}
+
+model ContractType {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  code      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("contract_types")
 }
 
 model CompanySettings {
@@ -333,8 +439,11 @@ model Employee {
   departmentId      String?
   managerId         String?
   employeeNumber    String?
-  jobTitle          String?
-  grade             String?
+  jobTitleId        String?
+  gradeId           String?
+  sectionId         String?
+  businessUnitId    String?
+  contractTypeId    String?
   employmentType    String    @default("FULL_TIME")
   employmentMode    String    @default("ONSITE")
   startDate         DateTime?
@@ -376,11 +485,9 @@ model Employee {
   approvalStage     Int       @default(0)
   role              String?
   joiningDate       String?
-  contractType      String?
   contractStartDate String?
   contractEndDate   String?
   probationEndDate  String?
-  section           String?
   modeOfPayment     String?
   // Rich JSON data blobs
   checklist         String?   @db.Text
@@ -402,6 +509,11 @@ model Employee {
   company              Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   branch               Branch?              @relation(fields: [branchId], references: [id])
   department           Department?          @relation(fields: [departmentId], references: [id])
+  jobTitle             JobTitle?            @relation(fields: [jobTitleId], references: [id])
+  grade                Grade?               @relation(fields: [gradeId], references: [id])
+  section              Section?             @relation(fields: [sectionId], references: [id])
+  businessUnit         BusinessUnit?        @relation(fields: [businessUnitId], references: [id])
+  contractType         ContractType?        @relation(fields: [contractTypeId], references: [id])
   user                 User?
   leaveBalances        LeaveBalance[]
   leaveRequests        LeaveRequest[]
