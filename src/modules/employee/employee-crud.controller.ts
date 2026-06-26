@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
 import * as bcrypt from 'bcryptjs';
@@ -10,6 +11,7 @@ export class EmployeeCrudController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly jwt: JwtService,
   ) {}
 
   @Get()
@@ -202,7 +204,8 @@ export class EmployeeCrudController {
       try {
         const existingUser = await this.prisma.user.findUnique({ where: { email: body.email.toLowerCase() } });
         if (!existingUser) {
-          const hashed = await bcrypt.hash(body.password || 'employee123', 12);
+          const defaultPw = '123456';
+          const hashed = await bcrypt.hash(defaultPw, 12);
           const user = await this.prisma.user.create({
             data: {
               email: body.email.toLowerCase(),
@@ -216,12 +219,23 @@ export class EmployeeCrudController {
             },
           });
           await this.prisma.employee.update({ where: { id: employee.id }, data: { userId: user.id } });
-          // Send welcome email
-          this.email.send(body.email, 'Welcome to ExactEHRM', this.email.buildHtml(`
-            <h2>Welcome to ExactEHRM!</h2>
+          // Send welcome email with credentials and confirmation link
+          const confirmToken = this.jwt.sign({ sub: user.id, type: 'email_confirm' }, { expiresIn: '48h' });
+          const confirmUrl = `${process.env.FRONTEND_URL || 'https://demo.exactehrm.co.tz'}/confirm-email?token=${confirmToken}`;
+          const bc = this.email.brandColor;
+          this.email.send(body.email, 'Welcome to ExactEHRM — Your Account is Ready', this.email.buildHtml(`
+            <h2 style="color:${bc};margin:0 0 16px">Welcome to ExactEHRM!</h2>
             <p>Hi ${body.firstName}, your employee account has been created.</p>
-            <p>Your login email is: <strong>${body.email}</strong></p>
-            <p>You can sign in and access your employee portal.</p>
+            <p style="margin:16px 0;padding:12px;background:#f9f9f9;border-radius:8px;border:1px solid #eee">
+              <strong>Login credentials:</strong><br/>
+              Email: <strong>${body.email}</strong><br/>
+              Password: <strong>${defaultPw}</strong>
+            </p>
+            <p>Please confirm your email by clicking the button below:</p>
+            <p style="text-align:center;margin:24px 0">
+              <a href="${confirmUrl}" style="display:inline-block;background:${bc};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Confirm my account</a>
+            </p>
+            <p style="color:#888;font-size:13px">This link expires in 48 hours.</p>
           `)).catch(() => {});
         }
       } catch {}
