@@ -143,7 +143,7 @@ export class EmployeeCrudController {
   @ApiOperation({ summary: 'Create employee' })
   async create(@Body() body: any) {
         // Collect extra fields into metadata
-    const extraFields = ['companyRole', 'role', 'prefix', 'middleName', 'username', 'mobile', 'locale',
+    const extraFields = ['prefix', 'middleName', 'username', 'mobile', 'locale',
       'personalEmail', 'region', 'postalAddress', 'physicalAddress', 'businessUnit',
       'healthInsuranceProvider', 'healthInsuranceOther', 'tradeUnion', 'inductionDate',
       'inductionCompleted', 'termsAndConditions', 'contractFileName', 'profilePhotoName',
@@ -185,6 +185,7 @@ export class EmployeeCrudController {
         probationEndDate: body.probationEndDate || null,
         stage: body.stage || 'Draft',
         approvalStage: body.approvalStage || 0,
+        role: body.companyRole || body.role || null,
         checklist: body.checklist ? JSON.stringify(body.checklist) : null,
         complianceStatus: body.complianceStatus ? JSON.stringify(body.complianceStatus) : null,
         documents: body.documents ? JSON.stringify(body.documents) : null,
@@ -262,7 +263,9 @@ export class EmployeeCrudController {
       'tradeUnion', 'inductionDate', 'termsAndConditions', 'contractFileName',
       'profilePhotoName', 'yearsOfExperience', 'offerLetterDate',
       'offerAcceptedDate', 'candidateSource', 'candidateId',
+      'role',
     ];
+    if (body.role !== undefined) data.role = body.role;
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }

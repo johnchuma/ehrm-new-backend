@@ -374,6 +374,7 @@ model Employee {
   // Onboarding workflow (company admin)
   stage             String    @default("Draft")
   approvalStage     Int       @default(0)
+  role              String?
   joiningDate       String?
   contractType      String?
   contractStartDate String?
