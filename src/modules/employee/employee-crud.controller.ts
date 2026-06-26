@@ -170,6 +170,7 @@ export class EmployeeCrudController {
         departmentId: body.departmentId || body.department || null,
         section: body.section || null,
         jobTitle: body.jobTitle || null,
+        employeeNumber: body.employeeNumber || body.employmentId || null,
         employmentMode: body.employmentMode || body.employmentType || null,
         employmentType: body.employmentType || null,
         modeOfPayment: body.modeOfPayment || null,

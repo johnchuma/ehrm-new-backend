@@ -332,7 +332,7 @@ model Employee {
   branchId          String?
   departmentId      String?
   managerId         String?
-  employeeNumber    String  @default("")
+  employeeNumber    String?
   jobTitle          String?
   grade             String?
   employmentType    String    @default("FULL_TIME")
