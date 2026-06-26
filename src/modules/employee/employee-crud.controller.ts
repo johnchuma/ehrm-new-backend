@@ -140,6 +140,20 @@ export class EmployeeCrudController {
   @Post()
   @ApiOperation({ summary: 'Create employee' })
   async create(@Body() body: any) {
+        // Collect extra fields into metadata
+    const extraFields = ['role', 'prefix', 'middleName', 'username', 'mobile', 'locale',
+      'personalEmail', 'region', 'postalAddress', 'physicalAddress', 'businessUnit',
+      'healthInsuranceProvider', 'healthInsuranceOther', 'tradeUnion', 'inductionDate',
+      'inductionCompleted', 'termsAndConditions', 'contractFileName', 'profilePhotoName',
+      'yearsOfExperience', 'offerLetterDate', 'offerAccepted', 'offerAcceptedDate',
+      'candidateSource', 'candidateId', 'employmentId', 'socialSecurityType',
+      'socialSecurityNumber', 'tinNumber', 'nidaNumber', 'passportNumber', 'manager',
+      'employeeNumber'];
+    const extraMeta: Record<string, any> = {};
+    for (const k of extraFields) {
+      if (body[k] !== undefined) extraMeta[k] = body[k];
+    }
+
     const employee = await this.prisma.employee.create({
       data: {
         companyId: body.companyId || '',
@@ -177,7 +191,7 @@ export class EmployeeCrudController {
         languages: body.languages ? JSON.stringify(body.languages) : null,
         emergencyContacts: body.emergencyContacts ? JSON.stringify(body.emergencyContacts) : null,
         family: body.family ? JSON.stringify(body.family) : null,
-        metadata: body.metadata ? JSON.stringify(body.metadata) : null,
+        metadata: JSON.stringify({ ...(body.metadata ? (typeof body.metadata === 'string' ? JSON.parse(body.metadata) : body.metadata) : {}), ...extraMeta }),
         createdById: body.createdById || null,
       },
     });
@@ -196,7 +210,7 @@ export class EmployeeCrudController {
               lastName: body.lastName || '',
               fullName: `${body.firstName || ''} ${body.lastName || ''}`.trim(),
               companyId: body.companyId,
-              role: 'Employee',
+              role: body.role || 'Employee',
               isActive: true,
             },
           });
