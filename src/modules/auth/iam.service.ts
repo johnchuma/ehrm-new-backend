@@ -5,6 +5,36 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 export class IamService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async attachUserCounts<T extends { id: string; name: string; companyId?: string | null }>(roles: T[]) {
+    if (!roles.length) return [];
+
+    const companyIds = [...new Set(roles.map((role) => role.companyId).filter(Boolean))] as string[];
+    const users = await this.prisma.user.findMany({
+      where: companyIds.length ? { companyId: { in: companyIds } } : {},
+      select: {
+        id: true,
+        companyId: true,
+        role: true,
+        roles: { select: { roleId: true } },
+      },
+    });
+
+    return roles.map((role) => {
+      const assignedUserIds = new Set<string>();
+      for (const user of users) {
+        if (role.companyId && user.companyId !== role.companyId) continue;
+        if (user.role === role.name) assignedUserIds.add(user.id);
+        if (user.roles.some((entry) => entry.roleId === role.id)) {
+          assignedUserIds.add(user.id);
+        }
+      }
+      return {
+        ...role,
+        users: assignedUserIds.size,
+      };
+    });
+  }
+
   private async ensurePermission(name: string): Promise<string> {
     const parts = name.split('_');
     const resource = parts.slice(1).join('_') || 'unknown';
@@ -27,16 +57,16 @@ export class IamService {
   // ── Roles ──
 
   async listRoles(companyId?: string) {
-    return this.prisma.role.findMany({
+    const roles = await this.prisma.role.findMany({
       where: companyId
         ? { OR: [{ isSystem: true }, { companyId }] }
         : { isSystem: true },
       include: {
         permissions: { include: { permission: true } },
-        users: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } } },
       },
       orderBy: { name: 'asc' },
     });
+    return this.attachUserCounts(roles);
   }
 
   async getRole(id: string) {
@@ -44,11 +74,11 @@ export class IamService {
       where: { id },
       include: {
         permissions: { include: { permission: true } },
-        users: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } } },
       },
     });
     if (!role) throw new NotFoundException('Role not found');
-    return role;
+    const [roleWithCount] = await this.attachUserCounts([role]);
+    return roleWithCount;
   }
 
   async createRole(data: { name: string; description?: string; companyId?: string; permissionNames?: string[] }) {
