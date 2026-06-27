@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { OffboardingService } from './offboarding.service';
 
@@ -58,5 +58,11 @@ export class OffboardingController {
   @ApiOperation({ summary: 'Mark an offboarding case as completed' })
   complete(@Param('id') id: string, @Body() body: { completedBy?: string; notes?: string }) {
     return this.offboarding.complete(id, body);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete an offboarding case' })
+  delete(@Param('id') id: string) {
+    return this.offboarding.delete(id);
   }
 }

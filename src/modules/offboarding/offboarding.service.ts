@@ -288,6 +288,14 @@ export class OffboardingService {
     return this.serialize(updated);
   }
 
+  async delete(id: string) {
+    const existing = await this.prisma.offboarding.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Offboarding case not found');
+
+    await this.prisma.offboarding.delete({ where: { id } });
+    return { deleted: true, id };
+  }
+
   private async markEmployeeOffboarding(employeeId: string, exitDate: string) {
     await this.prisma.employee.update({
       where: { id: employeeId },
