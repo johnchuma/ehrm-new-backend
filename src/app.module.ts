@@ -28,6 +28,7 @@ import { PerformanceModule } from './modules/performance/performance.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
+import { OffboardingModule } from './modules/offboarding/offboarding.module';
 
 import { IamController } from './modules/auth/iam.controller';
 import { IamService } from './modules/auth/iam.service';
@@ -69,6 +70,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     ExpensesModule,
     DashboardModule,
     ContractsModule,
+    OffboardingModule,
   ],
   controllers: [IamController],
   providers: [

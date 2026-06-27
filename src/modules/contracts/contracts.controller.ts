@@ -63,6 +63,12 @@ export class ContractsController {
     return this.contracts.update(id, body);
   }
 
+  @Post(':id/approve')
+  @ApiOperation({ summary: 'Approve a pending contract and activate it' })
+  approve(@Param('id') id: string, @Body() body: { approvedBy?: string }) {
+    return this.contracts.approve(id, body);
+  }
+
   @Post(':id/extend')
   @ApiOperation({ summary: 'Extend the end date of an existing contract' })
   extend(@Param('id') id: string, @Body() body: { newEndDate: string; notes?: string }) {

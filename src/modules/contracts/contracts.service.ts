@@ -3,6 +3,15 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { NotificationService } from '../notifications/notification.service';
 
 const ACTIVE_STATUSES = ['Active', 'Probation', 'ExpiringSoon', 'Extended'];
+const PENDING_APPROVAL_STATUS = 'Pending Approval';
+
+async function hasApprovalFlow(companyId: string, moduleKey: string, prisma: PrismaService) {
+  const cfg = await prisma.workspaceApprovalConfig.findFirst({
+    where: { companyId, moduleKey, isActive: true },
+    select: { id: true },
+  });
+  return !!cfg;
+}
 
 function toDateOnlyStr(d: Date | string | null | undefined): string | null {
   if (!d) return null;
@@ -26,7 +35,12 @@ function deriveStatus(contract: {
   terminatedAt: Date | null;
 }): string {
   if (contract.terminatedAt) return 'Terminated';
-  if (contract.status === 'Renewed' || contract.status === 'Terminated' || contract.status === 'Draft') {
+  if (
+    contract.status === 'Renewed' ||
+    contract.status === 'Terminated' ||
+    contract.status === 'Draft' ||
+    contract.status === PENDING_APPROVAL_STATUS
+  ) {
     return contract.status;
   }
   const today = new Date();
@@ -140,6 +154,7 @@ export class ContractsService {
     });
     const enriched = rows.map((r) => ({ ...r, derivedStatus: deriveStatus(r) }));
     const active = enriched.filter((r) => ACTIVE_STATUSES.includes(r.derivedStatus)).length;
+    const pendingApproval = enriched.filter((r) => r.derivedStatus === PENDING_APPROVAL_STATUS).length;
     const expiringSoon = enriched.filter((r) => r.derivedStatus === 'ExpiringSoon').length;
     const expired = enriched.filter((r) => r.derivedStatus === 'Expired').length;
     const probationEnding = enriched.filter((r) => {
@@ -147,7 +162,7 @@ export class ContractsService {
       return d !== null && d >= 0 && d <= 60;
     }).length;
     const terminated = enriched.filter((r) => r.derivedStatus === 'Terminated').length;
-    return { total: rows.length, active, expiringSoon, expired, probationEnding, terminated };
+    return { total: rows.length, active, pendingApproval, expiringSoon, expired, probationEnding, terminated };
   }
 
   async alerts(companyId: string) {
@@ -182,13 +197,18 @@ export class ContractsService {
       take: 1,
     });
     const version = (previous[0]?.version || 0) + 1;
+    const approvalRequired = await hasApprovalFlow(body.companyId, 'CONTRACT_RENEWAL', this.prisma);
+    const requestedStatus = body.status || 'Active';
+    const status = approvalRequired && requestedStatus === 'Active' ? PENDING_APPROVAL_STATUS : requestedStatus;
 
     const data: any = {
       companyId: body.companyId,
       employeeId: body.employeeId,
       contractTypeId: body.contractTypeId || null,
       contractNumber: body.contractNumber || `CON-${Date.now().toString(36).toUpperCase()}`,
-      status: body.status || 'Active',
+      status,
+      approvedAt: status === 'Active' ? new Date() : null,
+      approvedBy: status === 'Active' ? body.approvedBy || null : null,
       startDate: toDateOnlyStr(body.startDate) || body.startDate,
       endDate: toDateOnlyStr(body.endDate),
       probationEndDate: toDateOnlyStr(body.probationEndDate),
@@ -206,7 +226,6 @@ export class ContractsService {
     };
 
     const created = await this.prisma.contract.create({ data, include: this.contractInclude() });
-
     // Mirror key dates back onto the employee record so other modules see them.
     await this.prisma.employee.update({
       where: { id: body.employeeId },
@@ -219,6 +238,34 @@ export class ContractsService {
     }).catch(() => {});
 
     return this.serialize(created);
+  }
+
+  async approve(id: string, body: { approvedBy?: string }) {
+    const existing = await this.prisma.contract.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Contract not found');
+
+    const updated = await this.prisma.contract.update({
+      where: { id },
+      data: {
+        status: 'Active',
+        approvedAt: new Date(),
+        approvedBy: body.approvedBy || null,
+      },
+      include: this.contractInclude(),
+    });
+
+    const emp = await this.prisma.employee.findUnique({ where: { id: existing.employeeId }, include: { user: true } });
+    if (emp?.user?.id) {
+      await this.notifications.send(emp.user.id, {
+        type: 'CONTRACT_APPROVED',
+        title: 'Contract approved',
+        message: 'Your contract has been approved and is now active.',
+        link: '/dashboard/contracts',
+        companyId: existing.companyId,
+      }).catch(() => {});
+    }
+
+    return this.serialize(updated);
   }
 
   async update(id: string, body: any) {
@@ -301,7 +348,6 @@ export class ContractsService {
       fileName: body.fileName || null,
       template: body.template || existing.template,
       parentContractId: existing.id,
-      status: 'Active',
       metadata: { renewalNotes: body.notes || null },
     });
 
@@ -353,6 +399,33 @@ export class ContractsService {
         endDate: effective,
       },
     }).catch(() => {});
+
+    const offboardingApprovalRequired = await hasApprovalFlow(existing.companyId, 'OFFBOARDING', this.prisma);
+    const existingOffboarding = await this.prisma.offboarding.findFirst({
+      where: {
+        companyId: existing.companyId,
+        employeeId: existing.employeeId,
+        contractId: existing.id,
+      },
+      select: { id: true },
+    });
+    if (!existingOffboarding) {
+      await this.prisma.offboarding.create({
+        data: {
+          companyId: existing.companyId,
+          employeeId: existing.employeeId,
+          contractId: existing.id,
+          reason: body.reason,
+          type: 'Without Payment',
+          exitDate: effective,
+          settlementJson: body.notes ? JSON.stringify({ notes: body.notes }) : null,
+          approvalStage: offboardingApprovalRequired ? 0 : 1,
+          status: offboardingApprovalRequired ? 'Pending Approval' : 'In Progress',
+          approvedAt: offboardingApprovalRequired ? null : new Date(),
+          approvedBy: offboardingApprovalRequired ? null : body.terminatedBy || null,
+        },
+      }).catch(() => {});
+    }
 
     // Notify employee + HR (best-effort).
     try {
@@ -406,6 +479,7 @@ export class ContractsService {
     });
     if (existing) return existing;
     if (!emp.contractStartDate) return null;
+    const approvalRequired = await hasApprovalFlow(emp.companyId, 'CONTRACT_RENEWAL', this.prisma);
     return this.create({
       companyId: emp.companyId,
       employeeId: emp.id,
@@ -416,7 +490,7 @@ export class ContractsService {
       signedDate: new Date().toISOString().slice(0, 10),
       salary: emp.basicSalary ? Number(emp.basicSalary) : null,
       currency: emp.currency || 'TZS',
-      status: 'Active',
+      status: approvalRequired ? PENDING_APPROVAL_STATUS : 'Active',
       metadata: { source: 'onboarding-auto' },
     });
   }

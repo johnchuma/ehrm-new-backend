@@ -197,6 +197,7 @@ model Company {
   positions     Position[]
   contractTypes ContractType[]
   contracts     Contract[]
+  offboardings  Offboarding[]
   salaryGrades  SalaryGrade[]
   workingDays   WorkingDayPattern[]
   locations     WorkspaceLocation[]
@@ -365,6 +366,8 @@ model Contract {
   contractNumber    String?
   // Lifecycle status: Draft | Active | Probation | ExpiringSoon | Expired | Renewed | Terminated | Extended
   status            String    @default("Active")
+  approvedAt        DateTime?
+  approvedBy        String?
   startDate         String
   endDate           String?
   probationEndDate  String?
@@ -393,6 +396,7 @@ model Contract {
   contractType   ContractType? @relation(fields: [contractTypeId], references: [id])
   parentContract Contract?     @relation("ContractVersions", fields: [parentContractId], references: [id])
   childContracts Contract[]    @relation("ContractVersions")
+  offboardings   Offboarding[]
 
   @@index([companyId])
   @@index([employeeId])
@@ -674,12 +678,56 @@ model Employee {
   swapRequestsSent     ShiftSwapRequest[]   @relation("SwapRequester")
   swapRequestsReceived ShiftSwapRequest[]   @relation("SwapTarget")
   contracts            Contract[]           @relation("EmployeeContracts")
+  offboardings         Offboarding[]
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])
   @@index([departmentId])
   @@index([managerId])
   @@map("employees")
+}
+
+model Offboarding {
+  id                         String    @id @default(cuid())
+  companyId                  String
+  employeeId                 String
+  contractId                 String?
+  reason                     String
+  type                       String
+  exitDate                   String
+  terminationGround          String?
+  noticePeriodDays           Int?
+  noticeDate                 String?
+  retirementDate             String?
+  retirementBenefits         String?
+  redundancyReason           String?
+  redundancyConsultationDate String?
+  settlementJson             String?   @db.Text
+  interviewJson              String?   @db.Text
+  knowledgeTransferJson      String?   @db.Text
+  handoverJson               String?   @db.Text
+  clearancesJson             String?   @db.Text
+  assetsJson                 String?   @db.Text
+  systemAccessRevoked        Boolean   @default(false)
+  idCardCollected            Boolean   @default(false)
+  approvalStage              Int       @default(0)
+  status                     String    @default("Pending Approval")
+  approvedAt                 DateTime?
+  approvedBy                 String?
+  completedAt                DateTime?
+  completedBy                String?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  contract Contract? @relation(fields: [contractId], references: [id])
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([exitDate])
+  @@map("offboardings")
 }
 
 model EmployeeMovement {
