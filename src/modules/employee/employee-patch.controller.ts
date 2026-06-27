@@ -29,6 +29,14 @@ export class EmployeePatchController {
       'employmentType', 'employmentMode', 'modeOfPayment', 'joiningDate', 'status', 'stage', 'profilePhoto',
     ];
     if (body.manager !== undefined && body.managerId === undefined) data.managerId = body.manager || null;
+    // Map relation-name aliases sent by onboarding/edit forms to actual FK columns.
+    if (body.branch !== undefined && body.branchId === undefined) data.branchId = body.branch || null;
+    if (body.department !== undefined && body.departmentId === undefined) data.departmentId = body.department || null;
+    if (body.section !== undefined && body.sectionId === undefined) data.sectionId = body.section || null;
+    if (body.jobTitle !== undefined && body.jobTitleId === undefined) data.jobTitleId = body.jobTitle || null;
+    if (body.grade !== undefined && body.gradeId === undefined) data.gradeId = body.grade || null;
+    if (body.businessUnit !== undefined && body.businessUnitId === undefined) data.businessUnitId = body.businessUnit || null;
+    if (body.contractType !== undefined && body.contractTypeId === undefined) data.contractTypeId = body.contractType || null;
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }

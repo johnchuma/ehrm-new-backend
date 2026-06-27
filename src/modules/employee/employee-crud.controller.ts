@@ -282,29 +282,43 @@ export class EmployeeCrudController {
   async update(@Param('id') id: string, @Body() body: Record<string, any>) {
     const data: any = {};
     console.log('[UPDATE] body.role:', body.role, 'body.companyRole:', body.companyRole);
-    const fields = [
+
+    // Scalar columns that exist on the Employee model — only these are safe
+    // to spread into `data`. Anything else gets stashed into metadata below.
+    const scalarFields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'maritalStatus',
-      'dateOfBirth', 'nationality', 'branchId', 'departmentId', 'sectionId', 'jobTitleId',
-      'gradeId', 'businessUnitId', 'contractTypeId',
-      'manager', 'employmentId', 'employmentCategory', 'employmentType',
-      'modeOfEmployment', 'modeOfPayment', 'joiningDate', 'status', 'stage',
-      'contractType', 'contractStartDate', 'contractEndDate', 'probationEndDate',
-      'socialSecurityType', 'socialSecurityNumber', 'tinNumber', 'nidaNumber',
-      'passportNumber', 'createdById',
-      'prefix', 'middleName', 'username', 'mobile', 'locale',
-      'personalEmail', 'region', 'postalAddress', 'physicalAddress',
-      'businessUnit', 'healthInsuranceProvider', 'healthInsuranceOther',
-      'tradeUnion', 'inductionDate', 'termsAndConditions', 'contractFileName',
-      'profilePhotoName', 'yearsOfExperience', 'offerLetterDate',
-      'offerAcceptedDate', 'candidateSource', 'candidateId',
+      'dateOfBirth', 'nationality', 'employmentType', 'employmentMode',
+      'modeOfPayment', 'joiningDate', 'status', 'stage',
+      'contractStartDate', 'contractEndDate', 'probationEndDate',
+      'passportNumber', 'createdById', 'profilePhoto', 'employeeNumber',
       'role',
     ];
-    if (body.role !== undefined) data.role = body.role;
-    for (const f of fields) {
+    for (const f of scalarFields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
-    if (body.inductionCompleted !== undefined) data.inductionCompleted = body.inductionCompleted;
-    if (body.offerAccepted !== undefined) data.offerAccepted = body.offerAccepted;
+
+    // Foreign-key fields — accept either the *Id form or the relation-name
+    // form sent by the onboarding/edit forms.
+    if (body.branchId !== undefined || body.branch !== undefined) {
+      data.branchId = body.branchId ?? body.branch ?? null;
+    }
+    if (body.departmentId !== undefined || body.department !== undefined) {
+      data.departmentId = body.departmentId ?? body.department ?? null;
+    }
+    if (body.sectionId !== undefined || body.section !== undefined) {
+      data.sectionId = body.sectionId ?? body.section ?? null;
+    }
+    if (body.jobTitleId !== undefined) data.jobTitleId = body.jobTitleId;
+    if (body.gradeId !== undefined || body.grade !== undefined) {
+      data.gradeId = body.gradeId ?? body.grade ?? null;
+    }
+    if (body.businessUnitId !== undefined || body.businessUnit !== undefined) {
+      data.businessUnitId = body.businessUnitId ?? body.businessUnit ?? null;
+    }
+    if (body.contractTypeId !== undefined || body.contractType !== undefined) {
+      data.contractTypeId = body.contractTypeId ?? body.contractType ?? null;
+    }
+
     if (body.firstName !== undefined || body.lastName !== undefined) {
       const current = await this.prisma.employee.findUnique({ where: { id } });
       data.fullName = `${body.firstName ?? current?.firstName ?? ''} ${body.lastName ?? current?.lastName ?? ''}`.trim();
@@ -320,7 +334,36 @@ export class EmployeeCrudController {
     if (body.languages !== undefined) data.languages = JSON.stringify(body.languages);
     if (body.emergencyContacts !== undefined) data.emergencyContacts = JSON.stringify(body.emergencyContacts);
     if (body.family !== undefined) data.family = JSON.stringify(body.family);
-    if (body.metadata !== undefined) data.metadata = JSON.stringify(body.metadata);
+
+    // Fields that don't have a dedicated column — merge into metadata JSON.
+    const metaFields = [
+      'manager', 'employmentId', 'employmentCategory', 'modeOfEmployment',
+      'socialSecurityType', 'socialSecurityNumber', 'tinNumber', 'nidaNumber',
+      'prefix', 'middleName', 'username', 'mobile', 'locale',
+      'personalEmail', 'region', 'postalAddress', 'physicalAddress',
+      'healthInsuranceProvider', 'healthInsuranceOther',
+      'tradeUnion', 'inductionDate', 'inductionCompleted', 'termsAndConditions',
+      'contractFileName', 'profilePhotoName', 'yearsOfExperience',
+      'offerLetterDate', 'offerAccepted', 'offerAcceptedDate',
+      'candidateSource', 'candidateId',
+    ];
+    const extraMeta: Record<string, any> = {};
+    for (const f of metaFields) {
+      if (body[f] !== undefined) extraMeta[f] = body[f];
+    }
+    if (body.metadata !== undefined || Object.keys(extraMeta).length > 0) {
+      const incoming = body.metadata
+        ? (typeof body.metadata === 'string' ? JSON.parse(body.metadata) : body.metadata)
+        : {};
+      // Merge with any existing metadata on the record so partial updates don't drop fields.
+      const current = await this.prisma.employee.findUnique({ where: { id }, select: { metadata: true } });
+      let currentMeta: Record<string, any> = {};
+      if (current?.metadata) {
+        try { currentMeta = JSON.parse(current.metadata); } catch { currentMeta = {}; }
+      }
+      data.metadata = JSON.stringify({ ...currentMeta, ...incoming, ...extraMeta });
+    }
+
     return this.prisma.employee.update({ where: { id }, data });
   }
 

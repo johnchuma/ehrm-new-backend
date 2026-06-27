@@ -145,12 +145,12 @@ export class EmployeeController {
     const data: any = {};
     const fields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'nationality',
-      'maritalStatus', 'address', 'city', 'jobTitle', 'grade', 'status',
+      'maritalStatus', 'address', 'city', 'status',
       'branchId', 'departmentId', 'managerId', 'employeeNumber',
       'jobTitleId', 'gradeId', 'sectionId', 'businessUnitId', 'contractTypeId',
       'employmentType', 'employmentMode', 'startDate', 'endDate',
-      'basicSalary', 'currency', 'gross', 'section', 'stage', 'approvalStage',
-      'joiningDate', 'contractType', 'contractStartDate', 'contractEndDate',
+      'basicSalary', 'currency', 'gross', 'stage', 'approvalStage',
+      'joiningDate', 'contractStartDate', 'contractEndDate',
       'probationEndDate', 'modeOfPayment', 'profilePhoto',
       'bankName', 'bankAccount', 'bankBranch', 'mobileMoney', 'mobileMoneyName',
       'emergencyName', 'emergencyPhone', 'emergencyRelation',
@@ -158,6 +158,7 @@ export class EmployeeController {
       'role',
     ];
     if (body.role !== undefined) data.role = body.role;
+    // Map relation-name aliases sent by the form to the actual FK columns.
     if (body.section !== undefined && body.sectionId === undefined) data.sectionId = body.section;
     if (body.jobTitle !== undefined && body.jobTitleId === undefined) data.jobTitleId = body.jobTitle;
     if (body.grade !== undefined && body.gradeId === undefined) data.gradeId = body.grade;
