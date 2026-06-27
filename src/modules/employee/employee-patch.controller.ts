@@ -11,20 +11,53 @@ export class EmployeePatchController {
     if (!emp) throw new NotFoundException('Employee not found');
 
     const data: any = {};
+    const extraFields = [
+      'prefix', 'middleName', 'username', 'mobile', 'locale', 'personalEmail',
+      'region', 'postalAddress', 'physicalAddress', 'businessUnit',
+      'healthInsuranceProvider', 'healthInsuranceOther', 'tradeUnion',
+      'inductionDate', 'inductionCompleted', 'termsAndConditions',
+      'contractFileName', 'profilePhotoName', 'yearsOfExperience',
+      'offerLetterDate', 'offerAccepted', 'offerAcceptedDate',
+      'candidateSource', 'candidateId', 'employmentId', 'employmentCategory',
+      'modeOfEmployment', 'socialSecurityType', 'socialSecurityNumber',
+      'tinNumber', 'nidaNumber', 'passportNumber', 'manager', 'employeeNumber',
+    ];
     const fields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'maritalStatus',
       'dateOfBirth', 'nationality', 'branchId', 'departmentId', 'sectionId', 'jobTitleId',
       'gradeId', 'businessUnitId', 'contractTypeId', 'managerId', 'employeeNumber',
-      'employmentType', 'employmentMode', 'modeOfPayment', 'joiningDate', 'status', 'stage',
+      'employmentType', 'employmentMode', 'modeOfPayment', 'joiningDate', 'status', 'stage', 'profilePhoto',
     ];
     if (body.manager !== undefined && body.managerId === undefined) data.managerId = body.manager || null;
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
+    if (body.profilePhotoName !== undefined && body.profilePhoto === undefined) {
+      data.profilePhoto = body.profilePhotoName || null;
+    }
     if (body.gross !== undefined) data.gross = Number(body.gross);
     if (body.approvalStage !== undefined) data.approvalStage = body.approvalStage;
     if (body.checklist !== undefined) data.checklist = JSON.stringify(body.checklist);
     if (body.documents !== undefined) data.documents = JSON.stringify(body.documents);
+    const currentMetadata = emp.metadata
+      ? (() => {
+          try {
+            return JSON.parse(emp.metadata as any);
+          } catch {
+            return {};
+          }
+        })()
+      : {};
+    const incomingMetadata = body.metadata && typeof body.metadata === 'object'
+      ? body.metadata
+      : {};
+    const mergedMetadata: Record<string, any> = { ...currentMetadata, ...incomingMetadata };
+    for (const key of extraFields) {
+      if (body[key] !== undefined) mergedMetadata[key] = body[key];
+    }
+    if (Object.keys(mergedMetadata).length > 0) {
+      data.metadata = JSON.stringify(mergedMetadata);
+    }
 
     return this.prisma.employee.update({ where: { id }, data });
   }
