@@ -21,6 +21,34 @@ export class EmployeeCrudController {
     if (query.companyId) where.companyId = query.companyId;
     if (query.status) where.status = query.status;
     if (query.stage) where.stage = query.stage;
+
+    // Filter by permission: returns only employees whose `role` matches a Role
+    // (in the same company OR system role) that has the requested permission.
+    // Convention: permission names are `${action}_${feature}` (e.g. `approve_onboarding`).
+    if (query.permission) {
+      const roleWhere: any = {
+        permissions: { some: { permission: { name: String(query.permission) } } },
+      };
+      if (query.companyId) {
+        // include system roles too
+        roleWhere.OR = [{ companyId: query.companyId }, { isSystem: true }];
+      }
+      const matchingRoles = await this.prisma.role.findMany({
+        where: roleWhere,
+        select: { name: true },
+      });
+      const roleNames = matchingRoles.map((r) => r.name);
+      if (roleNames.length === 0) {
+        return { employees: [] };
+      }
+      where.role = { in: roleNames };
+    }
+
+    // Exclude Draft (onboarding-in-progress) unless caller explicitly asks for it
+    if (query.excludeDraft === 'true' || query.excludeDraft === true) {
+      where.stage = { not: 'Draft' };
+    }
+
     const employees = await this.prisma.employee.findMany({ where, orderBy: { createdAt: 'desc' }, include: { branch: true, department: true, jobTitle: { select: { id: true, name: true } }, grade: { select: { id: true, name: true } }, section: { select: { id: true, name: true } }, businessUnit: { select: { id: true, name: true } }, contractType: { select: { id: true, name: true } } } });
     return { employees };
   }
