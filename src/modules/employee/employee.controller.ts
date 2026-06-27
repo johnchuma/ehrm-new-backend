@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, UseGuards, NotFoundException, Delete, Param, Post } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Body, UseGuards, NotFoundException, Delete, Param, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EmployeeService, UpdateProfileDto } from './employee.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -139,6 +139,7 @@ export class EmployeeController {
   }
 
   @Put(':id')
+  @Patch(':id')
   @ApiOperation({ summary: 'Update employee' })
   async update(@Param('id') id: string, @Body() body: any) {
     const data: any = {};
