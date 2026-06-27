@@ -1,5 +1,6 @@
 import { Controller, Patch, Param, Body, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { dropInvalidEmployeeFks } from './employee-fk-guard';
 
 @Controller('employees')
 export class EmployeePatchController {
@@ -66,6 +67,8 @@ export class EmployeePatchController {
     if (Object.keys(mergedMetadata).length > 0) {
       data.metadata = JSON.stringify(mergedMetadata);
     }
+
+    await dropInvalidEmployeeFks(this.prisma, data);
 
     return this.prisma.employee.update({ where: { id }, data });
   }

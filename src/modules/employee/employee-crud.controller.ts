@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
+import { dropInvalidEmployeeFks } from './employee-fk-guard';
 import * as bcrypt from 'bcryptjs';
 
 @ApiTags('Employees - CRUD')
@@ -363,6 +364,8 @@ export class EmployeeCrudController {
       }
       data.metadata = JSON.stringify({ ...currentMeta, ...incoming, ...extraMeta });
     }
+
+    await dropInvalidEmployeeFks(this.prisma, data);
 
     return this.prisma.employee.update({ where: { id }, data });
   }
