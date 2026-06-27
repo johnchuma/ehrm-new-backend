@@ -9,28 +9,19 @@ export class IamService {
     if (!roles.length) return [];
 
     const companyIds = [...new Set(roles.map((role) => role.companyId).filter(Boolean))] as string[];
-    const users = await this.prisma.user.findMany({
+    const employees = await this.prisma.employee.findMany({
       where: companyIds.length ? { companyId: { in: companyIds } } : {},
-      select: {
-        id: true,
-        companyId: true,
-        role: true,
-        roles: { select: { roleId: true } },
-      },
+      select: { id: true, companyId: true, role: true },
     });
 
     return roles.map((role) => {
-      const assignedUserIds = new Set<string>();
-      for (const user of users) {
-        if (role.companyId && user.companyId !== role.companyId) continue;
-        if (user.role === role.name) assignedUserIds.add(user.id);
-        if (user.roles.some((entry) => entry.roleId === role.id)) {
-          assignedUserIds.add(user.id);
-        }
-      }
+      const count = employees.reduce((total, employee) => {
+        if (role.companyId && employee.companyId !== role.companyId) return total;
+        return employee.role === role.name ? total + 1 : total;
+      }, 0);
       return {
         ...role,
-        users: assignedUserIds.size,
+        users: count,
       };
     });
   }
