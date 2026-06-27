@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
+import { ContractsService } from '../contracts/contracts.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
 import * as bcrypt from 'bcryptjs';
 
@@ -13,6 +14,7 @@ export class EmployeeCrudController {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly jwt: JwtService,
+    private readonly contracts: ContractsService,
   ) {}
 
   @Get()
@@ -367,7 +369,16 @@ export class EmployeeCrudController {
 
     await dropInvalidEmployeeFks(this.prisma, data);
 
-    return this.prisma.employee.update({ where: { id }, data });
+    const previous = await this.prisma.employee.findUnique({ where: { id }, select: { stage: true } });
+    const updated = await this.prisma.employee.update({ where: { id }, data });
+
+    // Onboarding hook: when stage transitions into Approved, ensure the
+    // employee has a Contract record so the contracts module can take over.
+    if (data.stage === 'Approved' && previous?.stage !== 'Approved') {
+      try { await this.contracts.ensureContractForEmployee(id); } catch (e) { console.error('[CONTRACT AUTO-CREATE]', e); }
+    }
+
+    return updated;
   }
 
   @Get(':id/documents')

@@ -196,6 +196,7 @@ model Company {
   grades        Grade[]
   positions     Position[]
   contractTypes ContractType[]
+  contracts     Contract[]
   salaryGrades  SalaryGrade[]
   workingDays   WorkingDayPattern[]
   locations     WorkspaceLocation[]
@@ -349,10 +350,55 @@ model ContractType {
   updatedAt DateTime   @updatedAt
   company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employees Employee[]
+  contracts Contract[]
 
   @@unique([companyId, name])
   @@index([companyId])
   @@map("contract_types")
+}
+
+model Contract {
+  id                String    @id @default(cuid())
+  companyId         String
+  employeeId        String
+  contractTypeId    String?
+  contractNumber    String?
+  // Lifecycle status: Draft | Active | Probation | ExpiringSoon | Expired | Renewed | Terminated | Extended
+  status            String    @default("Active")
+  startDate         String
+  endDate           String?
+  probationEndDate  String?
+  signedDate        String?
+  noticePeriod      Int?
+  autoRenew         Boolean   @default(false)
+  salary            Decimal?  @db.Decimal(15, 2)
+  currency          String    @default("TZS")
+  fileUrl           String?   @db.Text
+  fileName          String?
+  template          String?
+  version           Int       @default(1)
+  // Self-link for renewals / extensions
+  parentContractId  String?
+  // Termination
+  terminationReason String?
+  terminationNotes  String?   @db.Text
+  terminatedAt      DateTime?
+  terminatedBy      String?
+  metadata          String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee       Employee      @relation("EmployeeContracts", fields: [employeeId], references: [id], onDelete: Cascade)
+  contractType   ContractType? @relation(fields: [contractTypeId], references: [id])
+  parentContract Contract?     @relation("ContractVersions", fields: [parentContractId], references: [id])
+  childContracts Contract[]    @relation("ContractVersions")
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([endDate])
+  @@map("contracts")
 }
 
 model SalaryGrade {
@@ -627,6 +673,7 @@ model Employee {
   performanceGoals     PerformanceGoal[]
   swapRequestsSent     ShiftSwapRequest[]   @relation("SwapRequester")
   swapRequestsReceived ShiftSwapRequest[]   @relation("SwapTarget")
+  contracts            Contract[]           @relation("EmployeeContracts")
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])

@@ -4,6 +4,7 @@ import { EmployeeService, UpdateProfileDto } from './employee.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ContractsService } from '../contracts/contracts.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
 import * as bcrypt from 'bcryptjs';
 
@@ -18,6 +19,7 @@ export class EmployeeController {
   constructor(
     private readonly svc: EmployeeService,
     private readonly prisma: PrismaService,
+    private readonly contracts: ContractsService,
   ) {}
 
   @Get('me')
@@ -191,7 +193,15 @@ export class EmployeeController {
     // so a stale/legacy dropdown value can't fail the whole save.
     await dropInvalidEmployeeFks(this.prisma, data);
 
-    return this.prisma.employee.update({ where: { id }, data });
+    const previous = await this.prisma.employee.findUnique({ where: { id }, select: { stage: true } });
+    const updated = await this.prisma.employee.update({ where: { id }, data });
+
+    // Auto-create the first contract when onboarding is approved.
+    if (data.stage === 'Approved' && previous?.stage !== 'Approved') {
+      try { await this.contracts.ensureContractForEmployee(id); } catch (e) { console.error('[CONTRACT AUTO-CREATE]', e); }
+    }
+
+    return updated;
   }
 
   @Get(':id/documents')

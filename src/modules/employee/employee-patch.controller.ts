@@ -1,10 +1,14 @@
 import { Controller, Patch, Param, Body, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ContractsService } from '../contracts/contracts.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
 
 @Controller('employees')
 export class EmployeePatchController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly contracts: ContractsService,
+  ) {}
 
   @Patch(':id')
   async patch(@Param('id') id: string, @Body() body: Record<string, any>) {
@@ -70,6 +74,13 @@ export class EmployeePatchController {
 
     await dropInvalidEmployeeFks(this.prisma, data);
 
-    return this.prisma.employee.update({ where: { id }, data });
+    const previousStage = emp.stage;
+    const updated = await this.prisma.employee.update({ where: { id }, data });
+
+    if (data.stage === 'Approved' && previousStage !== 'Approved') {
+      try { await this.contracts.ensureContractForEmployee(id); } catch (e) { console.error('[CONTRACT AUTO-CREATE]', e); }
+    }
+
+    return updated;
   }
 }
