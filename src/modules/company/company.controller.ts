@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -61,6 +61,33 @@ export class CompanyController {
     if (body.website !== undefined) data.website = body.website;
     if (body.registrationNumber !== undefined) data.registrationNumber = body.registrationNumber;
     if (body.size !== undefined) data.size = body.size;
+    return this.prisma.company.update({ where: { id }, data });
+  }
+
+  @Patch('companies/:id')
+  @ApiOperation({ summary: 'Patch company (partial update)' })
+  @ApiBody({ type: UpdateCompanyDto })
+  async patch(@Param('id') id: string, @Body() body: Partial<UpdateCompanyDto>) {
+    const data: any = {};
+    if (body.name !== undefined) data.name = body.name;
+    if (body.email !== undefined) data.email = body.email;
+    if (body.phone !== undefined) data.phone = body.phone;
+    if (body.industry !== undefined) data.industry = body.industry;
+    if (body.country !== undefined) data.country = body.country;
+    if (body.currency !== undefined) data.currency = body.currency;
+    if (body.subscriptionPlan !== undefined) data.subscriptionPlan = body.subscriptionPlan;
+    if (body.status !== undefined) data.status = body.status;
+    if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor;
+    if (body.secondaryColor !== undefined) data.secondaryColor = body.secondaryColor;
+    if (body.tin !== undefined) data.tin = body.tin;
+    if (body.address !== undefined) data.address = body.address;
+    if (body.city !== undefined) data.city = body.city;
+    if (body.timezone !== undefined) data.timezone = body.timezone;
+    if (body.logo !== undefined) data.logo = body.logo;
+    if (body.website !== undefined) data.website = body.website;
+    if (body.registrationNumber !== undefined) data.registrationNumber = body.registrationNumber;
+    if (body.size !== undefined) data.size = body.size;
+    // tradingName intentionally omitted from DB update to avoid unknown field errors
     return this.prisma.company.update({ where: { id }, data });
   }
 
