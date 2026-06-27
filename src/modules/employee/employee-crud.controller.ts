@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -249,6 +249,7 @@ export class EmployeeCrudController {
   }
 
   @Put(':id')
+  @Patch(':id')
   @ApiOperation({ summary: 'Update employee' })
   async update(@Param('id') id: string, @Body() body: Record<string, any>) {
     const data: any = {};
