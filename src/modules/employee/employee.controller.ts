@@ -185,7 +185,41 @@ export class EmployeeController {
     if (body.emergencyContacts !== undefined) data.emergencyContacts = JSON.stringify(body.emergencyContacts);
     if (body.family !== undefined) data.family = JSON.stringify(body.family);
     if (body.metadata !== undefined) data.metadata = JSON.stringify(body.metadata);
+
+    // Validate FK fields — drop any *Id that doesn't resolve to a real record,
+    // so a stale/legacy dropdown value can't fail the whole save.
+    await this.dropInvalidFks(data);
+
     return this.prisma.employee.update({ where: { id }, data });
+  }
+
+  // Existence-check each FK column. If the referenced row doesn't exist,
+  // remove the key from `data` so the update succeeds and other fields persist.
+  private async dropInvalidFks(data: Record<string, any>) {
+    const checks: Array<{ key: string; check: Promise<{ id: string } | null> }> = [];
+    const pushCheck = (key: string, finder: Promise<{ id: string } | null>) => {
+      if (data[key] && typeof data[key] === 'string') {
+        checks.push({ key, check: finder });
+      } else if (data[key] === '' || data[key] === null) {
+        // empty string → treat as clearing the FK
+        data[key] = null;
+      }
+    };
+    pushCheck('branchId', this.prisma.branch.findUnique({ where: { id: data.branchId }, select: { id: true } }).catch(() => null));
+    pushCheck('departmentId', this.prisma.department.findUnique({ where: { id: data.departmentId }, select: { id: true } }).catch(() => null));
+    pushCheck('sectionId', this.prisma.section.findUnique({ where: { id: data.sectionId }, select: { id: true } }).catch(() => null));
+    pushCheck('jobTitleId', this.prisma.jobTitle.findUnique({ where: { id: data.jobTitleId }, select: { id: true } }).catch(() => null));
+    pushCheck('gradeId', this.prisma.grade.findUnique({ where: { id: data.gradeId }, select: { id: true } }).catch(() => null));
+    pushCheck('businessUnitId', this.prisma.businessUnit.findUnique({ where: { id: data.businessUnitId }, select: { id: true } }).catch(() => null));
+    pushCheck('contractTypeId', this.prisma.contractType.findUnique({ where: { id: data.contractTypeId }, select: { id: true } }).catch(() => null));
+    if (checks.length === 0) return;
+    const results = await Promise.all(checks.map((c) => c.check));
+    checks.forEach(({ key }, i) => {
+      if (!results[i]) {
+        console.warn(`[UPDATE] dropping invalid FK ${key}=${data[key]}`);
+        delete data[key];
+      }
+    });
   }
 
   @Get(':id/documents')
