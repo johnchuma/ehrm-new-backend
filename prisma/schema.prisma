@@ -181,28 +181,29 @@ model Company {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  branches      Branch[]
-  departments   Department[]
-  settings      CompanySettings?
-  subscriptions Subscription[]
-  employees     Employee[]
-  leaveTypes    LeaveType[]
-  shifts        Shift[]
-  holidays      PublicHoliday[]
-  tasks         Task[]
-  businessUnits BusinessUnit[]
-  sections      Section[]
-  jobTitles     JobTitle[]
-  grades        Grade[]
-  positions     Position[]
-  contractTypes ContractType[]
-  contracts     Contract[]
-  offboardings  Offboarding[]
-  salaryGrades  SalaryGrade[]
-  workingDays   WorkingDayPattern[]
-  locations     WorkspaceLocation[]
-  approvals     WorkspaceApprovalConfig[]
-  announcements Announcement[]
+  branches                  Branch[]
+  departments               Department[]
+  settings                  CompanySettings?
+  subscriptions             Subscription[]
+  employees                 Employee[]
+  leaveTypes                LeaveType[]
+  shifts                    Shift[]
+  holidays                  PublicHoliday[]
+  tasks                     Task[]
+  businessUnits             BusinessUnit[]
+  sections                  Section[]
+  jobTitles                 JobTitle[]
+  grades                    Grade[]
+  positions                 Position[]
+  contractTypes             ContractType[]
+  contracts                 Contract[]
+  offboardings              Offboarding[]
+  attendanceBulkSubmissions AttendanceBulkSubmission[]
+  salaryGrades              SalaryGrade[]
+  workingDays               WorkingDayPattern[]
+  locations                 WorkspaceLocation[]
+  approvals                 WorkspaceApprovalConfig[]
+  announcements             Announcement[]
 
   @@index([slug])
   @@index([status])
@@ -943,6 +944,37 @@ model ShiftSwapRequest {
   @@map("shift_swap_requests")
 }
 
+model AttendanceBulkSubmission {
+  id                String    @id @default(cuid())
+  companyId         String
+  submittedByUserId String?
+  submittedByName   String?
+  branchId          String?
+  departmentId      String?
+  attendanceDate    DateTime  @db.Date
+  defaultStatus     String    @default("PRESENT")
+  source            String?   @default("BULK")
+  payload           String    @db.Text
+  notes             String?   @db.Text
+  status            String    @default("Pending Approval")
+  approvalStage     Int       @default(0)
+  approvalConfigKey String?
+  approvedBy        String?
+  approvedAt        DateTime?
+  returnedBy        String?
+  returnedAt        DateTime?
+  rejectionReason   String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([attendanceDate])
+  @@index([status])
+  @@map("attendance_bulk_submissions")
+}
+
 // ─── PAYROLL ─────────────────────────────────────────────────────────────────
 
 model Payslip {
@@ -988,7 +1020,6 @@ model SalaryAdvance {
   deductionStartYear  Int?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-
   employee     Employee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   installments SalaryAdvanceInstallment[]
 
