@@ -60,7 +60,6 @@ export class CompanyController {
     if (body.logo !== undefined) data.logo = body.logo;
     if (body.website !== undefined) data.website = body.website;
     if (body.registrationNumber !== undefined) data.registrationNumber = body.registrationNumber;
-    if (body.tradingName !== undefined) data.tradingName = body.tradingName;
     if (body.size !== undefined) data.size = body.size;
     return this.prisma.company.update({ where: { id }, data });
   }

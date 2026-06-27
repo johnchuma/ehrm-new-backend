@@ -13,6 +13,10 @@ const TENANT_MODELS = new Set([
   'department',      // companyId
   'companySettings', // companyId
   'subscription',    // companyId
+  'salaryGrade',
+  'workingDayPattern',
+  'workspaceLocation',
+  'workspaceApprovalConfig',
 ]);
 
 // Operations where we inject companyId into the WHERE clause

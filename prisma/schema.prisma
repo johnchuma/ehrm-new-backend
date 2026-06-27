@@ -53,17 +53,17 @@ model User {
 }
 
 model Role {
-  id          String     @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   slug        String?
   description String?
-  scope       RoleScope  @default(TENANT)
+  scope       RoleScope @default(TENANT)
   companyId   String?
-  isSystem    Boolean    @default(false)
-  isActive    Boolean    @default(true)
+  isSystem    Boolean   @default(false)
+  isActive    Boolean   @default(true)
   createdBy   String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   users       UserRole[]
   permissions RolePermission[]
@@ -196,6 +196,10 @@ model Company {
   grades        Grade[]
   positions     Position[]
   contractTypes ContractType[]
+  salaryGrades  SalaryGrade[]
+  workingDays   WorkingDayPattern[]
+  locations     WorkspaceLocation[]
+  approvals     WorkspaceApprovalConfig[]
   announcements Announcement[]
 
   @@index([slug])
@@ -252,16 +256,16 @@ model Department {
 }
 
 model BusinessUnit {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   companyId String
   name      String
   code      String?
   lead      String?
-  notes     String?  @db.Text
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  notes     String?    @db.Text
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employees Employee[]
 
   @@unique([companyId, name])
@@ -270,14 +274,14 @@ model BusinessUnit {
 }
 
 model Section {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   companyId String
   name      String
   code      String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employees Employee[]
 
   @@unique([companyId, name])
@@ -286,16 +290,16 @@ model Section {
 }
 
 model JobTitle {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   companyId   String
   name        String
   code        String?
   grade       String?
-  description String?  @db.Text
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  description String?    @db.Text
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employees   Employee[]
 
   @@unique([companyId, name])
@@ -304,15 +308,15 @@ model JobTitle {
 }
 
 model Grade {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   companyId String
   name      String
-  rank      Int      @default(0)
+  rank      Int        @default(0)
   code      String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employees Employee[]
 
   @@unique([companyId, name])
@@ -336,19 +340,112 @@ model Position {
 }
 
 model ContractType {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   companyId String
   name      String
   code      String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employees Employee[]
 
   @@unique([companyId, name])
   @@index([companyId])
   @@map("contract_types")
+}
+
+model SalaryGrade {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  code      String?
+  rank      Int      @default(0)
+  minSalary Decimal? @db.Decimal(15, 2)
+  maxSalary Decimal? @db.Decimal(15, 2)
+  currency  String   @default("TZS")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("salary_grades")
+}
+
+model WorkingDayPattern {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  pattern     String?
+  hours       String?
+  weekend     String?
+  weekendDays String?  @db.Text
+  dayConfigs  String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("working_day_patterns")
+}
+
+model WorkspaceLocation {
+  id           String   @id @default(cuid())
+  companyId    String
+  name         String
+  code         String?
+  city         String?
+  country      String?
+  type         String?
+  address      String?  @db.Text
+  radiusMeters Int?
+  latitude     Decimal? @db.Decimal(10, 7)
+  longitude    Decimal? @db.Decimal(10, 7)
+  isActive     Boolean  @default(true)
+  metadata     String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("workspace_locations")
+}
+
+model WorkspaceApprovalConfig {
+  id                    String   @id @default(cuid())
+  companyId             String
+  moduleKey             String
+  process               String?
+  levels                Int      @default(1)
+  approvalMode          String   @default("global")
+  initiatorDepartments  String?  @db.Text
+  initiators            String?  @db.Text
+  initiatorRule         String?  @default("any")
+  reviewerDepartments   String?  @db.Text
+  reviewers             String?  @db.Text
+  reviewerRule          String?  @default("any")
+  approverDepartments   String?  @db.Text
+  approvers             String?  @db.Text
+  approverRule          String?  @default("any")
+  departmentAssignments String?  @db.Text
+  escalation            String?
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, moduleKey])
+  @@index([companyId])
+  @@map("workspace_approval_configs")
 }
 
 model CompanySettings {
@@ -539,22 +636,22 @@ model Employee {
 }
 
 model EmployeeMovement {
-  id              String   @id @default(cuid())
-  companyId       String
-  employeeId      String
-  employeeName    String?
-  movementType    String   // Promotion, Transfer, Salary Change, Acting Appointment, Reassignment
-  fromValue       String?  // previous grade, branch, department, salary, etc.
-  toValue         String?  // proposed grade, branch, department, salary, etc.
-  reason          String?  @db.Text
-  effectiveDate   String?
-  status          String   @default("Pending") // Pending, Approved, Rejected
-  approvedBy      String?
-  approvedAt      DateTime?
-  metadata        String?  @db.Text
-  createdById     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String    @id @default(cuid())
+  companyId     String
+  employeeId    String
+  employeeName  String?
+  movementType  String // Promotion, Transfer, Salary Change, Acting Appointment, Reassignment
+  fromValue     String? // previous grade, branch, department, salary, etc.
+  toValue       String? // proposed grade, branch, department, salary, etc.
+  reason        String?   @db.Text
+  effectiveDate String?
+  status        String    @default("Pending") // Pending, Approved, Rejected
+  approvedBy    String?
+  approvedAt    DateTime?
+  metadata      String?   @db.Text
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -797,7 +894,7 @@ model SalaryAdvance {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  employee     Employee                  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee     Employee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   installments SalaryAdvanceInstallment[]
 
   @@index([employeeId])
@@ -861,7 +958,7 @@ model HRQuery {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  employee Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   messages HRQueryMessage[]
 
   @@index([employeeId])
@@ -981,8 +1078,8 @@ model BenefitEnrollment {
   status     String    @default("ACTIVE")
   enrolledAt DateTime  @default(now())
 
-  employee Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  benefit  Benefit      @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+  employee Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  benefit  Benefit        @relation(fields: [benefitId], references: [id], onDelete: Cascade)
   claims   BenefitClaim[]
 
   @@unique([employeeId, benefitId])

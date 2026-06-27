@@ -61,16 +61,42 @@ export class BootstrapService implements OnModuleInit {
   private async ensurePermissions(createdBy: string) {
     const results = [];
     for (const p of PHASE_1_PERMISSIONS) {
-      const perm = await this.prisma.permission.upsert({
-        where: { name: p.name },
-        update: { resource: p.module, action: p.action, description: p.description },
-        create: {
-          name: p.name,
-          resource: p.module,
-          action: p.action,
-          description: p.description,
-        },
+      // Seed by the composite key first so legacy names do not violate (resource, action) uniqueness.
+      const existingByPair = await this.prisma.permission.findUnique({
+        where: { resource_action: { resource: p.module, action: p.action } },
       });
+
+      let perm;
+      if (existingByPair) {
+        perm = await this.prisma.permission.update({
+          where: { id: existingByPair.id },
+          data: { description: p.description },
+        });
+      } else {
+        const existingByName = await this.prisma.permission.findUnique({
+          where: { name: p.name },
+        });
+
+        if (existingByName) {
+          perm = await this.prisma.permission.update({
+            where: { id: existingByName.id },
+            data: {
+              resource: p.module,
+              action: p.action,
+              description: p.description,
+            },
+          });
+        } else {
+          perm = await this.prisma.permission.create({
+            data: {
+              name: p.name,
+              resource: p.module,
+              action: p.action,
+              description: p.description,
+            },
+          });
+        }
+      }
       results.push(perm);
     }
     this.logger.log(`Ensured ${results.length} permissions`);

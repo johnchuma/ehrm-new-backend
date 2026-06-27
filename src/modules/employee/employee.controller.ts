@@ -157,6 +157,13 @@ export class EmployeeController {
       'role',
     ];
     if (body.role !== undefined) data.role = body.role;
+    if (body.section !== undefined && body.sectionId === undefined) data.sectionId = body.section;
+    if (body.jobTitle !== undefined && body.jobTitleId === undefined) data.jobTitleId = body.jobTitle;
+    if (body.grade !== undefined && body.gradeId === undefined) data.gradeId = body.grade;
+    if (body.businessUnit !== undefined && body.businessUnitId === undefined) data.businessUnitId = body.businessUnit;
+    if (body.contractType !== undefined && body.contractTypeId === undefined) data.contractTypeId = body.contractType;
+    if (body.branch !== undefined && body.branchId === undefined) data.branchId = body.branch;
+    if (body.department !== undefined && body.departmentId === undefined) data.departmentId = body.department;
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
