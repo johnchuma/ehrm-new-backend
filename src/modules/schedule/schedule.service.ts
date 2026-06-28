@@ -13,6 +13,15 @@ function resolveUploadPath(fileName?: string | null) {
 export class ScheduleService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private defaultShifts() {
+    return [
+      { name: 'Morning', startTime: '08:00', endTime: '17:00', type: 'Day Shift', color: 'orange', breakMinutes: 60, isNightShift: false, isActive: true },
+      { name: 'Afternoon', startTime: '13:00', endTime: '22:00', type: 'Day Shift', color: 'blue', breakMinutes: 60, isNightShift: false, isActive: true },
+      { name: 'Night', startTime: '22:00', endTime: '06:00', type: 'Night Shift', color: 'purple', breakMinutes: 60, isNightShift: true, isActive: true },
+      { name: 'Office', startTime: '09:00', endTime: '18:00', type: 'Office', color: 'green', breakMinutes: 60, isNightShift: false, isActive: true },
+    ];
+  }
+
   private requireCompanyId(companyId?: string | null) {
     if (!companyId) throw new BadRequestException('Company not selected');
     return companyId;
@@ -111,7 +120,19 @@ export class ScheduleService {
     const monthStart = new Date(y, m - 1, 1);
     const monthEnd = new Date(y, m, 0, 23, 59, 59);
 
-    const [employees, shifts, assignments, swaps, holidays] = await Promise.all([
+    let shifts = await this.prisma.shift.findMany({ where: { companyId: cid }, orderBy: { name: 'asc' } });
+    if (!shifts.length) {
+      await this.prisma.shift.createMany({
+        data: this.defaultShifts().map((shift) => ({
+          companyId: cid,
+          ...shift,
+        })),
+        skipDuplicates: true,
+      });
+      shifts = await this.prisma.shift.findMany({ where: { companyId: cid }, orderBy: { name: 'asc' } });
+    }
+
+    const [employees, assignmentsData, swapsData, holidays] = await Promise.all([
       this.prisma.employee.findMany({
         where: { companyId: cid, status: 'Active' },
         select: {
@@ -124,7 +145,6 @@ export class ScheduleService {
         },
         orderBy: { fullName: 'asc' },
       }),
-      this.prisma.shift.findMany({ where: { companyId: cid }, orderBy: { name: 'asc' } }),
       this.prisma.shiftAssignment.findMany({
         where: { employee: { companyId: cid } },
         include: {
@@ -147,7 +167,7 @@ export class ScheduleService {
       }),
     ]);
 
-    const assignmentRows = assignments.map((assignment) => ({
+    const assignmentRows = assignmentsData.map((assignment) => ({
       id: assignment.id,
       empId: assignment.employeeId,
       emp: assignment.employee?.fullName || assignment.employee?.employeeNumber || assignment.employeeId,
@@ -177,7 +197,7 @@ export class ScheduleService {
       active: shift.isActive,
     }));
 
-    const swapRows = swaps.map((swap) => ({
+    const swapRows = swapsData.map((swap) => ({
       id: swap.id,
       requester: swap.requester?.fullName || swap.requester?.employeeNumber || swap.requesterId,
       requestee: swap.target?.fullName || swap.target?.employeeNumber || swap.targetId,
