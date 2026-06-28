@@ -829,6 +829,8 @@ model LeaveRequest {
   totalDays       Decimal   @db.Decimal(8, 2)
   reason          String?   @db.Text
   status          String    @default("PENDING")
+  approvalStage   Int       @default(0)
+  approvalConfigKey String?
   approverId      String?
   approvedAt      DateTime?
   rejectionReason String?   @db.Text

@@ -16,6 +16,7 @@ import { EmployeeModule } from './modules/employee/employee.module';
 import { MovementModule } from './modules/movement/movement.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { LeaveModule } from './modules/leave/leave.module';
+import { LeaveAdminModule } from './modules/leave-admin/leave-admin.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { AttendanceAdminModule } from './modules/attendance-admin/attendance-admin.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
@@ -59,6 +60,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     EmployeeModule,
     SettingsModule,
     LeaveModule,
+    LeaveAdminModule,
     AttendanceModule,
     AttendanceAdminModule,
     PayrollModule,

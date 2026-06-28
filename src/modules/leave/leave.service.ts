@@ -6,6 +6,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
+const PENDING_APPROVAL_STATUS = 'PENDING';
+const APPROVED_STATUS = 'APPROVED';
+const LEAVE_APPROVAL_MODULE = 'LEAVE';
+
+async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
+  const cfg = await prisma.workspaceApprovalConfig.findFirst({
+    where: { companyId, moduleKey: LEAVE_APPROVAL_MODULE, isActive: true },
+  });
+  return !!cfg;
+}
+
 @Injectable()
 export class LeaveService {
   constructor(private readonly prisma: PrismaService) {}
@@ -89,6 +100,7 @@ export class LeaveService {
     if (end < start) throw new BadRequestException('End date must be after start date');
 
     const totalDays = this.calculateWorkingDays(start, end);
+    const approvalRequired = await hasApprovalFlow(companyId, this.prisma) || leaveType.requiresApproval;
 
     // Check for overlapping pending/approved leaves
     const overlap = await this.prisma.leaveRequest.findFirst({
@@ -112,6 +124,8 @@ export class LeaveService {
       : leaveType.daysPerYear;
     if (totalDays > available) throw new BadRequestException(`Insufficient leave balance. Available: ${available} days`);
 
+    const status = approvalRequired ? PENDING_APPROVAL_STATUS : APPROVED_STATUS;
+
     const [request] = await this.prisma.$transaction([
       this.prisma.leaveRequest.create({
         data: {
@@ -123,7 +137,10 @@ export class LeaveService {
           totalDays,
           reason: dto.reason,
           handoverNotes: dto.handoverNotes,
-          status: leaveType.requiresApproval ? 'PENDING' : 'APPROVED',
+          status,
+          approvalStage: approvalRequired ? 0 : 1,
+          approvalConfigKey: approvalRequired ? LEAVE_APPROVAL_MODULE : null,
+          approvedAt: approvalRequired ? null : new Date(),
         },
         include: { leaveType: { select: { name: true, code: true } } },
       }),
@@ -137,11 +154,13 @@ export class LeaveService {
           leaveTypeId: dto.leaveTypeId,
           year,
           totalDays: leaveType.daysPerYear,
-          usedDays: 0,
-          pendingDays: totalDays,
+          usedDays: approvalRequired ? 0 : totalDays,
+          pendingDays: approvalRequired ? totalDays : 0,
           carriedOver: 0,
         },
-        update: { pendingDays: { increment: totalDays } },
+        update: approvalRequired
+          ? { pendingDays: { increment: totalDays } }
+          : { usedDays: { increment: totalDays } },
       }),
     ]);
     return request;
@@ -161,7 +180,7 @@ export class LeaveService {
     await this.prisma.$transaction([
       this.prisma.leaveRequest.update({
         where: { id: requestId },
-        data: { status: 'CANCELLED' },
+        data: { status: 'CANCELLED', approvalStage: Math.max(request.approvalStage, 1) },
       }),
       this.prisma.leaveBalance.updateMany({
         where: { employeeId, leaveTypeId: request.leaveTypeId, year },
@@ -220,6 +239,7 @@ export class LeaveService {
         data: {
           status: action,
           approverId: employeeId,
+          approvalStage: 1,
           approvedAt: action === 'APPROVED' ? new Date() : undefined,
           rejectionReason: action === 'REJECTED' ? reason : undefined,
         },
