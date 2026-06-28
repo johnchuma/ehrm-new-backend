@@ -27,6 +27,14 @@ function deriveCode(name: string) {
     .slice(0, 12) || 'LEAVE';
 }
 
+function buildLeaveTypeCode(baseCode: string, suffix: number) {
+  if (suffix <= 1) return baseCode;
+
+  const suffixText = `_${suffix}`;
+  const maxBaseLength = Math.max(1, 12 - suffixText.length);
+  return `${baseCode.slice(0, maxBaseLength)}${suffixText}`;
+}
+
 async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
   const cfg = await prisma.workspaceApprovalConfig.findFirst({
     where: { companyId, moduleKey: LEAVE_APPROVAL_MODULE, isActive: true },
@@ -279,11 +287,20 @@ export class LeaveAdminService {
     const days = Number(body.daysPerYear ?? body.days ?? 0);
     if (!Number.isFinite(days) || days <= 0) throw new BadRequestException('daysPerYear required');
 
+    const baseCode = deriveCode(body.code || body.name);
+    let code = baseCode;
+    let suffix = 1;
+
+    while (await this.prisma.leaveType.findFirst({ where: { companyId, code } })) {
+      suffix += 1;
+      code = buildLeaveTypeCode(baseCode, suffix);
+    }
+
     const created = await this.prisma.leaveType.create({
       data: {
         companyId,
         name: body.name,
-        code: body.code || deriveCode(body.name),
+        code,
         daysPerYear: days,
         isPaid: body.isPaid !== undefined ? !!body.isPaid : true,
         requiresApproval: body.requiresApproval !== undefined ? !!body.requiresApproval : true,
