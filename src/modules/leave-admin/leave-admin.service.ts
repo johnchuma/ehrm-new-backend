@@ -256,6 +256,13 @@ export class LeaveAdminService {
       approvals,
       leaveTypes: leaveTypeRows,
       balances: balanceRows,
+      employees: employees.map((employee) => ({
+        id: employee.id,
+        employeeNumber: employee.employeeNumber,
+        fullName: employee.fullName,
+        department: employee.department?.name || 'Unassigned',
+        branch: employee.branch?.name || 'Unassigned',
+      })),
       liabilities: balanceRows.map((row) => ({
         id: row.id,
         employee: row.employee,
