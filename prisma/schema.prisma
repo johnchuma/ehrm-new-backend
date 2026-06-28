@@ -820,23 +820,23 @@ model LeaveBalance {
 }
 
 model LeaveRequest {
-  id              String    @id @default(cuid())
-  employeeId      String
-  companyId       String
-  leaveTypeId     String
-  startDate       DateTime
-  endDate         DateTime
-  totalDays       Decimal   @db.Decimal(8, 2)
-  reason          String?   @db.Text
-  status          String    @default("PENDING")
-  approvalStage   Int       @default(0)
+  id                String    @id @default(cuid())
+  employeeId        String
+  companyId         String
+  leaveTypeId       String
+  startDate         DateTime
+  endDate           DateTime
+  totalDays         Decimal   @db.Decimal(8, 2)
+  reason            String?   @db.Text
+  status            String    @default("PENDING")
+  approvalStage     Int       @default(0)
   approvalConfigKey String?
-  approverId      String?
-  approvedAt      DateTime?
-  rejectionReason String?   @db.Text
-  handoverNotes   String?   @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  approverId        String?
+  approvedAt        DateTime?
+  rejectionReason   String?   @db.Text
+  handoverNotes     String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
@@ -855,6 +855,8 @@ model Shift {
   name         String
   startTime    String
   endTime      String
+  type         String   @default("Day Shift")
+  color        String   @default("orange")
   breakMinutes Int      @default(60)
   isNightShift Boolean  @default(false)
   isActive     Boolean  @default(true)
@@ -874,6 +876,8 @@ model ShiftAssignment {
   shiftId    String
   startDate  DateTime
   endDate    DateTime?
+  rotation   String    @default("None")
+  status     String    @default("Active")
   createdAt  DateTime  @default(now())
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -1008,22 +1012,22 @@ model Payslip {
 }
 
 model SalaryAdvance {
-  id                  String    @id @default(cuid())
+  id                  String                     @id @default(cuid())
   employeeId          String
   companyId           String
-  amount              Decimal   @db.Decimal(15, 2)
-  reason              String?   @db.Text
-  repaymentMonths     Int       @default(1)
-  status              String    @default("PENDING")
+  amount              Decimal                    @db.Decimal(15, 2)
+  reason              String?                    @db.Text
+  repaymentMonths     Int                        @default(1)
+  status              String                     @default("PENDING")
   approvedBy          String?
   approvedAt          DateTime?
   rejectionReason     String?
   deductionStartMonth Int?
   deductionStartYear  Int?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  employee     Employee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  installments SalaryAdvanceInstallment[]
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  employee            Employee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  installments        SalaryAdvanceInstallment[]
 
   @@index([employeeId])
   @@index([companyId])
