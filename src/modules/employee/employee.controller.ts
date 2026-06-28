@@ -103,6 +103,9 @@ export class EmployeeController {
       metadata: Object.keys(extraMeta).length ? JSON.stringify(extraMeta) : null,
       createdById: body.createdById || null,
     };
+    // Drop any invalid FK values (e.g., relation names or stale ids)
+    await dropInvalidEmployeeFks(this.prisma, empData);
+
     const employee = await this.prisma.employee.create({ data: empData });
 
     // Create user account if email provided
