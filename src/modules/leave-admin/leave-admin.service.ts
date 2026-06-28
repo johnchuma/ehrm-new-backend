@@ -35,6 +35,14 @@ function buildLeaveTypeCode(baseCode: string, suffix: number) {
   return `${baseCode.slice(0, maxBaseLength)}${suffixText}`;
 }
 
+function resolveUploadPath(fileName?: string | null) {
+  if (!fileName) return '';
+  const value = String(fileName).trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('/uploads/')) return value;
+  return `/uploads/${value.replace(/^\/+/, '')}`;
+}
+
 async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
   const cfg = await prisma.workspaceApprovalConfig.findFirst({
     where: { companyId, moduleKey: LEAVE_APPROVAL_MODULE, isActive: true },
@@ -64,6 +72,7 @@ export class LeaveAdminService {
               id: true,
               employeeNumber: true,
               fullName: true,
+              profilePhoto: true,
               department: { select: { name: true } },
               branch: { select: { name: true } },
             },
@@ -81,6 +90,7 @@ export class LeaveAdminService {
               id: true,
               employeeNumber: true,
               fullName: true,
+              profilePhoto: true,
               department: { select: { name: true } },
               branch: { select: { name: true } },
             },
@@ -93,6 +103,7 @@ export class LeaveAdminService {
           id: true,
           employeeNumber: true,
           fullName: true,
+          profilePhoto: true,
           department: { select: { name: true } },
           branch: { select: { name: true } },
         },
@@ -150,6 +161,7 @@ export class LeaveAdminService {
     const requestRows = requests.map((request) => ({
       id: request.id,
       emp: request.employee?.fullName || request.employee?.employeeNumber || request.employeeId,
+      photoUrl: resolveUploadPath(request.employee?.profilePhoto),
       employeeId: request.employeeId,
       dept: request.employee?.department?.name || 'Unassigned',
       branch: request.employee?.branch?.name || 'Unassigned',
@@ -181,6 +193,7 @@ export class LeaveAdminService {
     const balanceRows = balances.map((balance) => ({
       id: balance.id,
       employee: balance.employee?.fullName || balance.employee?.employeeNumber || balance.employeeId,
+      photoUrl: resolveUploadPath(balance.employee?.profilePhoto),
       department: balance.employee?.department?.name || 'Unassigned',
       branch: balance.employee?.branch?.name || 'Unassigned',
       type: balance.leaveType?.name || 'Leave',
@@ -260,6 +273,7 @@ export class LeaveAdminService {
         id: employee.id,
         employeeNumber: employee.employeeNumber,
         fullName: employee.fullName,
+        photoUrl: resolveUploadPath(employee.profilePhoto),
         department: employee.department?.name || 'Unassigned',
         branch: employee.branch?.name || 'Unassigned',
       })),

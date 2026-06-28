@@ -19,6 +19,14 @@ function toDateOnly(value: string | Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+function resolveUploadPath(fileName?: string | null) {
+  if (!fileName) return '';
+  const value = String(fileName).trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('/uploads/')) return value;
+  return `/uploads/${value.replace(/^\/+/, '')}`;
+}
+
 async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
   const cfg = await prisma.workspaceApprovalConfig.findFirst({
     where: { companyId, moduleKey: 'ATTENDANCE_BULK', isActive: true },
@@ -47,6 +55,7 @@ export class AttendanceAdminService {
               id: true,
               employeeNumber: true,
               fullName: true,
+              profilePhoto: true,
               department: { select: { name: true } },
               branch: { select: { name: true } },
             },
@@ -63,6 +72,7 @@ export class AttendanceAdminService {
           fullName: true,
           firstName: true,
           lastName: true,
+          profilePhoto: true,
           department: { select: { id: true, name: true } },
           branch: { select: { id: true, name: true } },
         },
@@ -82,12 +92,18 @@ export class AttendanceAdminService {
       this.prisma.attendanceBulkSubmission.findMany({ where: { companyId }, orderBy: { createdAt: 'desc' } }),
     ]);
 
+    const employeeById = new Map(
+      employees.map((employee) => [employee.id, employee]),
+    );
+    const shiftById = new Map(shifts.map((shift) => [shift.id, shift]));
+
     const rows = attendance.map((row) => ({
       id: row.id,
       empId: row.employeeId,
-      emp: row.employee?.fullName || row.employee?.employeeNumber || row.employeeId,
-      dept: row.employee?.department?.name || 'Unassigned',
-      branch: row.employee?.branch?.name || 'Unassigned',
+      emp: employeeById.get(row.employeeId)?.fullName || employeeById.get(row.employeeId)?.employeeNumber || row.employeeId,
+      photoUrl: resolveUploadPath(employeeById.get(row.employeeId)?.profilePhoto),
+      dept: employeeById.get(row.employeeId)?.department?.name || 'Unassigned',
+      branch: employeeById.get(row.employeeId)?.branch?.name || 'Unassigned',
       date: row.date.toISOString().slice(0, 10),
       in: row.checkIn ? row.checkIn.toISOString() : '',
       out: row.checkOut ? row.checkOut.toISOString() : '',
@@ -95,7 +111,7 @@ export class AttendanceAdminService {
       method: row.isManual ? 'Manual' : 'Auto',
       status: row.status,
       notes: row.notes || '',
-      shift: row.shift?.name || '',
+      shift: shiftById.get(row.shiftId)?.name || '',
     }));
 
     const todayRows = attendance.filter((row) => row.date.getTime() === today.getTime());
@@ -112,8 +128,9 @@ export class AttendanceAdminService {
     const branchGroups = new Map<string, { name: string; count: number }>();
     const deptGroups = new Map<string, { name: string; count: number }>();
     attendance.forEach((row) => {
-      const branchName = row.employee?.branch?.name || 'Unassigned';
-      const deptName = row.employee?.department?.name || 'Unassigned';
+      const employee = employeeById.get(row.employeeId);
+      const branchName = employee?.branch?.name || 'Unassigned';
+      const deptName = employee?.department?.name || 'Unassigned';
       branchGroups.set(branchName, { name: branchName, count: (branchGroups.get(branchName)?.count || 0) + 1 });
       deptGroups.set(deptName, { name: deptName, count: (deptGroups.get(deptName)?.count || 0) + 1 });
     });
@@ -124,6 +141,7 @@ export class AttendanceAdminService {
         id: employee.id,
         employeeNumber: employee.employeeNumber,
         fullName: employee.fullName || [employee.firstName, employee.lastName].filter(Boolean).join(' '),
+        photoUrl: resolveUploadPath(employee.profilePhoto),
         department: employee.department?.name || 'Unassigned',
         branch: employee.branch?.name || 'Unassigned',
       })),
