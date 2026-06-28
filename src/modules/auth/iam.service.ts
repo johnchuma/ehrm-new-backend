@@ -30,10 +30,36 @@ export class IamService {
     const parts = name.split('_');
     const resource = parts.slice(1).join('_') || 'unknown';
     const action = parts[0] || 'manage';
-    let perm = await this.prisma.permission.findUnique({ where: { name } });
-    if (!perm) {
-      perm = await this.prisma.permission.create({ data: { name, resource, action } });
+    const existingByPair = await this.prisma.permission.findUnique({
+      where: { resource_action: { resource, action } },
+    });
+
+    if (existingByPair) {
+      if (existingByPair.name !== name) {
+        const existingByName = await this.prisma.permission.findUnique({ where: { name } });
+        if (existingByName && existingByName.id !== existingByPair.id) {
+          await this.prisma.permission.delete({ where: { id: existingByName.id } });
+        }
+
+        await this.prisma.permission.update({
+          where: { id: existingByPair.id },
+          data: { name },
+        });
+      }
+
+      return existingByPair.id;
     }
+
+    const existingByName = await this.prisma.permission.findUnique({ where: { name } });
+    if (existingByName) {
+      const updated = await this.prisma.permission.update({
+        where: { id: existingByName.id },
+        data: { resource, action },
+      });
+      return updated.id;
+    }
+
+    const perm = await this.prisma.permission.create({ data: { name, resource, action } });
     return perm.id;
   }
 
