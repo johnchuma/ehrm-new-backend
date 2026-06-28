@@ -350,6 +350,122 @@ export class LeaveAdminService {
     };
   }
 
+  async createLeaveRequest(companyId: string, body: any) {
+    if (!body?.employeeId) throw new BadRequestException('employeeId required');
+    if (!body?.leaveTypeId) throw new BadRequestException('leaveTypeId required');
+    if (!body?.startDate) throw new BadRequestException('startDate required');
+    if (!body?.endDate) throw new BadRequestException('endDate required');
+
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: body.employeeId, companyId },
+      select: { id: true },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+
+    const leaveType = await this.prisma.leaveType.findFirst({
+      where: { id: body.leaveTypeId, companyId, isActive: true },
+    });
+    if (!leaveType) throw new NotFoundException('Leave type not found');
+
+    const start = new Date(body.startDate);
+    const end = new Date(body.endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new BadRequestException('Invalid leave dates');
+    }
+    if (end < start) throw new BadRequestException('End date must be after start date');
+
+    const totalDays = this.calculateWorkingDays(start, end);
+    const approvalRequired = (await hasApprovalFlow(companyId, this.prisma)) || leaveType.requiresApproval;
+
+    const overlap = await this.prisma.leaveRequest.findFirst({
+      where: {
+        employeeId: employee.id,
+        status: { in: ['PENDING', 'APPROVED'] },
+        OR: [{ startDate: { lte: end }, endDate: { gte: start } }],
+      },
+    });
+    if (overlap) throw new BadRequestException('This employee already has a leave request overlapping these dates');
+
+    const year = start.getFullYear();
+    const balance = await this.prisma.leaveBalance.findFirst({
+      where: { employeeId: employee.id, leaveTypeId: leaveType.id, year },
+    });
+    const available = balance
+      ? Number(balance.totalDays) + Number(balance.carriedOver) - Number(balance.usedDays) - Number(balance.pendingDays)
+      : leaveType.daysPerYear;
+    if (totalDays > available) throw new BadRequestException(`Insufficient leave balance. Available: ${available} days`);
+
+    const status = approvalRequired ? PENDING_APPROVAL_STATUS : APPROVED_STATUS;
+
+    const [request] = await this.prisma.$transaction([
+      this.prisma.leaveRequest.create({
+        data: {
+          employeeId: employee.id,
+          companyId,
+          leaveTypeId: leaveType.id,
+          startDate: start,
+          endDate: end,
+          totalDays,
+          reason: body.reason || null,
+          handoverNotes: body.handoverNotes || null,
+          status,
+          approvalStage: approvalRequired ? 0 : 1,
+          approvalConfigKey: approvalRequired ? LEAVE_APPROVAL_MODULE : null,
+          approvedAt: approvalRequired ? null : new Date(),
+        },
+        include: {
+          leaveType: { select: { name: true, code: true } },
+          employee: {
+            select: {
+              id: true,
+              employeeNumber: true,
+              fullName: true,
+              department: { select: { name: true } },
+              branch: { select: { name: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.leaveBalance.upsert({
+        where: {
+          employeeId_leaveTypeId_year: { employeeId: employee.id, leaveTypeId: leaveType.id, year },
+        },
+        create: {
+          employeeId: employee.id,
+          companyId,
+          leaveTypeId: leaveType.id,
+          year,
+          totalDays: leaveType.daysPerYear,
+          usedDays: approvalRequired ? 0 : totalDays,
+          pendingDays: approvalRequired ? totalDays : 0,
+          carriedOver: 0,
+        },
+        update: approvalRequired
+          ? { pendingDays: { increment: totalDays } }
+          : { usedDays: { increment: totalDays } },
+      }),
+    ]);
+
+    return {
+      id: request.id,
+      employeeId: request.employeeId,
+      employee: request.employee?.fullName || request.employee?.employeeNumber || request.employeeId,
+      dept: request.employee?.department?.name || 'Unassigned',
+      branch: request.employee?.branch?.name || 'Unassigned',
+      type: request.leaveType?.name || 'Leave',
+      from: toKey(request.startDate),
+      to: toKey(request.endDate),
+      days: Number(request.totalDays || 0),
+      reason: request.reason || '',
+      status: request.status,
+      approver: request.approverId || '',
+      approvedAt: request.approvedAt || null,
+      rejectionReason: request.rejectionReason || '',
+      approvalStage: request.approvalStage || 0,
+      approvalConfigKey: request.approvalConfigKey || null,
+    };
+  }
+
   async respond(companyId: string, requestId: string, body: { action: 'APPROVED' | 'REJECTED'; reason?: string }, actor?: any) {
     const request = await this.prisma.leaveRequest.findFirst({
       where: { id: requestId, companyId },
@@ -379,5 +495,16 @@ export class LeaveAdminService {
     ]);
 
     return { message: body.action === APPROVED_STATUS ? 'Leave request approved' : 'Leave request rejected' };
+  }
+
+  private calculateWorkingDays(start: Date, end: Date): number {
+    let count = 0;
+    const cur = new Date(start);
+    while (cur <= end) {
+      const day = cur.getDay();
+      if (day !== 0 && day !== 6) count += 1;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
   }
 }

@@ -31,6 +31,12 @@ export class LeaveAdminController {
     return this.svc.updateLeaveType(user.companyId, id, body);
   }
 
+  @Post('requests')
+  @ApiOperation({ summary: 'Create a leave request on behalf of an employee' })
+  createRequest(@CurrentUser() user: any, @Body() body: any) {
+    return this.svc.createLeaveRequest(user.companyId, body);
+  }
+
   @Post('requests/:id/respond')
   @ApiOperation({ summary: 'Approve or reject a leave request' })
   respond(@CurrentUser() user: any, @Param('id') id: string, @Body() body: { action: 'APPROVED' | 'REJECTED'; reason?: string }) {
