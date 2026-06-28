@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { PayrollService, RequestAdvanceDto } from './payroll.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -35,5 +35,193 @@ export class PayrollController {
   @ApiOperation({ summary: 'Request a salary advance' })
   requestAdvance(@CurrentUser() user: any, @Body() dto: RequestAdvanceDto) {
     return this.svc.requestAdvance(user.sub, dto);
+  }
+
+  @Get('runs')
+  @ApiOperation({ summary: 'List payroll runs for the company' })
+  @ApiQuery({ name: 'month', required: false, type: Number })
+  @ApiQuery({ name: 'year', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  listPayrollRuns(
+    @CurrentUser() user: any,
+    @Query('month') month?: string,
+    @Query('year') year?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.svc.listPayrollRuns(user.companyId, {
+      month: month ? parseInt(month) : undefined,
+      year: year ? parseInt(year) : undefined,
+      page: page ? parseInt(page) : undefined,
+      limit: limit ? parseInt(limit) : undefined,
+    });
+  }
+
+  @Get('runs/:id')
+  @ApiOperation({ summary: 'Get payroll run detail' })
+  getPayrollRun(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.svc.getPayrollRun(user.companyId, id);
+  }
+
+  @Get('runs/:id/payslips')
+  @ApiOperation({ summary: 'Get payroll run paylist rows' })
+  getRunPayslips(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.svc.getRunPayslips(user.companyId, id);
+  }
+
+  @Post('runs')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Generate a payroll run' })
+  generatePayrollRun(@CurrentUser() user: any, @Body() body: any) {
+    return this.svc.generatePayrollRun(user.companyId, body, user);
+  }
+
+  @Put('runs/:id/approve')
+  @ApiOperation({ summary: 'Approve a payroll run' })
+  approvePayrollRun(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.svc.approvePayrollRun(user.companyId, id, user);
+  }
+
+  @Put('runs/:id/close')
+  @ApiOperation({ summary: 'Close a payroll run' })
+  closePayrollRun(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.svc.closePayrollRun(user.companyId, id);
+  }
+
+  @Get('summary')
+  @ApiOperation({ summary: 'Get payroll summary for a month' })
+  @ApiQuery({ name: 'month', required: true, type: Number })
+  @ApiQuery({ name: 'year', required: true, type: Number })
+  getPayrollSummary(@CurrentUser() user: any, @Query('month') month: string, @Query('year') year: string) {
+    return this.svc.getPayrollSummary(user.companyId, parseInt(month), parseInt(year));
+  }
+
+  @Get('paylist')
+  @ApiOperation({ summary: 'Get payroll paylist as JSON or CSV' })
+  @ApiQuery({ name: 'month', required: true, type: Number })
+  @ApiQuery({ name: 'year', required: true, type: Number })
+  @ApiQuery({ name: 'format', required: false, enum: ['json', 'csv'] })
+  getPaylist(
+    @CurrentUser() user: any,
+    @Query('month') month: string,
+    @Query('year') year: string,
+    @Query('format') format?: 'json' | 'csv',
+  ) {
+    return this.svc.getPaylist(user.companyId, parseInt(month), parseInt(year), format || 'json');
+  }
+
+  @Get('advances')
+  @ApiOperation({ summary: 'List salary advances for the company' })
+  @ApiQuery({ name: 'employeeId', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  listSalaryAdvances(
+    @CurrentUser() user: any,
+    @Query('employeeId') employeeId?: string,
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.svc.listSalaryAdvances(user.companyId, {
+      employeeId,
+      status,
+      page: page ? parseInt(page) : undefined,
+      limit: limit ? parseInt(limit) : undefined,
+    });
+  }
+
+  @Post('advances')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Create a salary advance for an employee' })
+  createSalaryAdvance(@CurrentUser() user: any, @Body() body: RequestAdvanceDto & { employeeId: string }) {
+    return this.svc.createSalaryAdvance(user.companyId, body);
+  }
+
+  @Put('advances/:id')
+  @ApiOperation({ summary: 'Update a salary advance' })
+  updateSalaryAdvance(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    return this.svc.updateSalaryAdvance(user.companyId, id, body);
+  }
+
+  @Delete('advances/:id')
+  @ApiOperation({ summary: 'Delete a salary advance' })
+  deleteSalaryAdvance(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.svc.deleteSalaryAdvance(user.companyId, id);
+  }
+
+  @Get('adjustments')
+  @ApiOperation({ summary: 'List payroll adjustments' })
+  @ApiQuery({ name: 'employeeId', required: false })
+  @ApiQuery({ name: 'type', required: false })
+  @ApiQuery({ name: 'code', required: false })
+  @ApiQuery({ name: 'month', required: false, type: Number })
+  @ApiQuery({ name: 'year', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  listPayrollAdjustments(
+    @CurrentUser() user: any,
+    @Query('employeeId') employeeId?: string,
+    @Query('type') type?: string,
+    @Query('code') code?: string,
+    @Query('month') month?: string,
+    @Query('year') year?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.svc.listPayrollAdjustments(user.companyId, {
+      employeeId,
+      type,
+      code,
+      month: month ? parseInt(month) : undefined,
+      year: year ? parseInt(year) : undefined,
+      page: page ? parseInt(page) : undefined,
+      limit: limit ? parseInt(limit) : undefined,
+    });
+  }
+
+  @Post('adjustments')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Create a payroll adjustment' })
+  createPayrollAdjustment(@CurrentUser() user: any, @Body() body: any) {
+    return this.svc.createPayrollAdjustment(user.companyId, body);
+  }
+
+  @Put('adjustments/:id')
+  @ApiOperation({ summary: 'Update a payroll adjustment' })
+  updatePayrollAdjustment(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    return this.svc.updatePayrollAdjustment(user.companyId, id, body);
+  }
+
+  @Delete('adjustments/:id')
+  @ApiOperation({ summary: 'Delete a payroll adjustment' })
+  deletePayrollAdjustment(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.svc.deletePayrollAdjustment(user.companyId, id);
+  }
+
+  @Get('components')
+  @ApiOperation({ summary: 'List payroll components' })
+  listPayrollComponents(@CurrentUser() user: any) {
+    return this.svc.listPayrollComponents(user.companyId);
+  }
+
+  @Post('components')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Create or update a payroll component' })
+  upsertPayrollComponent(@CurrentUser() user: any, @Body() body: any) {
+    return this.svc.upsertPayrollComponent(user.companyId, body);
+  }
+
+  @Delete('components/:id')
+  @ApiOperation({ summary: 'Delete a payroll component' })
+  deletePayrollComponent(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.svc.deletePayrollComponent(user.companyId, id);
+  }
+
+  @Get('salary-history/:employeeId')
+  @ApiOperation({ summary: 'Get payroll history for an employee' })
+  getEmployeeSalaryHistory(@CurrentUser() user: any, @Param('employeeId') employeeId: string) {
+    return this.svc.getEmployeeSalaryHistory(user.companyId, employeeId);
   }
 }

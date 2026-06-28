@@ -204,6 +204,10 @@ model Company {
   locations                 WorkspaceLocation[]
   approvals                 WorkspaceApprovalConfig[]
   announcements             Announcement[]
+  payrollRuns               PayrollRun[]
+  payrollRunItems           PayrollRunItem[]
+  payrollAdjustments        PayrollAdjustment[]
+  payrollComponents         PayrollComponent[]
 
   @@index([slug])
   @@index([status])
@@ -680,6 +684,9 @@ model Employee {
   swapRequestsReceived ShiftSwapRequest[]   @relation("SwapTarget")
   contracts            Contract[]           @relation("EmployeeContracts")
   offboardings         Offboarding[]
+  payrollRunItems      PayrollRunItem[]
+  payrollAdjustments   PayrollAdjustment[]
+  payrollComponents    PayrollComponent[]
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])
@@ -1047,6 +1054,142 @@ model SalaryAdvanceInstallment {
 
   @@unique([advanceId, month, year])
   @@map("salary_advance_installments")
+}
+
+model PayrollRun {
+  id                String    @id @default(cuid())
+  companyId         String
+  month             Int
+  year              Int
+  periodLabel       String
+  paymentMethod     String    @default("Bank Transfer")
+  payDate           DateTime?
+  cutoffDay         Int?
+  status            String    @default("DRAFT")
+  employeeCount     Int       @default(0)
+  totalGrossSalary  Decimal   @default(0) @db.Decimal(15, 2)
+  totalNetSalary    Decimal   @default(0) @db.Decimal(15, 2)
+  totalPaye         Decimal   @default(0) @db.Decimal(15, 2)
+  totalNssf         Decimal   @default(0) @db.Decimal(15, 2)
+  totalSdl          Decimal   @default(0) @db.Decimal(15, 2)
+  totalWcf          Decimal   @default(0) @db.Decimal(15, 2)
+  totalNhifEmployee Decimal   @default(0) @db.Decimal(15, 2)
+  totalNhifEmployer Decimal   @default(0) @db.Decimal(15, 2)
+  totalAllowances   Decimal   @default(0) @db.Decimal(15, 2)
+  totalDeductions   Decimal   @default(0) @db.Decimal(15, 2)
+  totalPayrollCost  Decimal   @default(0) @db.Decimal(15, 2)
+  approvalConfigKey String?
+  submittedAt       DateTime?
+  approvedAt        DateTime?
+  approvedBy        String?
+  closedAt          DateTime?
+  metadata          String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company     Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items       PayrollRunItem[]
+  adjustments PayrollAdjustment[]
+
+  @@unique([companyId, month, year])
+  @@index([companyId])
+  @@index([status])
+  @@map("payroll_runs")
+}
+
+model PayrollRunItem {
+  id                String   @id @default(cuid())
+  payrollRunId      String
+  companyId         String
+  employeeId        String
+  employeeNumber    String?
+  employeeName      String
+  departmentName    String?
+  title             String?
+  basicSalary       Decimal  @default(0) @db.Decimal(15, 2)
+  allowances        Decimal  @default(0) @db.Decimal(15, 2)
+  overtime          Decimal  @default(0) @db.Decimal(15, 2)
+  terminationAmount Decimal  @default(0) @db.Decimal(15, 2)
+  attendanceDays    Int      @default(0)
+  grossSalary       Decimal  @default(0) @db.Decimal(15, 2)
+  paye              Decimal  @default(0) @db.Decimal(15, 2)
+  nssf              Decimal  @default(0) @db.Decimal(15, 2)
+  sdl               Decimal  @default(0) @db.Decimal(15, 2)
+  wcf               Decimal  @default(0) @db.Decimal(15, 2)
+  nhifEmployee      Decimal  @default(0) @db.Decimal(15, 2)
+  nhifEmployer      Decimal  @default(0) @db.Decimal(15, 2)
+  salaryAdvance     Decimal  @default(0) @db.Decimal(15, 2)
+  otherDeduction    Decimal  @default(0) @db.Decimal(15, 2)
+  totalDeductions   Decimal  @default(0) @db.Decimal(15, 2)
+  netSalary         Decimal  @default(0) @db.Decimal(15, 2)
+  totalPayrollCost  Decimal  @default(0) @db.Decimal(15, 2)
+  reviewStatus      String   @default("PENDING")
+  remarks           String?  @db.Text
+  metadata          String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee   Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollRunId, employeeId])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("payroll_run_items")
+}
+
+model PayrollAdjustment {
+  id           String   @id @default(cuid())
+  companyId    String
+  employeeId   String?
+  payrollRunId String?
+  type         String
+  code         String
+  description  String?
+  amountTzs    Decimal  @db.Decimal(15, 2)
+  month        Int?
+  year         Int?
+  status       String   @default("ACTIVE")
+  remarks      String?  @db.Text
+  referenceId  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee   Employee?   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  payrollRun PayrollRun? @relation(fields: [payrollRunId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([month, year])
+  @@map("payroll_adjustments")
+}
+
+model PayrollComponent {
+  id           String   @id @default(cuid())
+  companyId    String
+  employeeId   String?
+  departmentId String?
+  positionId   String?
+  name         String
+  code         String
+  type         String
+  amountTzs    Decimal? @db.Decimal(15, 2)
+  percentage   Decimal? @db.Decimal(8, 2)
+  scope        String   @default("COMPANY")
+  notes        String?  @db.Text
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("payroll_components")
 }
 
 // ─── TASKS ───────────────────────────────────────────────────────────────────
