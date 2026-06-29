@@ -119,12 +119,32 @@ model RefreshToken {
   jti       String?  @unique
   expiresAt DateTime
   revoked   Boolean  @default(false)
+  ipAddress String?
+  userAgent String?  @db.VarChar(500)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+model SecurityAlert {
+  id         String    @id @default(cuid())
+  type       String
+  entity     String
+  detail     String    @db.Text
+  severity   String    @default("Medium")
+  resolved   Boolean   @default(false)
+  resolvedAt DateTime?
+  resolvedBy String?
+  occurredAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  @@index([resolved])
+  @@index([severity])
+  @@index([occurredAt])
+  @@map("security_alerts")
 }
 
 model PasswordReset {
@@ -181,22 +201,27 @@ model Company {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  branches      Branch[]
-  departments   Department[]
-  settings      CompanySettings?
-  subscriptions Subscription[]
-  employees     Employee[]
-  leaveTypes    LeaveType[]
-  shifts        Shift[]
-  holidays      PublicHoliday[]
-  tasks         Task[]
-  businessUnits BusinessUnit[]
-  sections      Section[]
-  jobTitles     JobTitle[]
-  grades        Grade[]
-  positions     Position[]
-  contractTypes ContractType[]
-  announcements Announcement[]
+  enabledModules String? @db.Text
+  userLimit      Int?
+
+  branches       Branch[]
+  departments    Department[]
+  settings       CompanySettings?
+  subscriptions  Subscription[]
+  payments       Payment[]
+  employees      Employee[]
+  leaveTypes     LeaveType[]
+  shifts         Shift[]
+  holidays       PublicHoliday[]
+  tasks          Task[]
+  businessUnits  BusinessUnit[]
+  sections       Section[]
+  jobTitles      JobTitle[]
+  grades         Grade[]
+  positions      Position[]
+  contractTypes  ContractType[]
+  announcements  Announcement[]
+  billingAlerts  BillingAlert[]
 
   @@index([slug])
   @@index([status])
@@ -373,20 +398,23 @@ model CompanySettings {
 // ─── PLANS & SUBSCRIPTIONS ───────────────────────────────────────────────────
 
 model Plan {
-  id           String   @id @default(cuid())
-  name         String   @unique
-  slug         String   @unique
-  description  String?  @db.Text
-  monthlyPrice Decimal  @default(0) @db.Decimal(10, 2)
-  annualPrice  Decimal  @default(0) @db.Decimal(10, 2)
-  maxEmployees Int      @default(-1)
-  features     String?  @db.Text
-  isActive     Boolean  @default(true)
-  isPublic     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String   @unique
+  slug          String   @unique
+  description   String?  @db.Text
+  monthlyPrice  Decimal  @default(0) @db.Decimal(10, 2)
+  annualPrice   Decimal  @default(0) @db.Decimal(10, 2)
+  maxEmployees  Int      @default(-1)
+  features      String?  @db.Text
+  isActive      Boolean  @default(true)
+  isPublic      Boolean  @default(true)
+  isHighlighted Boolean  @default(false)
+  supportTier   String   @default("Email")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   subscriptions Subscription[]
+  payments      Payment[]
 
   @@index([slug])
   @@map("plans")
@@ -403,16 +431,47 @@ model Subscription {
   cancelledAt        DateTime?
   cancelReason       String?
   trialEndsAt        DateTime?
+  gatewayRef         String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  plan    Plan    @relation(fields: [planId], references: [id])
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan     Plan      @relation(fields: [planId], references: [id])
+  payments Payment[]
 
   @@index([companyId])
   @@index([planId])
   @@index([status])
   @@map("subscriptions")
+}
+
+model Payment {
+  id              String    @id @default(cuid())
+  companyId       String
+  planId          String
+  subscriptionId  String?
+  amount          Decimal   @db.Decimal(15, 2)
+  currency        String    @default("TZS")
+  billingInterval String    @default("MONTHLY")
+  status          String    @default("PENDING")
+  gateway         String    @default("snipepay")
+  gatewayRef      String?   @unique
+  gatewayResponse String?   @db.Text
+  callbackUrl     String?   @db.Text
+  paidAt          DateTime?
+  failedAt        DateTime?
+  failureReason   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan         Plan          @relation(fields: [planId], references: [id])
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@index([gatewayRef])
+  @@map("payments")
 }
 
 model ImpersonationAudit {
@@ -428,6 +487,26 @@ model ImpersonationAudit {
   @@index([superAdminId])
   @@index([targetCompanyId])
   @@map("impersonation_audits")
+}
+
+model BillingAlert {
+  id         String    @id @default(cuid())
+  type       String
+  companyId  String
+  message    String    @db.Text
+  severity   String    @default("Medium")
+  resolved   Boolean   @default(false)
+  resolvedAt DateTime?
+  resolvedBy String?
+  occurredAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([resolved])
+  @@index([severity])
+  @@map("billing_alerts")
 }
 
 // ─── EMPLOYEE ────────────────────────────────────────────────────────────────

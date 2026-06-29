@@ -30,8 +30,10 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiBody({ type: LoginDto })
-  login(@Body() body: LoginDto) {
-    return this.auth.login(body.email, body.password);
+  login(@Body() body: LoginDto, @Req() req: any) {
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.ip;
+    const userAgent = req.headers['user-agent'] ?? undefined;
+    return this.auth.login(body.email, body.password, ip, userAgent);
   }
 
   @Public()

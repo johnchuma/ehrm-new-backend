@@ -17,6 +17,8 @@ export class PermissionsGuard implements CanActivate {
     const { user } = ctx.switchToHttp().getRequest();
     if (!user) return false;
 
+    if (user.isSuperAdmin) return true;
+
     return required.every((perm) => user.permissions?.includes(perm));
   }
 }

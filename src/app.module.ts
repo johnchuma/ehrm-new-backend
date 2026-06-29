@@ -27,6 +27,7 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
 import { PerformanceModule } from './modules/performance/performance.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 import { IamController } from './modules/auth/iam.controller';
 import { IamService } from './modules/auth/iam.service';
@@ -66,6 +67,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     PerformanceModule,
     ExpensesModule,
     DashboardModule,
+    PaymentsModule,
   ],
   controllers: [IamController],
   providers: [

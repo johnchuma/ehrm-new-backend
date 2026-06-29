@@ -15,16 +15,23 @@ export class BootstrapService implements OnModuleInit {
 
   async run() {
     this.logger.log('Bootstrap starting...');
+
+    // Plans always run independently — never blocked by IAM errors
+    try {
+      await this.ensureDefaultPlans();
+    } catch (err) {
+      this.logger.error('Plan seeding failed', err);
+    }
+
     try {
       const superAdminUser = await this.ensureSuperAdminUser();
       const permissions = await this.ensurePermissions(superAdminUser.id);
-      await this.ensureDefaultPlans();
       const role = await this.ensureSuperAdminRole(superAdminUser.id);
       await this.grantAllPermissionsToRole(role.id, permissions, superAdminUser.id);
       await this.assignRoleToUser(superAdminUser.id, role.id);
       this.logger.log('Bootstrap complete.');
     } catch (err) {
-      this.logger.error('Bootstrap failed', err);
+      this.logger.error('Bootstrap IAM step failed (non-fatal)', err);
     }
   }
 
@@ -35,6 +42,12 @@ export class BootstrapService implements OnModuleInit {
 
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
+      if (existing.role !== 'System Administrator') {
+        await this.prisma.user.update({
+          where: { email },
+          data: { role: 'System Administrator' },
+        });
+      }
       this.logger.log(`Super admin exists: ${email}`);
       return existing;
     }
@@ -51,6 +64,7 @@ export class BootstrapService implements OnModuleInit {
         firstName: 'System',
         lastName: 'Administrator',
         fullName: 'System Administrator',
+        role: 'System Administrator',
         isActive: true,
       },
     });
@@ -61,17 +75,25 @@ export class BootstrapService implements OnModuleInit {
   private async ensurePermissions(createdBy: string) {
     const results = [];
     for (const p of PHASE_1_PERMISSIONS) {
-      const perm = await this.prisma.permission.upsert({
-        where: { name: p.name },
-        update: { resource: p.module, action: p.action, description: p.description },
-        create: {
-          name: p.name,
-          resource: p.module,
-          action: p.action,
-          description: p.description,
-        },
-      });
-      results.push(perm);
+      try {
+        const perm = await this.prisma.permission.upsert({
+          where: { name: p.name },
+          update: { description: p.description },
+          create: {
+            name: p.name,
+            resource: p.module,
+            action: p.action,
+            description: p.description,
+          },
+        });
+        results.push(perm);
+      } catch {
+        // Silently skip duplicate permission conflicts
+        const existing = await this.prisma.permission.findFirst({
+          where: { resource: p.module, action: p.action },
+        });
+        if (existing) results.push(existing);
+      }
     }
     this.logger.log(`Ensured ${results.length} permissions`);
     return results;
@@ -132,24 +154,54 @@ export class BootstrapService implements OnModuleInit {
 
   private async ensureDefaultPlans() {
     const plans = [
-      { name: 'HR Starter',           slug: 'hr-starter',           monthlyPrice: 2500,  maxEmployees: 50,   features: { payroll: false, ai: false, analytics: false } },
-      { name: 'HR Essentials',        slug: 'hr-essentials',        monthlyPrice: 4500,  maxEmployees: 200,  features: { payroll: true,  ai: false, analytics: false } },
-      { name: 'HR Professional',      slug: 'hr-professional',      monthlyPrice: 9000,  maxEmployees: 1000, features: { payroll: true,  ai: false, analytics: true  } },
-      { name: 'Enterprise Suite',     slug: 'enterprise-suite',     monthlyPrice: 14000, maxEmployees: 5000, features: { payroll: true,  ai: false, analytics: true  } },
-      { name: 'Intelligence Premium', slug: 'intelligence-premium', monthlyPrice: 18000, maxEmployees: -1,   features: { payroll: true,  ai: true,  analytics: true  } },
+      {
+        name: 'HR Starter', slug: 'hr-starter', monthlyPrice: 2500, annualPrice: 25500, maxEmployees: 50,
+        features: ['Employee Directory', 'Self-Service Portal', 'Leave Management', 'Attendance Tracking'],
+        supportTier: 'Email', isHighlighted: false,
+      },
+      {
+        name: 'HR Essentials', slug: 'hr-essentials', monthlyPrice: 4500, annualPrice: 45900, maxEmployees: 200,
+        features: ['Employee Directory', 'Self-Service Portal', 'Leave Management', 'Attendance Tracking', 'Payroll Basic', 'ESS Mobile App'],
+        supportTier: 'Email', isHighlighted: false,
+      },
+      {
+        name: 'HR Professional', slug: 'hr-professional', monthlyPrice: 9000, annualPrice: 91800, maxEmployees: 1000,
+        features: ['HR Essentials', 'Training & Development', 'Performance Reviews', 'Benefits & CTC', 'Analytics Dashboard'],
+        supportTier: 'Priority', isHighlighted: true,
+      },
+      {
+        name: 'Enterprise Suite', slug: 'enterprise-suite', monthlyPrice: 14000, annualPrice: 142800, maxEmployees: 5000,
+        features: ['HR Professional', 'Compliance & Disciplinary', 'Tasks & Workflows', 'Exec Dashboards', 'API Access'],
+        supportTier: 'Dedicated', isHighlighted: false,
+      },
+      {
+        name: 'Intelligence Premium', slug: 'intelligence-premium', monthlyPrice: 18000, annualPrice: 183600, maxEmployees: -1,
+        features: ['Enterprise Suite', 'ExactAI Copilot', 'Advanced Analytics', 'Salary Survey Data', 'Custom Integrations'],
+        supportTier: 'Dedicated', isHighlighted: false,
+      },
     ];
 
     for (const plan of plans) {
       const featuresJson = JSON.stringify(plan.features);
-      await this.prisma.plan.upsert({
+      await (this.prisma.plan as any).upsert({
         where: { slug: plan.slug },
-        update: { monthlyPrice: plan.monthlyPrice, features: featuresJson },
+        update: {
+          monthlyPrice: plan.monthlyPrice,
+          annualPrice: plan.annualPrice,
+          features: featuresJson,
+          isHighlighted: plan.isHighlighted,
+          supportTier: plan.supportTier,
+          maxEmployees: plan.maxEmployees,
+        },
         create: {
           name: plan.name,
           slug: plan.slug,
           monthlyPrice: plan.monthlyPrice,
+          annualPrice: plan.annualPrice,
           maxEmployees: plan.maxEmployees,
           features: featuresJson,
+          isHighlighted: plan.isHighlighted,
+          supportTier: plan.supportTier,
           isActive: true,
         },
       });

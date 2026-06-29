@@ -18,7 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, role: true },
     });
 
     if (!user || !user.isActive) throw new UnauthorizedException('Account inactive');
@@ -29,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       roles: payload.roles ?? [],
       permissions: payload.permissions ?? [],
       selectedCompanyId: payload.selectedCompanyId ?? null,
-      isSuperAdmin: payload.isSuperAdmin ?? false,
+      isSuperAdmin: user.role === 'System Administrator',
       isImpersonating: payload.isImpersonating ?? false,
       originalAdminId: payload.originalAdminId ?? null,
       jti: payload.jti,

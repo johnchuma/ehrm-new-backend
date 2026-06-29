@@ -15,7 +15,7 @@ export class AuthService {
     private readonly sms: SmsService,
   ) {}
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, ip?: string, userAgent?: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     });
@@ -46,6 +46,8 @@ export class AuthService {
       selectedCompanyId: user.companyId ?? undefined,
       isSuperAdmin,
       isImpersonating: false,
+      ip,
+      userAgent,
     });
 
     const { password: _pw, mfaSecret: _mfa, ...safeUser } = user as any;
@@ -190,16 +192,20 @@ export class AuthService {
     isSuperAdmin?: boolean;
     isImpersonating?: boolean;
     originalAdminId?: string;
+    ip?: string;
+    userAgent?: string;
   }) {
     const jti = randomUUID();
     const refreshJti = randomUUID();
 
-    const accessToken = this.jwt.sign({ ...payload, type: 'access', jti }, { expiresIn: '15m' });
+    const { ip, userAgent, ...jwtPayload } = payload;
+
+    const accessToken = this.jwt.sign({ ...jwtPayload, type: 'access', jti }, { expiresIn: '15m' });
     const refreshToken = this.jwt.sign({ sub: payload.sub, email: payload.email, type: 'refresh', jti: refreshJti }, { expiresIn: '7d' });
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.prisma.refreshToken.create({
-      data: { userId: payload.sub, token: refreshToken, jti: refreshJti, expiresAt, revoked: false },
+      data: { userId: payload.sub, token: refreshToken, jti: refreshJti, expiresAt, revoked: false, ipAddress: ip ?? null, userAgent: userAgent ?? null },
     });
 
     return { accessToken, refreshToken };

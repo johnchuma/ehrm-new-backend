@@ -86,11 +86,11 @@ export class SuperAdminService {
 
     const companyGrowth = await this.prisma.$queryRaw<Array<{ month: string; count: bigint }>>`
       SELECT
-        DATE_FORMAT(created_at, '%Y-%m') AS month,
+        DATE_FORMAT(createdAt, '%Y-%m') AS month,
         COUNT(*) AS count
       FROM companies
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-        AND deleted_at IS NULL
+      WHERE createdAt >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+        AND deletedAt IS NULL
       GROUP BY month
       ORDER BY month ASC
     `;
@@ -561,9 +561,9 @@ export class SuperAdminService {
     };
   }
 
-  async createSuperAdmin(email: string, createdBy: string) {
+  async createSuperAdmin(dto: { email: string; firstName: string; lastName: string; password?: string }, createdBy: string) {
     const existing = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: dto.email.toLowerCase() },
     });
     if (existing) throw new ConflictException('Email already exists');
 
@@ -574,16 +574,16 @@ export class SuperAdminService {
       throw new NotFoundException('System Administrator role not found. Run bootstrap first.');
     }
 
-    const tempPassword = await bcrypt.hash('ChangeMe@2026!', 12);
+    const hashed = await bcrypt.hash(dto.password ?? 'ChangeMe@2026!', 12);
 
     const user = await this.prisma.user.create({
       data: {
-        email: email.toLowerCase(),
-        password: tempPassword,
-        firstName: 'Super',
-        lastName: 'Admin',
-        fullName: 'Super Admin',
-        companyId: '',
+        email: dto.email.toLowerCase(),
+        password: hashed,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        fullName: `${dto.firstName} ${dto.lastName}`,
+        role: 'System Administrator',
         isActive: true,
       },
     });
@@ -592,11 +592,15 @@ export class SuperAdminService {
       data: { userId: user.id, roleId: superAdminRole.id },
     });
 
-    this.logger.log(`Super admin created: ${email} by ${createdBy}`);
+    this.logger.log(`Super admin created: ${dto.email} by ${createdBy}`);
     return {
       id: user.id,
       email: user.email,
-      message: 'Super admin created. Password: ChangeMe@2026! (must be changed on first login)',
+      firstName: user.firstName,
+      lastName: user.lastName,
+      message: dto.password
+        ? 'Super admin created successfully.'
+        : 'Super admin created. Default password: ChangeMe@2026! (must be changed on first login)',
     };
   }
 
@@ -645,6 +649,32 @@ export class SuperAdminService {
     });
 
     return { message: 'User deleted successfully' };
+  }
+
+  async updateUser(userId: string, dto: { firstName?: string; lastName?: string; email?: string; password?: string }, actorId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    if (userId === actorId) throw new ForbiddenException('Cannot edit yourself via this endpoint');
+
+    if (dto.email && dto.email.toLowerCase() !== user.email) {
+      const taken = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
+      if (taken) throw new ConflictException('Email already in use');
+    }
+
+    const data: any = {};
+    if (dto.firstName) { data.firstName = dto.firstName; data.fullName = `${dto.firstName} ${dto.lastName ?? user.lastName}`; }
+    if (dto.lastName)  { data.lastName  = dto.lastName;  data.fullName = `${dto.firstName ?? user.firstName} ${dto.lastName}`; }
+    if (dto.email)     data.email    = dto.email.toLowerCase();
+    if (dto.password)  data.password = await bcrypt.hash(dto.password, 12);
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: { id: true, email: true, firstName: true, lastName: true, fullName: true, role: true, isActive: true },
+    });
+
+    this.logger.log(`User ${userId} updated by ${actorId}`);
+    return { message: 'User updated successfully', user: updated };
   }
 
   // ─── AUDIT LOGS ──────────────────────────────────────────────────────────────
