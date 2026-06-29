@@ -379,6 +379,62 @@ export class EmployeeCrudController {
     // employee has a Contract record so the contracts module can take over.
     if (data.stage === 'Approved' && previous?.stage !== 'Approved') {
       try { await this.contracts.ensureContractForEmployee(id); } catch (e) { console.error('[CONTRACT AUTO-CREATE]', e); }
+      // After onboarding is approved, ensure the employee has a user account
+      // and send a welcome email with credentials (default password: 123456).
+      try {
+        const emp = await this.prisma.employee.findUnique({ where: { id }, select: { email: true, firstName: true, lastName: true, companyId: true, userId: true } });
+        if (emp?.email) {
+          let user = null;
+          if (!emp.userId) {
+            const existingUser = await this.prisma.user.findUnique({ where: { email: emp.email.toLowerCase() } });
+            if (!existingUser) {
+              const defaultPw = '123456';
+              const hashed = await bcrypt.hash(defaultPw, 12);
+              user = await this.prisma.user.create({
+                data: {
+                  email: emp.email.toLowerCase(),
+                  password: hashed,
+                  firstName: emp.firstName || '',
+                  lastName: emp.lastName || '',
+                  fullName: `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
+                  companyId: emp.companyId || null,
+                  role: 'Employee',
+                  isActive: true,
+                },
+              });
+              await this.prisma.employee.update({ where: { id }, data: { userId: user.id } });
+            } else {
+              user = existingUser;
+              await this.prisma.employee.update({ where: { id }, data: { userId: user.id } });
+            }
+          } else {
+            user = await this.prisma.user.findUnique({ where: { id: emp.userId } });
+          }
+
+          if (user) {
+            const defaultPw = '123456';
+            const confirmToken = this.jwt.sign({ sub: user.id, type: 'email_confirm' }, { expiresIn: '48h' });
+            const confirmUrl = `${process.env.FRONTEND_URL || 'https://demo.exactehrm.co.tz'}/confirm-email?token=${confirmToken}`;
+            const bc = this.email.brandColor;
+            this.email.send(emp.email, 'Welcome to ExactEHRM — Your Account is Ready', this.email.buildHtml(`
+              <h2 style="color:${bc};margin:0 0 16px">Welcome to ExactEHRM!</h2>
+              <p>Hi ${emp.firstName || ''}, your employee account has been created and is ready.</p>
+              <p style="margin:16px 0;padding:12px;background:#f9f9f9;border-radius:8px;border:1px solid #eee">
+                <strong>Login credentials:</strong><br/>
+                Email: <strong>${user.email}</strong><br/>
+                Password: <strong>${defaultPw}</strong>
+              </p>
+              <p>Please confirm your email by clicking the button below:</p>
+              <p style="text-align:center;margin:24px 0">
+                <a href="${confirmUrl}" style="display:inline-block;background:${bc};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Confirm my account</a>
+              </p>
+              <p style="color:#888;font-size:13px">This link expires in 48 hours.</p>
+            `)).catch(() => {});
+          }
+        }
+      } catch (e) {
+        console.error('[ONBOARDING EMAIL]', e);
+      }
     }
 
     return updated;
