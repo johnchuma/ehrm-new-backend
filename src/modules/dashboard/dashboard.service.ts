@@ -124,6 +124,102 @@ export class DashboardService {
     };
   }
 
+  // Company-wide overview for admin dashboard
+  async getOverview(companyId: string, month?: number, year?: number) {
+    // For now return a comprehensive overview payload mirroring the previous frontend mock.
+    // This centralizes demo data on the backend so the frontend no longer imports mocks.
+    const now = new Date();
+    const kpiStrip = {
+      totalEmployees: 1284,
+      activeEmployees: 1256,
+      newHiresMTD: 18,
+      exitsMTD: 7,
+      vacancies: 31,
+      totalPayrollCost: 2847000000,
+      totalWorkforceCost: 3416400000,
+      attendanceRate: 93.1,
+      absenteeismRate: 6.9,
+      leaveUtilisation: 67,
+      overtimeCost: 45800000,
+      kpiAchievement: 78,
+      performanceReviewCompletion: 82,
+      trainingCompletion: 71,
+      openHRQueries: 23,
+      complianceScore: 94,
+      expiringContracts: 12,
+      employeesOnProbation: 8,
+      employeeTurnoverRate: 4.2,
+      workforceHealthScore: 86,
+    };
+
+    const approvalQueue = [
+      { id: "WF-1041", employee: "Halima Kimaro", type: "Promotion", step: 2, totalSteps: 4, stepLabel: "HR Manager", initiator: "Line Manager", submitted: "3 days ago", sla: "On Track" },
+      { id: "WF-1039", employee: "Said Mlay", type: "Leave Application", step: 1, totalSteps: 9, stepLabel: "Manager Review", initiator: "Employee", submitted: "Today", sla: "On Track" },
+    ];
+
+    const approvalAnalytics = {
+      avgTurnaround: { "Leave Application": "1.4 days", "Promotion": "6.2 days" },
+      slaBreachRate: "12%",
+      longestPending: { id: "WF-1031", employee: "Grace Mutuku", type: "Onboarding Activation", days: 12 },
+      delegations: [],
+    };
+
+    const governanceFeed = [];
+    const onboardingPipeline = [];
+    const blockedPerStep = [];
+    const offboardingPipeline = [];
+    const movementPipeline = [];
+    const establishment = { approvedPositions: 1315, filledPositions: 1284, vacantPositions: 31, futurePositions: 12, newHiresThisMonth: 18, separationsThisMonth: 7, noManagerAssigned: 4, pendingOrgChanges: 3 };
+
+    const attendanceCommand = {
+      attendanceRate: 93.1,
+      byMethod: [],
+      checkedIn: 1196,
+      checkedOut: 842,
+      notYetIn: 48,
+      absent: 40,
+      exceptions: [],
+      devices: [],
+    };
+
+    const shiftPayrollReadiness = { shiftsWithGaps: 2, noShiftAssigned: 14, pendingSwaps: 6, unplannedOT: 22, attendanceUnapproved: 38, correctionsPending: 14, exceptionsUnresolved: 19, payrollCutoff: "2026-06-30" };
+
+    const leaveIntelligence = { liability: {}, onLeaveToday: [], pendingApprovals: 0, cancellationsPending: 0, amendmentsPending: 0, encashmentPipeline: [], blackoutPeriods: [], carryForward: {} };
+
+    const systemHealth = { integrations: [], api: { usageToday: 0, usageThisMonth: 0, avgLatency: "0ms" }, audit: {}, notifications: [], backup: {} };
+
+    const attendanceWeeklyTrend = [ { day: "Mon", rate: 94.2, present: 1210 }, { day: "Tue", rate: 92.8, present: 1192 }, { day: "Wed", rate: 95.1, present: 1221 }, { day: "Thu", rate: 91.5, present: 1175 }, { day: "Fri", rate: 89.3, present: 1147 }, { day: "Sat", rate: 78.6, present: 1009 }, { day: "Sun", rate: 0, present: 0 } ];
+
+    const headcountMonthlyTrend = [ { month: "Jan", value: 1240 }, { month: "Feb", value: 1248 }, { month: "Mar", value: 1255 }, { month: "Apr", value: 1262 }, { month: "May", value: 1271 }, { month: "Jun", value: 1284 } ];
+
+    const approvalTurnaroundChart = [];
+    const leaveDistribution = [];
+    const earlyArrivals = [];
+    const exceptionsTrend = [];
+
+    return {
+      kpiStrip,
+      approvalQueue,
+      approvalAnalytics,
+      governanceFeed,
+      onboardingPipeline,
+      blockedPerStep,
+      offboardingPipeline,
+      movementPipeline,
+      establishment,
+      attendanceCommand,
+      shiftPayrollReadiness,
+      leaveIntelligence,
+      systemHealth,
+      attendanceWeeklyTrend,
+      headcountMonthlyTrend,
+      approvalTurnaroundChart,
+      leaveDistribution,
+      earlyArrivals,
+      exceptionsTrend,
+    };
+  }
+
   // Company-wide directory (search employees by name/department)
   async getDirectory(companyId: string, search?: string, departmentId?: string) {
     return this.prisma.employee.findMany({

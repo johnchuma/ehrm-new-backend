@@ -59,4 +59,9 @@ async function bootstrap() {
   logger.log(`API running on http://localhost:${port}/api/v1`);
   logger.log(`Swagger:    http://localhost:${port}/api/docs`);
 }
-bootstrap();
+bootstrap().catch((error) => {
+  // Surface startup failures that can otherwise appear as silent exits in watch mode.
+  // eslint-disable-next-line no-console
+  console.error('Bootstrap failed:', error);
+  process.exit(1);
+});

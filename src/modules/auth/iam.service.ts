@@ -5,14 +5,61 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 export class IamService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async attachUserCounts<T extends { id: string; name: string; companyId?: string | null }>(roles: T[]) {
+    if (!roles.length) return [];
+
+    const companyIds = [...new Set(roles.map((role) => role.companyId).filter(Boolean))] as string[];
+    const employees = await this.prisma.employee.findMany({
+      where: companyIds.length ? { companyId: { in: companyIds } } : {},
+      select: { id: true, companyId: true, role: true },
+    });
+
+    return roles.map((role) => {
+      const count = employees.reduce((total, employee) => {
+        if (role.companyId && employee.companyId !== role.companyId) return total;
+        return employee.role === role.name ? total + 1 : total;
+      }, 0);
+      return {
+        ...role,
+        users: count,
+      };
+    });
+  }
+
   private async ensurePermission(name: string): Promise<string> {
     const parts = name.split('_');
     const resource = parts.slice(1).join('_') || 'unknown';
     const action = parts[0] || 'manage';
-    let perm = await this.prisma.permission.findUnique({ where: { name } });
-    if (!perm) {
-      perm = await this.prisma.permission.create({ data: { name, resource, action } });
+    const existingByPair = await this.prisma.permission.findUnique({
+      where: { resource_action: { resource, action } },
+    });
+
+    if (existingByPair) {
+      if (existingByPair.name !== name) {
+        const existingByName = await this.prisma.permission.findUnique({ where: { name } });
+        if (existingByName && existingByName.id !== existingByPair.id) {
+          await this.prisma.permission.delete({ where: { id: existingByName.id } });
+        }
+
+        await this.prisma.permission.update({
+          where: { id: existingByPair.id },
+          data: { name },
+        });
+      }
+
+      return existingByPair.id;
     }
+
+    const existingByName = await this.prisma.permission.findUnique({ where: { name } });
+    if (existingByName) {
+      const updated = await this.prisma.permission.update({
+        where: { id: existingByName.id },
+        data: { resource, action },
+      });
+      return updated.id;
+    }
+
+    const perm = await this.prisma.permission.create({ data: { name, resource, action } });
     return perm.id;
   }
 
@@ -27,16 +74,16 @@ export class IamService {
   // ── Roles ──
 
   async listRoles(companyId?: string) {
-    return this.prisma.role.findMany({
+    const roles = await this.prisma.role.findMany({
       where: companyId
         ? { OR: [{ isSystem: true }, { companyId }] }
         : { isSystem: true },
       include: {
         permissions: { include: { permission: true } },
-        users: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } } },
       },
       orderBy: { name: 'asc' },
     });
+    return this.attachUserCounts(roles);
   }
 
   async getRole(id: string) {
@@ -44,11 +91,11 @@ export class IamService {
       where: { id },
       include: {
         permissions: { include: { permission: true } },
-        users: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } } },
       },
     });
     if (!role) throw new NotFoundException('Role not found');
-    return role;
+    const [roleWithCount] = await this.attachUserCounts([role]);
+    return roleWithCount;
   }
 
   async createRole(data: { name: string; description?: string; companyId?: string; permissionNames?: string[] }) {

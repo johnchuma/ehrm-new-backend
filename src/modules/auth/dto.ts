@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, Allow } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'john@company.co.tz' })
@@ -37,85 +37,112 @@ export class UpdateUserDto {
 
 export class CreateCompanyDto {
   @ApiProperty({ example: 'Acacia Group Ltd' })
+  @IsString()
+  @IsNotEmpty()
   name: string;
 
   @ApiPropertyOptional({ example: 'info@acacia.co.tz' })
+  @IsOptional()
   email?: string;
 
   @ApiPropertyOptional({ example: '+255712345678' })
+  @IsOptional()
   phone?: string;
 
   @ApiPropertyOptional({ example: 'Tanzania' })
+  @IsOptional()
   country?: string;
 
   @ApiPropertyOptional({ example: 'TZS' })
+  @IsOptional()
   currency?: string;
 
   @ApiPropertyOptional({ example: 'HR Professional' })
+  @IsOptional()
   subscriptionPlan?: string;
 }
 
 export class UpdateCompanyDto {
   @ApiPropertyOptional({ example: 'Acacia Group Ltd' })
+  @IsOptional()
   name?: string;
 
   @ApiPropertyOptional({ example: 'info@acacia.co.tz' })
+  @IsOptional()
   email?: string;
 
   @ApiPropertyOptional({ example: '+255712345678' })
+  @IsOptional()
   phone?: string;
 
   @ApiPropertyOptional({ example: 'Manufacturing' })
+  @IsOptional()
   industry?: string;
 
   @ApiPropertyOptional({ example: 'Tanzania' })
+  @IsOptional()
   country?: string;
 
   @ApiPropertyOptional({ example: 'TZS' })
+  @IsOptional()
   currency?: string;
 
   @ApiPropertyOptional({ example: 'HR Professional' })
+  @IsOptional()
   subscriptionPlan?: string;
 
   @ApiPropertyOptional({ example: 'ACTIVE' })
+  @IsOptional()
   status?: string;
 
   @ApiPropertyOptional({ example: '#EC782B' })
+  @IsOptional()
   primaryColor?: string;
 
   @ApiPropertyOptional({ example: '#1E84B8' })
+  @IsOptional()
   secondaryColor?: string;
 
   @ApiPropertyOptional({ example: '123-456-789' })
+  @IsOptional()
   tin?: string;
 
   @ApiPropertyOptional({ example: '123 Nyerere Road' })
+  @IsOptional()
   address?: string;
 
   @ApiPropertyOptional({ example: 'Dar es Salaam' })
+  @IsOptional()
   city?: string;
 
   @ApiPropertyOptional({ example: 'Africa/Dar_es_Salaam' })
+  @IsOptional()
   timezone?: string;
 
   @ApiPropertyOptional()
+  @IsOptional()
   logo?: string;
 
   @ApiPropertyOptional({ example: 'https://acacia.co.tz' })
+  @IsOptional()
   website?: string;
 
   @ApiPropertyOptional({ example: 'REG-2024-001' })
+  @IsOptional()
   registrationNumber?: string;
 
   @ApiPropertyOptional()
+  @IsOptional()
   tradingName?: string;
 
   @ApiPropertyOptional({ example: '50-200' })
+  @IsOptional()
   size?: string;
 }
 
 export class UpdateSettingsDto {
   @ApiPropertyOptional({ example: '{\"theme\":\"dark\"}' })
+  @IsOptional()
   generalSettings?: string;
 }
 

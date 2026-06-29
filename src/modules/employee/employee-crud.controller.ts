@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
+import { ContractsService } from '../contracts/contracts.service';
+import { dropInvalidEmployeeFks } from './employee-fk-guard';
 import * as bcrypt from 'bcryptjs';
 
 @ApiTags('Employees - CRUD')
@@ -12,6 +14,7 @@ export class EmployeeCrudController {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly jwt: JwtService,
+    private readonly contracts: ContractsService,
   ) {}
 
   @Get()
@@ -21,6 +24,34 @@ export class EmployeeCrudController {
     if (query.companyId) where.companyId = query.companyId;
     if (query.status) where.status = query.status;
     if (query.stage) where.stage = query.stage;
+
+    // Filter by permission: returns only employees whose `role` matches a Role
+    // (in the same company OR system role) that has the requested permission.
+    // Convention: permission names are `${action}_${feature}` (e.g. `approve_onboarding`).
+    if (query.permission) {
+      const roleWhere: any = {
+        permissions: { some: { permission: { name: String(query.permission) } } },
+      };
+      if (query.companyId) {
+        // include system roles too
+        roleWhere.OR = [{ companyId: query.companyId }, { isSystem: true }];
+      }
+      const matchingRoles = await this.prisma.role.findMany({
+        where: roleWhere,
+        select: { name: true },
+      });
+      const roleNames = matchingRoles.map((r) => r.name);
+      if (roleNames.length === 0) {
+        return { employees: [] };
+      }
+      where.role = { in: roleNames };
+    }
+
+    // Exclude Draft (onboarding-in-progress) unless caller explicitly asks for it
+    if (query.excludeDraft === 'true' || query.excludeDraft === true) {
+      where.stage = { not: 'Draft' };
+    }
+
     const employees = await this.prisma.employee.findMany({ where, orderBy: { createdAt: 'desc' }, include: { branch: true, department: true, jobTitle: { select: { id: true, name: true } }, grade: { select: { id: true, name: true } }, section: { select: { id: true, name: true } }, businessUnit: { select: { id: true, name: true } }, contractType: { select: { id: true, name: true } } } });
     return { employees };
   }
@@ -201,6 +232,9 @@ export class EmployeeCrudController {
         createdById: body.createdById || null,
     };
 
+    // Drop any invalid FK values (e.g., relation names or stale ids)
+    await dropInvalidEmployeeFks(this.prisma, empData);
+
     const employee = await this.prisma.employee.create({ data: empData });
 
     // Create user account if email provided
@@ -249,33 +283,48 @@ export class EmployeeCrudController {
   }
 
   @Put(':id')
+  @Patch(':id')
   @ApiOperation({ summary: 'Update employee' })
   async update(@Param('id') id: string, @Body() body: Record<string, any>) {
     const data: any = {};
     console.log('[UPDATE] body.role:', body.role, 'body.companyRole:', body.companyRole);
-    const fields = [
+
+    // Scalar columns that exist on the Employee model — only these are safe
+    // to spread into `data`. Anything else gets stashed into metadata below.
+    const scalarFields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'maritalStatus',
-      'dateOfBirth', 'nationality', 'branchId', 'departmentId', 'sectionId', 'jobTitleId',
-      'gradeId', 'businessUnitId', 'contractTypeId',
-      'manager', 'employmentId', 'employmentCategory', 'employmentType',
-      'modeOfEmployment', 'modeOfPayment', 'joiningDate', 'status', 'stage',
-      'contractType', 'contractStartDate', 'contractEndDate', 'probationEndDate',
-      'socialSecurityType', 'socialSecurityNumber', 'tinNumber', 'nidaNumber',
-      'passportNumber', 'createdById',
-      'prefix', 'middleName', 'username', 'mobile', 'locale',
-      'personalEmail', 'region', 'postalAddress', 'physicalAddress',
-      'businessUnit', 'healthInsuranceProvider', 'healthInsuranceOther',
-      'tradeUnion', 'inductionDate', 'termsAndConditions', 'contractFileName',
-      'profilePhotoName', 'yearsOfExperience', 'offerLetterDate',
-      'offerAcceptedDate', 'candidateSource', 'candidateId',
+      'dateOfBirth', 'nationality', 'employmentType', 'employmentMode',
+      'modeOfPayment', 'joiningDate', 'status', 'stage',
+      'contractStartDate', 'contractEndDate', 'probationEndDate',
+      'passportNumber', 'createdById', 'profilePhoto', 'employeeNumber',
       'role',
     ];
-    if (body.role !== undefined) data.role = body.role;
-    for (const f of fields) {
+    for (const f of scalarFields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
-    if (body.inductionCompleted !== undefined) data.inductionCompleted = body.inductionCompleted;
-    if (body.offerAccepted !== undefined) data.offerAccepted = body.offerAccepted;
+
+    // Foreign-key fields — accept either the *Id form or the relation-name
+    // form sent by the onboarding/edit forms.
+    if (body.branchId !== undefined || body.branch !== undefined) {
+      data.branchId = body.branchId ?? body.branch ?? null;
+    }
+    if (body.departmentId !== undefined || body.department !== undefined) {
+      data.departmentId = body.departmentId ?? body.department ?? null;
+    }
+    if (body.sectionId !== undefined || body.section !== undefined) {
+      data.sectionId = body.sectionId ?? body.section ?? null;
+    }
+    if (body.jobTitleId !== undefined) data.jobTitleId = body.jobTitleId;
+    if (body.gradeId !== undefined || body.grade !== undefined) {
+      data.gradeId = body.gradeId ?? body.grade ?? null;
+    }
+    if (body.businessUnitId !== undefined || body.businessUnit !== undefined) {
+      data.businessUnitId = body.businessUnitId ?? body.businessUnit ?? null;
+    }
+    if (body.contractTypeId !== undefined || body.contractType !== undefined) {
+      data.contractTypeId = body.contractTypeId ?? body.contractType ?? null;
+    }
+
     if (body.firstName !== undefined || body.lastName !== undefined) {
       const current = await this.prisma.employee.findUnique({ where: { id } });
       data.fullName = `${body.firstName ?? current?.firstName ?? ''} ${body.lastName ?? current?.lastName ?? ''}`.trim();
@@ -291,8 +340,104 @@ export class EmployeeCrudController {
     if (body.languages !== undefined) data.languages = JSON.stringify(body.languages);
     if (body.emergencyContacts !== undefined) data.emergencyContacts = JSON.stringify(body.emergencyContacts);
     if (body.family !== undefined) data.family = JSON.stringify(body.family);
-    if (body.metadata !== undefined) data.metadata = JSON.stringify(body.metadata);
-    return this.prisma.employee.update({ where: { id }, data });
+
+    // Fields that don't have a dedicated column — merge into metadata JSON.
+    const metaFields = [
+      'manager', 'employmentId', 'employmentCategory', 'modeOfEmployment',
+      'socialSecurityType', 'socialSecurityNumber', 'tinNumber', 'nidaNumber',
+      'prefix', 'middleName', 'username', 'mobile', 'locale',
+      'personalEmail', 'region', 'postalAddress', 'physicalAddress',
+      'healthInsuranceProvider', 'healthInsuranceOther',
+      'tradeUnion', 'inductionDate', 'inductionCompleted', 'termsAndConditions',
+      'contractFileName', 'profilePhotoName', 'yearsOfExperience',
+      'offerLetterDate', 'offerAccepted', 'offerAcceptedDate',
+      'candidateSource', 'candidateId',
+    ];
+    const extraMeta: Record<string, any> = {};
+    for (const f of metaFields) {
+      if (body[f] !== undefined) extraMeta[f] = body[f];
+    }
+    if (body.metadata !== undefined || Object.keys(extraMeta).length > 0) {
+      const incoming = body.metadata
+        ? (typeof body.metadata === 'string' ? JSON.parse(body.metadata) : body.metadata)
+        : {};
+      // Merge with any existing metadata on the record so partial updates don't drop fields.
+      const current = await this.prisma.employee.findUnique({ where: { id }, select: { metadata: true } });
+      let currentMeta: Record<string, any> = {};
+      if (current?.metadata) {
+        try { currentMeta = JSON.parse(current.metadata); } catch { currentMeta = {}; }
+      }
+      data.metadata = JSON.stringify({ ...currentMeta, ...incoming, ...extraMeta });
+    }
+
+    await dropInvalidEmployeeFks(this.prisma, data);
+
+    const previous = await this.prisma.employee.findUnique({ where: { id }, select: { stage: true } });
+    const updated = await this.prisma.employee.update({ where: { id }, data });
+
+    // Onboarding hook: when stage transitions into Approved, ensure the
+    // employee has a Contract record so the contracts module can take over.
+    if (data.stage === 'Approved' && previous?.stage !== 'Approved') {
+      try { await this.contracts.ensureContractForEmployee(id); } catch (e) { console.error('[CONTRACT AUTO-CREATE]', e); }
+      // After onboarding is approved, ensure the employee has a user account
+      // and send a welcome email with credentials (default password: 123456).
+      try {
+        const emp = await this.prisma.employee.findUnique({ where: { id }, select: { email: true, firstName: true, lastName: true, companyId: true, userId: true } });
+        if (emp?.email) {
+          let user = null;
+          if (!emp.userId) {
+            const existingUser = await this.prisma.user.findUnique({ where: { email: emp.email.toLowerCase() } });
+            if (!existingUser) {
+              const defaultPw = '123456';
+              const hashed = await bcrypt.hash(defaultPw, 12);
+              user = await this.prisma.user.create({
+                data: {
+                  email: emp.email.toLowerCase(),
+                  password: hashed,
+                  firstName: emp.firstName || '',
+                  lastName: emp.lastName || '',
+                  fullName: `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
+                  companyId: emp.companyId || null,
+                  role: 'Employee',
+                  isActive: true,
+                },
+              });
+              await this.prisma.employee.update({ where: { id }, data: { userId: user.id } });
+            } else {
+              user = existingUser;
+              await this.prisma.employee.update({ where: { id }, data: { userId: user.id } });
+            }
+          } else {
+            user = await this.prisma.user.findUnique({ where: { id: emp.userId } });
+          }
+
+          if (user) {
+            const defaultPw = '123456';
+            const confirmToken = this.jwt.sign({ sub: user.id, type: 'email_confirm' }, { expiresIn: '48h' });
+            const confirmUrl = `${process.env.FRONTEND_URL || 'https://demo.exactehrm.co.tz'}/confirm-email?token=${confirmToken}`;
+            const bc = this.email.brandColor;
+            this.email.send(emp.email, 'Welcome to ExactEHRM — Your Account is Ready', this.email.buildHtml(`
+              <h2 style="color:${bc};margin:0 0 16px">Welcome to ExactEHRM!</h2>
+              <p>Hi ${emp.firstName || ''}, your employee account has been created and is ready.</p>
+              <p style="margin:16px 0;padding:12px;background:#f9f9f9;border-radius:8px;border:1px solid #eee">
+                <strong>Login credentials:</strong><br/>
+                Email: <strong>${user.email}</strong><br/>
+                Password: <strong>${defaultPw}</strong>
+              </p>
+              <p>Please confirm your email by clicking the button below:</p>
+              <p style="text-align:center;margin:24px 0">
+                <a href="${confirmUrl}" style="display:inline-block;background:${bc};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Confirm my account</a>
+              </p>
+              <p style="color:#888;font-size:13px">This link expires in 48 hours.</p>
+            `)).catch(() => {});
+          }
+        }
+      } catch (e) {
+        console.error('[ONBOARDING EMAIL]', e);
+      }
+    }
+
+    return updated;
   }
 
   @Get(':id/documents')

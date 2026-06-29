@@ -51,20 +51,56 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new workspace (company + admin)' })
   @ApiBody({ type: RegisterWorkspaceDto })
   async registerWorkspace(@Body() body: RegisterWorkspaceDto) {
-    const slug = (body.company || 'company').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now();
-    const company = await this.prisma.company.create({
-      data: { name: body.company || '', slug, email: body.email || '', phone: body.phone || '', country: body.country || 'Tanzania', currency: body.currency || 'TZS', subscriptionPlan: body.plan || 'FREE', status: 'ACTIVE' },
-    });
-    await this.prisma.companySettings.create({ data: { companyId: company.id } });
+    const email = (body.email || '').toLowerCase();
+    const relatedCompanies = [
+      {
+        company: body.company || '',
+        sector: body.sector,
+        size: body.size,
+        country: body.country || 'Tanzania',
+        currency: body.currency || 'TZS',
+      },
+      ...((body.additionalCompanies || [])
+        .map((company) => ({
+          company: company.company || '',
+          sector: company.sector,
+          size: company.size,
+          country: company.country || body.country || 'Tanzania',
+          currency: company.currency || body.currency || 'TZS',
+        }))
+        .filter((company) => company.company.trim())),
+    ];
+    const createdCompanies = [];
+    for (let index = 0; index < relatedCompanies.length; index += 1) {
+      const item = relatedCompanies[index];
+      const slugBase = item.company.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'company';
+      const slug = `${slugBase}-${Date.now()}-${index + 1}`;
+      const company = await this.prisma.company.create({
+        data: {
+          name: item.company,
+          slug,
+          email,
+          phone: body.phone || '',
+          country: item.country || 'Tanzania',
+          currency: item.currency || 'TZS',
+          subscriptionPlan: body.plan || 'FREE',
+          status: 'ACTIVE',
+          industry: item.sector || body.sector || undefined,
+          size: item.size || body.size || undefined,
+        },
+      });
+      await this.prisma.companySettings.create({ data: { companyId: company.id } });
+      createdCompanies.push(company);
+    }
     const hashed = await bcrypt.hash(body.password || 'demo1234', 12);
     const user = await this.prisma.user.create({
       data: {
-        email: (body.email || '').toLowerCase(),
+        email,
         password: hashed,
         firstName: body.fname || body.firstName || '',
         lastName: body.lname || body.lastName || '',
         fullName: `${body.fname || body.firstName || ''} ${body.lname || body.lastName || ''}`.trim(),
-        companyId: company.id,
+        companyId: createdCompanies[0]?.id || null,
         role: 'Company Admin',
         isActive: false,
       },
@@ -82,7 +118,10 @@ export class AuthController {
     `)).catch(() => {});
     return {
       message: 'Registration successful. Please check your email to confirm your account.',
-      company: { id: company.id, name: company.name, subscriptionPlan: company.subscriptionPlan },
+      company: createdCompanies[0]
+        ? { id: createdCompanies[0].id, name: createdCompanies[0].name, subscriptionPlan: createdCompanies[0].subscriptionPlan }
+        : null,
+      companies: createdCompanies.map((company) => ({ id: company.id, name: company.name, email: company.email })),
       workspaceType: body.workspaceType || 'single', plan: body.plan || '', billing: body.billing || 'monthly',
     };
   }

@@ -16,7 +16,9 @@ import { EmployeeModule } from './modules/employee/employee.module';
 import { MovementModule } from './modules/movement/movement.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { LeaveModule } from './modules/leave/leave.module';
+import { LeaveAdminModule } from './modules/leave-admin/leave-admin.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { AttendanceAdminModule } from './modules/attendance-admin/attendance-admin.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
 import { HRQueryModule } from './modules/hrquery/hrquery.module';
 import { TasksModule } from './modules/tasks/tasks.module';
@@ -28,6 +30,8 @@ import { PerformanceModule } from './modules/performance/performance.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { ContractsModule } from './modules/contracts/contracts.module';
+import { OffboardingModule } from './modules/offboarding/offboarding.module';
 
 import { IamController } from './modules/auth/iam.controller';
 import { IamService } from './modules/auth/iam.service';
@@ -58,7 +62,9 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     MovementModule,
     SettingsModule,
     LeaveModule,
+    LeaveAdminModule,
     AttendanceModule,
+    AttendanceAdminModule,
     PayrollModule,
     HRQueryModule,
     TasksModule,
@@ -70,6 +76,8 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     ExpensesModule,
     DashboardModule,
     PaymentsModule,
+    ContractsModule,
+    OffboardingModule,
   ],
   controllers: [IamController],
   providers: [

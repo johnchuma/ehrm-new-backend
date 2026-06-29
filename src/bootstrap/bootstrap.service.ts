@@ -75,25 +75,43 @@ export class BootstrapService implements OnModuleInit {
   private async ensurePermissions(createdBy: string) {
     const results = [];
     for (const p of PHASE_1_PERMISSIONS) {
-      try {
-        const perm = await this.prisma.permission.upsert({
+      // Seed by the composite key first so legacy names do not violate (resource, action) uniqueness.
+      const existingByPair = await this.prisma.permission.findUnique({
+        where: { resource_action: { resource: p.module, action: p.action } },
+      });
+
+      let perm;
+      if (existingByPair) {
+        perm = await this.prisma.permission.update({
+          where: { id: existingByPair.id },
+          data: { description: p.description },
+        });
+      } else {
+        const existingByName = await this.prisma.permission.findUnique({
           where: { name: p.name },
-          update: { description: p.description },
-          create: {
-            name: p.name,
-            resource: p.module,
-            action: p.action,
-            description: p.description,
-          },
         });
-        results.push(perm);
-      } catch {
-        // Silently skip duplicate permission conflicts
-        const existing = await this.prisma.permission.findFirst({
-          where: { resource: p.module, action: p.action },
-        });
-        if (existing) results.push(existing);
+
+        if (existingByName) {
+          perm = await this.prisma.permission.update({
+            where: { id: existingByName.id },
+            data: {
+              resource: p.module,
+              action: p.action,
+              description: p.description,
+            },
+          });
+        } else {
+          perm = await this.prisma.permission.create({
+            data: {
+              name: p.name,
+              resource: p.module,
+              action: p.action,
+              description: p.description,
+            },
+          });
+        }
       }
+      results.push(perm);
     }
     this.logger.log(`Ensured ${results.length} permissions`);
     return results;

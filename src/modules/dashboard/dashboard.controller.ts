@@ -30,4 +30,10 @@ export class DashboardController {
   ) {
     return this.svc.getDirectory(user.companyId, search, departmentId);
   }
+
+  @Get('overview')
+  @ApiOperation({ summary: 'Admin dashboard overview — aggregated KPIs for the company' })
+  getOverview(@CurrentUser() user: any, @Query('month') month?: number, @Query('year') year?: number) {
+    return this.svc.getOverview(user.companyId, month ? Number(month) : undefined, year ? Number(year) : undefined);
+  }
 }

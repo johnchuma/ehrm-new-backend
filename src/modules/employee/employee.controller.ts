@@ -1,9 +1,11 @@
-import { Controller, Get, Put, Body, UseGuards, NotFoundException, Delete, Param, Post } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Body, UseGuards, NotFoundException, Delete, Param, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { EmployeeService, UpdateProfileDto } from './employee.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ContractsService } from '../contracts/contracts.service';
+import { dropInvalidEmployeeFks } from './employee-fk-guard';
 import * as bcrypt from 'bcryptjs';
 
 function fileUrl(filename: string): string {
@@ -17,7 +19,43 @@ export class EmployeeController {
   constructor(
     private readonly svc: EmployeeService,
     private readonly prisma: PrismaService,
+    private readonly contracts: ContractsService,
   ) {}
+
+  private async resolveRelationId(
+    model:
+      | 'branch'
+      | 'department'
+      | 'section'
+      | 'jobTitle'
+      | 'grade'
+      | 'businessUnit'
+      | 'contractType',
+    companyId: string,
+    value: any,
+  ) {
+    if (!value) return null;
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const table = (this.prisma as any)[model];
+    if (!table?.findFirst) return value;
+
+    const found = await table.findFirst({
+      where: {
+        companyId,
+        OR: [
+          { id: trimmed },
+          { name: { equals: trimmed, mode: 'insensitive' } },
+          { code: { equals: trimmed, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    }).catch(() => null);
+
+    return found?.id || value;
+  }
 
   @Get('me')
   @ApiOperation({ summary: 'Get my employee profile' })
@@ -100,6 +138,16 @@ export class EmployeeController {
       metadata: Object.keys(extraMeta).length ? JSON.stringify(extraMeta) : null,
       createdById: body.createdById || null,
     };
+    empData.branchId = await this.resolveRelationId('branch', empData.companyId, body.branchId || body.branch);
+    empData.departmentId = await this.resolveRelationId('department', empData.companyId, body.departmentId || body.department);
+    empData.sectionId = await this.resolveRelationId('section', empData.companyId, body.sectionId || body.section);
+    empData.jobTitleId = await this.resolveRelationId('jobTitle', empData.companyId, body.jobTitleId || body.jobTitle);
+    empData.gradeId = await this.resolveRelationId('grade', empData.companyId, body.gradeId || body.grade);
+    empData.businessUnitId = await this.resolveRelationId('businessUnit', empData.companyId, body.businessUnitId || body.businessUnit);
+    empData.contractTypeId = await this.resolveRelationId('contractType', empData.companyId, body.contractTypeId || body.contractType);
+    // Drop any invalid FK values (e.g., relation names or stale ids)
+    await dropInvalidEmployeeFks(this.prisma, empData);
+
     const employee = await this.prisma.employee.create({ data: empData });
 
     // Create user account if email provided
@@ -139,17 +187,19 @@ export class EmployeeController {
   }
 
   @Put(':id')
+  @Patch(':id')
   @ApiOperation({ summary: 'Update employee' })
   async update(@Param('id') id: string, @Body() body: any) {
+    const current = await this.prisma.employee.findUnique({ where: { id }, select: { companyId: true, firstName: true, lastName: true } });
     const data: any = {};
     const fields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'nationality',
-      'maritalStatus', 'address', 'city', 'jobTitle', 'grade', 'status',
+      'maritalStatus', 'address', 'city', 'status',
       'branchId', 'departmentId', 'managerId', 'employeeNumber',
       'jobTitleId', 'gradeId', 'sectionId', 'businessUnitId', 'contractTypeId',
       'employmentType', 'employmentMode', 'startDate', 'endDate',
-      'basicSalary', 'currency', 'gross', 'section', 'stage', 'approvalStage',
-      'joiningDate', 'contractType', 'contractStartDate', 'contractEndDate',
+      'basicSalary', 'currency', 'gross', 'stage', 'approvalStage',
+      'joiningDate', 'contractStartDate', 'contractEndDate',
       'probationEndDate', 'modeOfPayment', 'profilePhoto',
       'bankName', 'bankAccount', 'bankBranch', 'mobileMoney', 'mobileMoneyName',
       'emergencyName', 'emergencyPhone', 'emergencyRelation',
@@ -157,11 +207,19 @@ export class EmployeeController {
       'role',
     ];
     if (body.role !== undefined) data.role = body.role;
+    // Map relation-name aliases sent by the form to the actual FK columns.
+    const companyId = body.companyId || current?.companyId || '';
+    if (body.section !== undefined && body.sectionId === undefined) data.sectionId = await this.resolveRelationId('section', companyId, body.section);
+    if (body.jobTitle !== undefined && body.jobTitleId === undefined) data.jobTitleId = await this.resolveRelationId('jobTitle', companyId, body.jobTitle);
+    if (body.grade !== undefined && body.gradeId === undefined) data.gradeId = await this.resolveRelationId('grade', companyId, body.grade);
+    if (body.businessUnit !== undefined && body.businessUnitId === undefined) data.businessUnitId = await this.resolveRelationId('businessUnit', companyId, body.businessUnit);
+    if (body.contractType !== undefined && body.contractTypeId === undefined) data.contractTypeId = await this.resolveRelationId('contractType', companyId, body.contractType);
+    if (body.branch !== undefined && body.branchId === undefined) data.branchId = await this.resolveRelationId('branch', companyId, body.branch);
+    if (body.department !== undefined && body.departmentId === undefined) data.departmentId = await this.resolveRelationId('department', companyId, body.department);
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
     if (body.firstName !== undefined || body.lastName !== undefined) {
-      const current = await this.prisma.employee.findUnique({ where: { id } });
       data.fullName = `${body.firstName ?? current?.firstName ?? ''} ${body.lastName ?? current?.lastName ?? ''}`.trim();
     }
     if (body.gross !== undefined) data.gross = Number(body.gross);
@@ -176,7 +234,20 @@ export class EmployeeController {
     if (body.emergencyContacts !== undefined) data.emergencyContacts = JSON.stringify(body.emergencyContacts);
     if (body.family !== undefined) data.family = JSON.stringify(body.family);
     if (body.metadata !== undefined) data.metadata = JSON.stringify(body.metadata);
-    return this.prisma.employee.update({ where: { id }, data });
+
+    // Validate FK fields — drop any *Id that doesn't resolve to a real record,
+    // so a stale/legacy dropdown value can't fail the whole save.
+    await dropInvalidEmployeeFks(this.prisma, data);
+
+    const previous = await this.prisma.employee.findUnique({ where: { id }, select: { stage: true } });
+    const updated = await this.prisma.employee.update({ where: { id }, data });
+
+    // Auto-create the first contract when onboarding is approved.
+    if (data.stage === 'Approved' && previous?.stage !== 'Approved') {
+      try { await this.contracts.ensureContractForEmployee(id); } catch (e) { console.error('[CONTRACT AUTO-CREATE]', e); }
+    }
+
+    return updated;
   }
 
   @Get(':id/documents')

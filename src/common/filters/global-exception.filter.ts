@@ -10,7 +10,7 @@ import { Request, Response } from 'express';
 
 interface PrismaError {
   code: string;
-  meta?: { target?: string[] };
+  meta?: { target?: string[] | string };
 }
 
 function isPrismaKnownError(e: unknown): e is PrismaError {
@@ -45,7 +45,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       if (exception.code === 'P2002') {
         status = HttpStatus.CONFLICT;
         code = 'CONFLICT';
-        const target = exception.meta?.target?.join(', ');
+        const rawTarget = exception.meta?.target;
+        const target = Array.isArray(rawTarget)
+          ? rawTarget.join(', ')
+          : typeof rawTarget === 'string'
+            ? rawTarget
+            : '';
         message = target ? `${target} already exists` : 'Duplicate value';
       } else if (exception.code === 'P2025') {
         status = HttpStatus.NOT_FOUND;
