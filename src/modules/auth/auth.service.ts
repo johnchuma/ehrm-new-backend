@@ -15,6 +15,18 @@ export class AuthService {
     private readonly sms: SmsService,
   ) {}
 
+  /**
+   * Defensive role matching: a super-admin must be recognised regardless of
+   * stray casing or separator drift ("System Administrator", "system_administrator",
+   * "system-admin", "System Admin"). A single bad casing must never silently
+   * strip platform privileges.
+   */
+  private isSuperAdminRole(role?: string | null): boolean {
+    if (!role) return false;
+    const normalized = role.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+    return normalized === 'system administrator' || normalized === 'system admin';
+  }
+
   async login(email: string, password: string, ip?: string, userAgent?: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -35,8 +47,7 @@ export class AuthService {
 
     await this.prisma.user.update({ where: { id: user.id }, data: { failedAttempts: 0, lockedUntil: null, lastLoginAt: new Date() } });
 
-    const roleName = user.role || 'Employee';
-    const isSuperAdmin = roleName === 'System Administrator';
+    const isSuperAdmin = this.isSuperAdminRole(user.role);
 
     const tokens = await this.generateTokens({
       sub: user.id,
@@ -171,7 +182,7 @@ export class AuthService {
 
     await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
 
-    const isSuperAdmin = user.role === 'System Administrator';
+    const isSuperAdmin = this.isSuperAdminRole(user.role);
 
     return this.generateTokens({ sub: user.id, email: user.email ?? '', roles: [], permissions: [], selectedCompanyId: user.companyId ?? undefined, isSuperAdmin, isImpersonating: false });
   }

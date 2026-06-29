@@ -3,6 +3,17 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
 
+/**
+ * Defensive super-admin role matching — tolerant of casing / separator drift so
+ * a stray role string can never silently strip platform privileges.
+ * Keep in sync with AuthService.isSuperAdminRole.
+ */
+function isSuperAdminRole(role?: string | null): boolean {
+  if (!role) return false;
+  const normalized = role.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+  return normalized === 'system administrator' || normalized === 'system admin';
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly prisma: PrismaService) {
@@ -29,7 +40,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       roles: payload.roles ?? [],
       permissions: payload.permissions ?? [],
       selectedCompanyId: payload.selectedCompanyId ?? null,
-      isSuperAdmin: user.role === 'System Administrator',
+      // An impersonation token must never carry super-admin privilege, even
+      // though the underlying user record is a System Administrator.
+      isSuperAdmin: isSuperAdminRole(user.role) && !payload.isImpersonating,
       isImpersonating: payload.isImpersonating ?? false,
       originalAdminId: payload.originalAdminId ?? null,
       jti: payload.jti,

@@ -55,6 +55,8 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     BootstrapModule,
     SuperAdminModule,
     EmployeeModule,
+    MovementModule,
+    SettingsModule,
     LeaveModule,
     AttendanceModule,
     PayrollModule,
