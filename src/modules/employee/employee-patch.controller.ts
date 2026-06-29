@@ -10,6 +10,41 @@ export class EmployeePatchController {
     private readonly contracts: ContractsService,
   ) {}
 
+  private async resolveRelationId(
+    model:
+      | 'branch'
+      | 'department'
+      | 'section'
+      | 'jobTitle'
+      | 'grade'
+      | 'businessUnit'
+      | 'contractType',
+    companyId: string,
+    value: any,
+  ) {
+    if (!value) return null;
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const table = (this.prisma as any)[model];
+    if (!table?.findFirst) return value;
+
+    const found = await table.findFirst({
+      where: {
+        companyId,
+        OR: [
+          { id: trimmed },
+          { name: { equals: trimmed, mode: 'insensitive' } },
+          { code: { equals: trimmed, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    }).catch(() => null);
+
+    return found?.id || value;
+  }
+
   @Patch(':id')
   async patch(@Param('id') id: string, @Body() body: Record<string, any>) {
     const emp = await this.prisma.employee.findUnique({ where: { id } });
@@ -35,13 +70,13 @@ export class EmployeePatchController {
     ];
     if (body.manager !== undefined && body.managerId === undefined) data.managerId = body.manager || null;
     // Map relation-name aliases sent by onboarding/edit forms to actual FK columns.
-    if (body.branch !== undefined && body.branchId === undefined) data.branchId = body.branch || null;
-    if (body.department !== undefined && body.departmentId === undefined) data.departmentId = body.department || null;
-    if (body.section !== undefined && body.sectionId === undefined) data.sectionId = body.section || null;
-    if (body.jobTitle !== undefined && body.jobTitleId === undefined) data.jobTitleId = body.jobTitle || null;
-    if (body.grade !== undefined && body.gradeId === undefined) data.gradeId = body.grade || null;
-    if (body.businessUnit !== undefined && body.businessUnitId === undefined) data.businessUnitId = body.businessUnit || null;
-    if (body.contractType !== undefined && body.contractTypeId === undefined) data.contractTypeId = body.contractType || null;
+    if (body.branch !== undefined && body.branchId === undefined) data.branchId = await this.resolveRelationId('branch', emp.companyId, body.branch);
+    if (body.department !== undefined && body.departmentId === undefined) data.departmentId = await this.resolveRelationId('department', emp.companyId, body.department);
+    if (body.section !== undefined && body.sectionId === undefined) data.sectionId = await this.resolveRelationId('section', emp.companyId, body.section);
+    if (body.jobTitle !== undefined && body.jobTitleId === undefined) data.jobTitleId = await this.resolveRelationId('jobTitle', emp.companyId, body.jobTitle);
+    if (body.grade !== undefined && body.gradeId === undefined) data.gradeId = await this.resolveRelationId('grade', emp.companyId, body.grade);
+    if (body.businessUnit !== undefined && body.businessUnitId === undefined) data.businessUnitId = await this.resolveRelationId('businessUnit', emp.companyId, body.businessUnit);
+    if (body.contractType !== undefined && body.contractTypeId === undefined) data.contractTypeId = await this.resolveRelationId('contractType', emp.companyId, body.contractType);
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }

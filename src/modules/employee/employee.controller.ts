@@ -22,6 +22,41 @@ export class EmployeeController {
     private readonly contracts: ContractsService,
   ) {}
 
+  private async resolveRelationId(
+    model:
+      | 'branch'
+      | 'department'
+      | 'section'
+      | 'jobTitle'
+      | 'grade'
+      | 'businessUnit'
+      | 'contractType',
+    companyId: string,
+    value: any,
+  ) {
+    if (!value) return null;
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const table = (this.prisma as any)[model];
+    if (!table?.findFirst) return value;
+
+    const found = await table.findFirst({
+      where: {
+        companyId,
+        OR: [
+          { id: trimmed },
+          { name: { equals: trimmed, mode: 'insensitive' } },
+          { code: { equals: trimmed, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    }).catch(() => null);
+
+    return found?.id || value;
+  }
+
   @Get('me')
   @ApiOperation({ summary: 'Get my employee profile' })
   getMyProfile(@CurrentUser() user: any) {
@@ -103,6 +138,13 @@ export class EmployeeController {
       metadata: Object.keys(extraMeta).length ? JSON.stringify(extraMeta) : null,
       createdById: body.createdById || null,
     };
+    empData.branchId = await this.resolveRelationId('branch', empData.companyId, body.branchId || body.branch);
+    empData.departmentId = await this.resolveRelationId('department', empData.companyId, body.departmentId || body.department);
+    empData.sectionId = await this.resolveRelationId('section', empData.companyId, body.sectionId || body.section);
+    empData.jobTitleId = await this.resolveRelationId('jobTitle', empData.companyId, body.jobTitleId || body.jobTitle);
+    empData.gradeId = await this.resolveRelationId('grade', empData.companyId, body.gradeId || body.grade);
+    empData.businessUnitId = await this.resolveRelationId('businessUnit', empData.companyId, body.businessUnitId || body.businessUnit);
+    empData.contractTypeId = await this.resolveRelationId('contractType', empData.companyId, body.contractTypeId || body.contractType);
     // Drop any invalid FK values (e.g., relation names or stale ids)
     await dropInvalidEmployeeFks(this.prisma, empData);
 
@@ -148,6 +190,7 @@ export class EmployeeController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update employee' })
   async update(@Param('id') id: string, @Body() body: any) {
+    const current = await this.prisma.employee.findUnique({ where: { id }, select: { companyId: true, firstName: true, lastName: true } });
     const data: any = {};
     const fields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'nationality',
@@ -165,18 +208,18 @@ export class EmployeeController {
     ];
     if (body.role !== undefined) data.role = body.role;
     // Map relation-name aliases sent by the form to the actual FK columns.
-    if (body.section !== undefined && body.sectionId === undefined) data.sectionId = body.section;
-    if (body.jobTitle !== undefined && body.jobTitleId === undefined) data.jobTitleId = body.jobTitle;
-    if (body.grade !== undefined && body.gradeId === undefined) data.gradeId = body.grade;
-    if (body.businessUnit !== undefined && body.businessUnitId === undefined) data.businessUnitId = body.businessUnit;
-    if (body.contractType !== undefined && body.contractTypeId === undefined) data.contractTypeId = body.contractType;
-    if (body.branch !== undefined && body.branchId === undefined) data.branchId = body.branch;
-    if (body.department !== undefined && body.departmentId === undefined) data.departmentId = body.department;
+    const companyId = body.companyId || current?.companyId || '';
+    if (body.section !== undefined && body.sectionId === undefined) data.sectionId = await this.resolveRelationId('section', companyId, body.section);
+    if (body.jobTitle !== undefined && body.jobTitleId === undefined) data.jobTitleId = await this.resolveRelationId('jobTitle', companyId, body.jobTitle);
+    if (body.grade !== undefined && body.gradeId === undefined) data.gradeId = await this.resolveRelationId('grade', companyId, body.grade);
+    if (body.businessUnit !== undefined && body.businessUnitId === undefined) data.businessUnitId = await this.resolveRelationId('businessUnit', companyId, body.businessUnit);
+    if (body.contractType !== undefined && body.contractTypeId === undefined) data.contractTypeId = await this.resolveRelationId('contractType', companyId, body.contractType);
+    if (body.branch !== undefined && body.branchId === undefined) data.branchId = await this.resolveRelationId('branch', companyId, body.branch);
+    if (body.department !== undefined && body.departmentId === undefined) data.departmentId = await this.resolveRelationId('department', companyId, body.department);
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
     if (body.firstName !== undefined || body.lastName !== undefined) {
-      const current = await this.prisma.employee.findUnique({ where: { id } });
       data.fullName = `${body.firstName ?? current?.firstName ?? ''} ${body.lastName ?? current?.lastName ?? ''}`.trim();
     }
     if (body.gross !== undefined) data.gross = Number(body.gross);
