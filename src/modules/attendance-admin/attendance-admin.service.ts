@@ -40,8 +40,14 @@ export class AttendanceAdminService {
 
   async overview(companyId: string, month?: number, year?: number) {
     const now = new Date();
-    const targetMonth = month ?? now.getMonth() + 1;
-    const targetYear = year ?? now.getFullYear();
+    // Guard against NaN/invalid input (e.g. a month name that parseInt() turned
+    // into NaN) — fall back to the current month/year so we never build an
+    // Invalid Date and crash the Prisma query with a 500.
+    const targetMonth =
+      Number.isFinite(month) && (month as number) >= 1 && (month as number) <= 12
+        ? (month as number)
+        : now.getMonth() + 1;
+    const targetYear = Number.isFinite(year) ? (year as number) : now.getFullYear();
     const start = new Date(targetYear, targetMonth - 1, 1);
     const end = new Date(targetYear, targetMonth, 0, 23, 59, 59);
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
