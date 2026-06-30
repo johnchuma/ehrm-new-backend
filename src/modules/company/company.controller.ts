@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, Query, Req, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateCompanyDto, UpdateCompanyDto, UpdateSettingsDto } from '../auth/dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Company')
 @ApiBearerAuth()
@@ -36,6 +38,46 @@ export class CompanyController {
     return this.prisma.company.create({
       data: { name: body.name || '', slug, email: body.email || '', phone: body.phone || '', country: body.country || 'Tanzania', currency: body.currency || 'TZS', subscriptionPlan: body.subscriptionPlan || 'FREE' },
     });
+  }
+
+  @Post('companies/me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create an additional company for the signed-in company admin' })
+  async createForCurrentUser(
+    @CurrentUser() user: any,
+    @Body() body: { name: string; industry?: string; size?: string; country?: string; currency?: string; phone?: string; city?: string; website?: string; tin?: string; workspaceType?: string; },
+  ) {
+    const email = String(user?.email || '').toLowerCase().trim();
+    if (!email) throw new Error('Current user email is required');
+
+    const slugBase = (body.name || 'company').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slug = `${slugBase}-${Date.now()}`;
+    const company = await this.prisma.company.create({
+      data: {
+        name: body.name || '',
+        slug,
+        email,
+        phone: body.phone || '',
+        tin: body.tin,
+        city: body.city,
+        country: body.country || 'Tanzania',
+        currency: body.currency || 'TZS',
+        website: body.website,
+        industry: body.industry,
+        size: body.size,
+        workspaceType: body.workspaceType || 'SaaS',
+        status: 'ACTIVE',
+      },
+    });
+
+    await this.prisma.companySettings.create({ data: { companyId: company.id } });
+
+    const existingUser = await this.prisma.user.findUnique({ where: { id: user.sub } });
+    if (existingUser && !existingUser.companyId) {
+      await this.prisma.user.update({ where: { id: existingUser.id }, data: { companyId: company.id } });
+    }
+
+    return company;
   }
 
   @Put('companies/:id')
