@@ -189,6 +189,7 @@ export class SuperAdminService {
         settings: true,
         branches: { where: { isActive: true }, select: { id: true, name: true, city: true } },
         departments: { where: { isActive: true }, select: { id: true, name: true } },
+        _count: { select: { branches: true, departments: true, employees: true } },
       },
     });
 
@@ -211,6 +212,7 @@ export class SuperAdminService {
     return {
       ...company,
       userCount,
+      employeeCount: company._count?.employees ?? 0,
       adminRole,
       recentActivity,
     };

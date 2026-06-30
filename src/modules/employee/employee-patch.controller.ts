@@ -49,6 +49,7 @@ export class EmployeePatchController {
     return found?.id || value;
   }
 
+  @Patch(':id/onboarding')
   @Patch(':id')
   async patch(@Param('id') id: string, @Body() body: Record<string, any>) {
     const emp = await this.prisma.employee.findUnique({ where: { id } });
@@ -71,6 +72,7 @@ export class EmployeePatchController {
       'dateOfBirth', 'nationality', 'branchId', 'departmentId', 'sectionId', 'jobTitleId',
       'gradeId', 'businessUnitId', 'contractTypeId', 'managerId', 'employeeNumber',
       'employmentType', 'employmentMode', 'modeOfPayment', 'joiningDate', 'status', 'stage', 'profilePhoto',
+      'contractStartDate', 'contractEndDate', 'probationEndDate', 'role',
     ];
     if (body.manager !== undefined && body.managerId === undefined) data.managerId = body.manager || null;
     // Map relation-name aliases sent by onboarding/edit forms to actual FK columns.
@@ -90,6 +92,7 @@ export class EmployeePatchController {
     if (body.gross !== undefined) data.gross = Number(body.gross);
     if (body.approvalStage !== undefined) data.approvalStage = body.approvalStage;
     if (body.checklist !== undefined) data.checklist = JSON.stringify(body.checklist);
+    if (body.complianceStatus !== undefined) data.complianceStatus = JSON.stringify(body.complianceStatus);
     if (body.documents !== undefined) data.documents = JSON.stringify(body.documents);
     const currentMetadata = emp.metadata
       ? (() => {

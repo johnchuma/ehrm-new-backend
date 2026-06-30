@@ -124,99 +124,319 @@ export class DashboardService {
     };
   }
 
-  // Company-wide overview for admin dashboard
+  // Company-wide overview for admin dashboard — aggregates live Prisma data
+  // for the caller's tenant. Falls back to safe zeros for derived metrics
+  // that have not been wired up yet.
   async getOverview(companyId: string, month?: number, year?: number) {
-    // For now return a comprehensive overview payload mirroring the previous frontend mock.
-    // This centralizes demo data on the backend so the frontend no longer imports mocks.
+    if (!companyId) {
+      return this.emptyOverview();
+    }
+
     const now = new Date();
-    const kpiStrip = {
-      totalEmployees: 1284,
-      activeEmployees: 1256,
-      newHiresMTD: 18,
-      exitsMTD: 7,
-      vacancies: 31,
-      totalPayrollCost: 2847000000,
-      totalWorkforceCost: 3416400000,
-      attendanceRate: 93.1,
-      absenteeismRate: 6.9,
-      leaveUtilisation: 67,
-      overtimeCost: 45800000,
-      kpiAchievement: 78,
-      performanceReviewCompletion: 82,
-      trainingCompletion: 71,
-      openHRQueries: 23,
-      complianceScore: 94,
-      expiringContracts: 12,
-      employeesOnProbation: 8,
-      employeeTurnoverRate: 4.2,
-      workforceHealthScore: 86,
-    };
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const y = year ?? now.getFullYear();
+    const m = month ? month - 1 : now.getMonth();
+    const monthStart = new Date(y, m, 1);
+    const monthEnd = new Date(y, m + 1, 0, 23, 59, 59);
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - 6);
 
-    const approvalQueue = [
-      { id: "WF-1041", employee: "Halima Kimaro", type: "Promotion", step: 2, totalSteps: 4, stepLabel: "HR Manager", initiator: "Line Manager", submitted: "3 days ago", sla: "On Track" },
-      { id: "WF-1039", employee: "Said Mlay", type: "Leave Application", step: 1, totalSteps: 9, stepLabel: "Manager Review", initiator: "Employee", submitted: "Today", sla: "On Track" },
-    ];
+    // Headcount snapshots for the last 6 months (including current)
+    const headcountPoints = Array.from({ length: 6 }, (_, i) => {
+      const offset = 5 - i;
+      const d = new Date(y, m - offset, 1);
+      const endOfMonth = new Date(y, m - offset + 1, 0, 23, 59, 59);
+      const monthLabel = d.toLocaleString('en-US', { month: 'short' });
+      return { endOfMonth, monthLabel };
+    });
 
-    const approvalAnalytics = {
-      avgTurnaround: { "Leave Application": "1.4 days", "Promotion": "6.2 days" },
-      slaBreachRate: "12%",
-      longestPending: { id: "WF-1031", employee: "Grace Mutuku", type: "Onboarding Activation", days: 12 },
-      delegations: [],
-    };
+    const [
+      totalEmployees,
+      activeEmployees,
+      newHiresMTD,
+      exitsMTD,
+      openPositions,
+      openHRQueries,
+      pendingLeave,
+      todayAttendance,
+      monthAttendance,
+      weekAttendance,
+      lastPayrollRun,
+      headcountTrendRows,
+    ] = await Promise.all([
+      this.prisma.employee.count({ where: { companyId } }),
+      this.prisma.employee.count({ where: { companyId, status: 'ACTIVE' } }),
+      this.prisma.employee.count({
+        where: { companyId, startDate: { gte: monthStart, lte: monthEnd } },
+      }),
+      this.prisma.employee.count({
+        where: { companyId, endDate: { gte: monthStart, lte: monthEnd } },
+      }),
+      this.prisma.position.count({ where: { companyId, isActive: true } }),
+      this.prisma.hRQuery.count({
+        where: { companyId, status: { in: ['OPEN', 'PENDING', 'IN_PROGRESS'] } },
+      }),
+      this.prisma.leaveRequest.count({
+        where: { companyId, status: 'PENDING' },
+      }),
+      this.prisma.attendance.findMany({
+        where: { companyId, date: today },
+        select: { status: true, checkIn: true },
+      }),
+      this.prisma.attendance.findMany({
+        where: { companyId, date: { gte: monthStart, lte: monthEnd } },
+        select: { status: true },
+      }),
+      this.prisma.attendance.findMany({
+        where: { companyId, date: { gte: weekStart, lte: today } },
+        select: { date: true, status: true },
+      }),
+      this.prisma.payrollRun.findFirst({
+        where: { companyId, status: { in: ['APPROVED', 'PAID', 'CLOSED'] } },
+        orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        select: { totalPayrollCost: true, totalGrossSalary: true, totalAllowances: true },
+      }),
+      Promise.all(
+        headcountPoints.map(({ endOfMonth, monthLabel }) =>
+          this.prisma.employee
+            .count({
+              where: {
+                companyId,
+                OR: [
+                  { startDate: null },
+                  { startDate: { lte: endOfMonth } },
+                ],
+                AND: [
+                  {
+                    OR: [
+                      { endDate: null },
+                      { endDate: { gt: endOfMonth } },
+                    ],
+                  },
+                ],
+              },
+            })
+            .then((value) => ({ month: monthLabel, value })),
+        ),
+      ),
+    ]);
 
-    const governanceFeed = [];
-    const onboardingPipeline = [];
-    const blockedPerStep = [];
-    const offboardingPipeline = [];
-    const movementPipeline = [];
-    const establishment = { approvedPositions: 1315, filledPositions: 1284, vacantPositions: 31, futurePositions: 12, newHiresThisMonth: 18, separationsThisMonth: 7, noManagerAssigned: 4, pendingOrgChanges: 3 };
+    // ── Derived: today's attendance command ──
+    const presentToday = todayAttendance.filter((a) => a.status === 'PRESENT').length;
+    const lateToday = todayAttendance.filter((a) => a.status === 'LATE').length;
+    const absentToday = todayAttendance.filter((a) => a.status === 'ABSENT').length;
+    const onLeaveToday = todayAttendance.filter((a) => a.status === 'ON_LEAVE').length;
+    const checkedInToday = presentToday + lateToday;
 
-    const attendanceCommand = {
-      attendanceRate: 93.1,
-      byMethod: [],
-      checkedIn: 1196,
-      checkedOut: 842,
-      notYetIn: 48,
-      absent: 40,
-      exceptions: [],
-      devices: [],
-    };
+    // ── Derived: month-to-date attendance rate ──
+    const presentMonth = monthAttendance.filter(
+      (a) => a.status === 'PRESENT' || a.status === 'LATE',
+    ).length;
+    const monthRecords = monthAttendance.length;
+    const attendanceRate =
+      monthRecords > 0
+        ? Number(((presentMonth / monthRecords) * 100).toFixed(1))
+        : 0;
+    const absenteeismRate =
+      monthRecords > 0
+        ? Number(((absentToday / Math.max(1, activeEmployees)) * 100).toFixed(1))
+        : 0;
 
-    const shiftPayrollReadiness = { shiftsWithGaps: 2, noShiftAssigned: 14, pendingSwaps: 6, unplannedOT: 22, attendanceUnapproved: 38, correctionsPending: 14, exceptionsUnresolved: 19, payrollCutoff: "2026-06-30" };
+    // ── Derived: last-7-days weekly trend ──
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const attendanceWeeklyTrend = Array.from({ length: 7 }, (_, i) => {
+      const offset = 6 - i;
+      const d = new Date(today);
+      d.setDate(today.getDate() - offset);
+      const dayRecords = weekAttendance.filter(
+        (a) => new Date(a.date).toDateString() === d.toDateString(),
+      );
+      const presentCount = dayRecords.filter(
+        (a) => a.status === 'PRESENT' || a.status === 'LATE',
+      ).length;
+      const totalCount = dayRecords.length;
+      const rate =
+        totalCount > 0
+          ? Number(((presentCount / totalCount) * 100).toFixed(1))
+          : 0;
+      return { day: dayNames[d.getDay()], rate, present: presentCount };
+    });
 
-    const leaveIntelligence = { liability: {}, onLeaveToday: [], pendingApprovals: 0, cancellationsPending: 0, amendmentsPending: 0, encashmentPipeline: [], blackoutPeriods: [], carryForward: {} };
-
-    const systemHealth = { integrations: [], api: { usageToday: 0, usageThisMonth: 0, avgLatency: "0ms" }, audit: {}, notifications: [], backup: {} };
-
-    const attendanceWeeklyTrend = [ { day: "Mon", rate: 94.2, present: 1210 }, { day: "Tue", rate: 92.8, present: 1192 }, { day: "Wed", rate: 95.1, present: 1221 }, { day: "Thu", rate: 91.5, present: 1175 }, { day: "Fri", rate: 89.3, present: 1147 }, { day: "Sat", rate: 78.6, present: 1009 }, { day: "Sun", rate: 0, present: 0 } ];
-
-    const headcountMonthlyTrend = [ { month: "Jan", value: 1240 }, { month: "Feb", value: 1248 }, { month: "Mar", value: 1255 }, { month: "Apr", value: 1262 }, { month: "May", value: 1271 }, { month: "Jun", value: 1284 } ];
-
-    const approvalTurnaroundChart = [];
-    const leaveDistribution = [];
-    const earlyArrivals = [];
-    const exceptionsTrend = [];
+    // ── Derived: payroll cost from last approved run ──
+    const totalPayrollCost = lastPayrollRun
+      ? Number(lastPayrollRun.totalPayrollCost ?? lastPayrollRun.totalGrossSalary ?? 0)
+      : 0;
 
     return {
-      kpiStrip,
-      approvalQueue,
-      approvalAnalytics,
-      governanceFeed,
-      onboardingPipeline,
-      blockedPerStep,
-      offboardingPipeline,
-      movementPipeline,
-      establishment,
-      attendanceCommand,
-      shiftPayrollReadiness,
-      leaveIntelligence,
-      systemHealth,
+      kpiStrip: {
+        totalEmployees,
+        activeEmployees,
+        newHiresMTD,
+        exitsMTD,
+        vacancies: Math.max(0, openPositions - activeEmployees),
+        totalPayrollCost,
+        totalWorkforceCost: 0,
+        attendanceRate,
+        absenteeismRate,
+        leaveUtilisation: 0,
+        overtimeCost: 0,
+        kpiAchievement: 0,
+        performanceReviewCompletion: 0,
+        trainingCompletion: 0,
+        openHRQueries,
+        complianceScore: 0,
+        expiringContracts: 0,
+        employeesOnProbation: 0,
+        employeeTurnoverRate: 0,
+        workforceHealthScore: 0,
+      },
+      approvalQueue: [],
+      approvalAnalytics: { avgTurnaround: {}, slaBreachRate: '0%', longestPending: null, delegations: [] },
+      governanceFeed: [],
+      onboardingPipeline: [],
+      blockedPerStep: [],
+      offboardingPipeline: [],
+      movementPipeline: [],
+      establishment: {
+        approvedPositions: openPositions,
+        filledPositions: activeEmployees,
+        vacantPositions: Math.max(0, openPositions - activeEmployees),
+        futurePositions: 0,
+        newHiresThisMonth: newHiresMTD,
+        separationsThisMonth: exitsMTD,
+        noManagerAssigned: 0,
+        pendingOrgChanges: 0,
+      },
+      attendanceCommand: {
+        attendanceRate,
+        byMethod: [],
+        checkedIn: checkedInToday,
+        checkedOut: 0,
+        notYetIn: Math.max(0, activeEmployees - checkedInToday - absentToday - onLeaveToday),
+        absent: absentToday,
+        exceptions: [],
+        devices: [],
+      },
+      shiftPayrollReadiness: {
+        shiftsWithGaps: 0,
+        noShiftAssigned: 0,
+        pendingSwaps: 0,
+        unplannedOT: 0,
+        attendanceUnapproved: 0,
+        correctionsPending: 0,
+        exceptionsUnresolved: 0,
+        payrollCutoff: '',
+      },
+      leaveIntelligence: {
+        liability: {},
+        onLeaveToday: [],
+        pendingApprovals: pendingLeave,
+        cancellationsPending: 0,
+        amendmentsPending: 0,
+        encashmentPipeline: [],
+        blackoutPeriods: [],
+        carryForward: {},
+      },
+      systemHealth: {
+        integrations: [],
+        api: { usageToday: 0, usageThisMonth: 0, avgLatency: '0ms' },
+        audit: {},
+        notifications: [],
+        backup: {},
+      },
       attendanceWeeklyTrend,
-      headcountMonthlyTrend,
-      approvalTurnaroundChart,
-      leaveDistribution,
-      earlyArrivals,
-      exceptionsTrend,
+      headcountMonthlyTrend: headcountTrendRows,
+      approvalTurnaroundChart: [],
+      leaveDistribution: [],
+      earlyArrivals: [],
+      exceptionsTrend: [],
+    };
+  }
+
+  private emptyOverview() {
+    return {
+      kpiStrip: {
+        totalEmployees: 0,
+        activeEmployees: 0,
+        newHiresMTD: 0,
+        exitsMTD: 0,
+        vacancies: 0,
+        totalPayrollCost: 0,
+        totalWorkforceCost: 0,
+        attendanceRate: 0,
+        absenteeismRate: 0,
+        leaveUtilisation: 0,
+        overtimeCost: 0,
+        kpiAchievement: 0,
+        performanceReviewCompletion: 0,
+        trainingCompletion: 0,
+        openHRQueries: 0,
+        complianceScore: 0,
+        expiringContracts: 0,
+        employeesOnProbation: 0,
+        employeeTurnoverRate: 0,
+        workforceHealthScore: 0,
+      },
+      approvalQueue: [],
+      approvalAnalytics: { avgTurnaround: {}, slaBreachRate: '0%', longestPending: null, delegations: [] },
+      governanceFeed: [],
+      onboardingPipeline: [],
+      blockedPerStep: [],
+      offboardingPipeline: [],
+      movementPipeline: [],
+      establishment: {
+        approvedPositions: 0,
+        filledPositions: 0,
+        vacantPositions: 0,
+        futurePositions: 0,
+        newHiresThisMonth: 0,
+        separationsThisMonth: 0,
+        noManagerAssigned: 0,
+        pendingOrgChanges: 0,
+      },
+      attendanceCommand: {
+        attendanceRate: 0,
+        byMethod: [],
+        checkedIn: 0,
+        checkedOut: 0,
+        notYetIn: 0,
+        absent: 0,
+        exceptions: [],
+        devices: [],
+      },
+      shiftPayrollReadiness: {
+        shiftsWithGaps: 0,
+        noShiftAssigned: 0,
+        pendingSwaps: 0,
+        unplannedOT: 0,
+        attendanceUnapproved: 0,
+        correctionsPending: 0,
+        exceptionsUnresolved: 0,
+        payrollCutoff: '',
+      },
+      leaveIntelligence: {
+        liability: {},
+        onLeaveToday: [],
+        pendingApprovals: 0,
+        cancellationsPending: 0,
+        amendmentsPending: 0,
+        encashmentPipeline: [],
+        blackoutPeriods: [],
+        carryForward: {},
+      },
+      systemHealth: {
+        integrations: [],
+        api: { usageToday: 0, usageThisMonth: 0, avgLatency: '0ms' },
+        audit: {},
+        notifications: [],
+        backup: {},
+      },
+      attendanceWeeklyTrend: [],
+      headcountMonthlyTrend: [],
+      approvalTurnaroundChart: [],
+      leaveDistribution: [],
+      earlyArrivals: [],
+      exceptionsTrend: [],
     };
   }
 
