@@ -42,7 +42,7 @@ export class SnipepayService {
 
   async initiatePayment(payload: SnipepayInitiatePayload): Promise<SnipepayInitiateResponse> {
     try {
-      const { data } = await firstValueFrom(
+      const response = await firstValueFrom(
         this.http.post<SnipepayInitiateResponse>(
           `${SNIPEPAY_BASE}/payments/initiate`,
           payload,
@@ -54,7 +54,7 @@ export class SnipepayService {
           },
         ),
       );
-      return data;
+      return response.data;
     } catch (err: any) {
       this.logger.error('Snipepay initiate failed', err?.response?.data ?? err.message);
       throw new BadRequestException(
@@ -65,12 +65,12 @@ export class SnipepayService {
 
   async checkStatus(transactionRef: string): Promise<{ status: string; paidAt?: string }> {
     try {
-      const { data } = await firstValueFrom(
+      const response = await firstValueFrom(
         this.http.get<any>(`${SNIPEPAY_BASE}/payments/${transactionRef}/status`, {
           headers: { Authorization: `Bearer ${SNIPEPAY_API_KEY}` },
         }),
       );
-      return { status: data.status, paidAt: data.paidAt };
+      return { status: response.data.status, paidAt: response.data.paidAt };
     } catch (err: any) {
       this.logger.error('Snipepay status check failed', err?.response?.data ?? err.message);
       throw new BadRequestException('Could not fetch payment status');

@@ -222,7 +222,7 @@ export class AuthService {
     });
 
     const companies = await this.prisma.company.findMany({
-      where: { email: { equals: user.email ?? '', mode: 'insensitive' }, deletedAt: null },
+      where: { email: String(user.email ?? '').trim().toLowerCase(), deletedAt: null },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
