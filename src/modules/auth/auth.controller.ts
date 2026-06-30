@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, HttpCode, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, Req, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 import { JwtService } from '@nestjs/jwt';
@@ -13,6 +13,12 @@ import * as bcrypt from 'bcryptjs';
 
 class RefreshDto {
   @IsNotEmpty() @IsString() refreshToken: string;
+}
+
+class SwitchCompanyDto {
+  @IsNotEmpty()
+  @IsString()
+  companyId: string;
 }
 
 @ApiTags('Authentication')
@@ -132,6 +138,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Exchange a refresh token for a new token pair' })
   refresh(@Body() body: RefreshDto) {
     return this.auth.refresh(body.refreshToken);
+  }
+
+  @Post('switch-company')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Switch the active company for the signed-in user' })
+  switchCompany(@CurrentUser() user: any, @Body() body: SwitchCompanyDto) {
+    if (!body?.companyId) throw new ForbiddenException('Company is required');
+    return this.auth.switchCompany(user.sub, body.companyId);
   }
 
   @Post('logout')

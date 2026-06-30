@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
@@ -190,6 +190,62 @@ export class AuthService {
   async logout(userId: string) {
     await this.prisma.refreshToken.updateMany({ where: { userId, revoked: false }, data: { revoked: true } });
     return { message: 'Logged out successfully' };
+  }
+
+  async switchCompany(userId: string, companyId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true, isActive: true },
+    });
+    if (!user || !user.isActive) throw new UnauthorizedException('Account inactive');
+
+    const company = await this.prisma.company.findFirst({
+      where: { id: companyId, deletedAt: null },
+      select: { id: true, name: true, email: true, subscriptionPlan: true, primaryColor: true, secondaryColor: true, logo: true, industry: true, size: true, country: true, currency: true },
+    });
+    if (!company) throw new NotFoundException('Company not found');
+
+    const sameOwner = String(company.email || '').toLowerCase().trim() === String(user.email || '').toLowerCase().trim();
+    if (!sameOwner && !this.isSuperAdminRole(user.role)) {
+      throw new ForbiddenException('You cannot switch to this company');
+    }
+
+    const isSuperAdmin = this.isSuperAdminRole(user.role);
+    const tokens = await this.generateTokens({
+      sub: user.id,
+      email: user.email ?? '',
+      roles: [],
+      permissions: [],
+      selectedCompanyId: company.id,
+      isSuperAdmin,
+      isImpersonating: false,
+    });
+
+    const companies = await this.prisma.company.findMany({
+      where: { email: { equals: user.email ?? '', mode: 'insensitive' }, deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        industry: true,
+        size: true,
+        country: true,
+        currency: true,
+        subscriptionPlan: true,
+        primaryColor: true,
+        secondaryColor: true,
+        logo: true,
+      },
+    });
+
+    return {
+      ...tokens,
+      user: { ...user, companyId: company.id, selectedCompanyId: company.id },
+      company,
+      companies,
+    };
   }
 
   // ── Token Generation ──
