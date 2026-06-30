@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, Query, Req, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
+import { ConflictException, Controller, Get, Post, Put, Patch, Body, Param, Query, Req, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -13,6 +13,12 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Controller('company')
 export class CompanyController {
   constructor(private readonly prisma: PrismaService) {}
+
+  private normalizeTin(value?: string | null) {
+    if (value === undefined) return undefined;
+    const normalized = String(value).trim();
+    return normalized.length > 0 ? normalized : null;
+  }
 
   @Get('companies')
   @ApiOperation({ summary: 'List all companies' })
@@ -52,13 +58,18 @@ export class CompanyController {
 
     const slugBase = (body.name || 'company').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const slug = `${slugBase}-${Date.now()}`;
+    const tin = this.normalizeTin(body.tin);
+    if (tin) {
+      const tinExists = await this.prisma.company.findFirst({ where: { tin, deletedAt: null } });
+      if (tinExists) throw new ConflictException('TIN already belongs to another company');
+    }
     const company = await this.prisma.company.create({
       data: {
         name: body.name || '',
         slug,
         email,
         phone: body.phone || '',
-        tin: body.tin,
+        ...(tin !== undefined ? { tin } : {}),
         city: body.city,
         country: body.country || 'Tanzania',
         currency: body.currency || 'TZS',
@@ -84,6 +95,9 @@ export class CompanyController {
   @ApiOperation({ summary: 'Update company' })
   @ApiBody({ type: UpdateCompanyDto })
   async update(@Param('id') id: string, @Body() body: UpdateCompanyDto) {
+    const existing = await this.prisma.company.findFirst({ where: { id } });
+    if (!existing) throw new ConflictException('Company not found');
+
     const data: any = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.email !== undefined) data.email = body.email;
@@ -95,7 +109,14 @@ export class CompanyController {
     if (body.status !== undefined) data.status = body.status;
     if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor;
     if (body.secondaryColor !== undefined) data.secondaryColor = body.secondaryColor;
-    if (body.tin !== undefined) data.tin = body.tin;
+    if (body.tin !== undefined) {
+      const tin = this.normalizeTin(body.tin);
+      if (tin && tin !== existing.tin) {
+        const tinExists = await this.prisma.company.findFirst({ where: { tin, id: { not: id }, deletedAt: null } });
+        if (tinExists) throw new ConflictException('TIN already belongs to another company');
+      }
+      data.tin = tin;
+    }
     if (body.address !== undefined) data.address = body.address;
     if (body.city !== undefined) data.city = body.city;
     if (body.timezone !== undefined) data.timezone = body.timezone;
@@ -110,6 +131,9 @@ export class CompanyController {
   @ApiOperation({ summary: 'Patch company (partial update)' })
   @ApiBody({ type: UpdateCompanyDto })
   async patch(@Param('id') id: string, @Body() body: Partial<UpdateCompanyDto>) {
+    const existing = await this.prisma.company.findFirst({ where: { id } });
+    if (!existing) throw new ConflictException('Company not found');
+
     const data: any = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.email !== undefined) data.email = body.email;
@@ -121,7 +145,14 @@ export class CompanyController {
     if (body.status !== undefined) data.status = body.status;
     if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor;
     if (body.secondaryColor !== undefined) data.secondaryColor = body.secondaryColor;
-    if (body.tin !== undefined) data.tin = body.tin;
+    if (body.tin !== undefined) {
+      const tin = this.normalizeTin(body.tin);
+      if (tin && tin !== existing.tin) {
+        const tinExists = await this.prisma.company.findFirst({ where: { tin, id: { not: id }, deletedAt: null } });
+        if (tinExists) throw new ConflictException('TIN already belongs to another company');
+      }
+      data.tin = tin;
+    }
     if (body.address !== undefined) data.address = body.address;
     if (body.city !== undefined) data.city = body.city;
     if (body.timezone !== undefined) data.timezone = body.timezone;
