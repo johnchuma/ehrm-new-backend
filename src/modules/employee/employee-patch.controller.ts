@@ -2,6 +2,7 @@ import { Controller, Patch, Param, Body, NotFoundException } from '@nestjs/commo
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
+import { toNullableEmployeeDate } from './employee-date.util';
 
 @Controller('employees')
 export class EmployeePatchController {
@@ -66,6 +67,7 @@ export class EmployeePatchController {
       'candidateSource', 'candidateId', 'employmentId', 'employmentCategory',
       'modeOfEmployment', 'socialSecurityType', 'socialSecurityNumber',
       'tinNumber', 'nidaNumber', 'passportNumber', 'manager', 'employeeNumber',
+      'emergencyName', 'emergencyRelationship', 'emergencyPhone',
     ];
     const fields = [
       'firstName', 'lastName', 'email', 'phone', 'gender', 'maritalStatus',
@@ -87,7 +89,7 @@ export class EmployeePatchController {
       if (body[f] !== undefined) data[f] = body[f];
     }
     if (body.dateOfBirth !== undefined) {
-      data.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : null;
+      data.dateOfBirth = toNullableEmployeeDate(body.dateOfBirth);
     }
     if (body.profilePhotoName !== undefined && body.profilePhoto === undefined) {
       data.profilePhoto = body.profilePhotoName || null;

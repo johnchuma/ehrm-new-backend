@@ -5,6 +5,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
+import { toNullableEmployeeDate } from './employee-date.util';
 import * as bcrypt from 'bcryptjs';
 
 @ApiTags('Employees - CRUD')
@@ -181,7 +182,7 @@ export class EmployeeCrudController {
       'yearsOfExperience', 'offerLetterDate', 'offerAccepted', 'offerAcceptedDate',
       'candidateSource', 'candidateId', 'employmentId', 'socialSecurityType',
       'socialSecurityNumber', 'tinNumber', 'nidaNumber', 'passportNumber', 'manager',
-      'employeeNumber'];
+      'employeeNumber', 'emergencyName', 'emergencyRelationship', 'emergencyPhone'];
     const extraMeta: Record<string, any> = {};
     for (const k of extraFields) {
       if (body[k] !== undefined) extraMeta[k] = body[k];
@@ -196,7 +197,7 @@ export class EmployeeCrudController {
         phone: body.phone || null,
         gender: body.gender || null,
         maritalStatus: body.maritalStatus || null,
-        dateOfBirth: body.dateOfBirth || null,
+        dateOfBirth: toNullableEmployeeDate(body.dateOfBirth),
         nationality: body.nationality || null,
         branchId: body.branchId || body.branch || null,
         departmentId: body.departmentId || body.department || null,
@@ -302,6 +303,9 @@ export class EmployeeCrudController {
     for (const f of scalarFields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
+    if (body.dateOfBirth !== undefined) {
+      data.dateOfBirth = toNullableEmployeeDate(body.dateOfBirth);
+    }
 
     // Foreign-key fields — accept either the *Id form or the relation-name
     // form sent by the onboarding/edit forms.
@@ -351,7 +355,8 @@ export class EmployeeCrudController {
       'tradeUnion', 'inductionDate', 'inductionCompleted', 'termsAndConditions',
       'contractFileName', 'profilePhotoName', 'yearsOfExperience',
       'offerLetterDate', 'offerAccepted', 'offerAcceptedDate',
-      'candidateSource', 'candidateId',
+      'candidateSource', 'candidateId', 'emergencyName', 'emergencyRelationship',
+      'emergencyPhone',
     ];
     const extraMeta: Record<string, any> = {};
     for (const f of metaFields) {

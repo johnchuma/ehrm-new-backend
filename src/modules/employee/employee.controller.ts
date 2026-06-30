@@ -6,6 +6,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
+import { toNullableEmployeeDate } from './employee-date.util';
 import * as bcrypt from 'bcryptjs';
 
 function fileUrl(filename: string): string {
@@ -111,7 +112,7 @@ export class EmployeeController {
       phone: body.phone || null,
       gender: body.gender || null,
       maritalStatus: body.maritalStatus || null,
-      dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
+      dateOfBirth: toNullableEmployeeDate(body.dateOfBirth),
       nationality: body.nationality || null,
       branchId: body.branchId || body.branch || null,
       departmentId: body.departmentId || body.department || null,
@@ -222,6 +223,9 @@ export class EmployeeController {
     if (body.department !== undefined && body.departmentId === undefined) data.departmentId = await this.resolveRelationId('department', companyId, body.department);
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
+    }
+    if (body.dateOfBirth !== undefined) {
+      data.dateOfBirth = toNullableEmployeeDate(body.dateOfBirth);
     }
     if (body.firstName !== undefined || body.lastName !== undefined) {
       data.fullName = `${body.firstName ?? current?.firstName ?? ''} ${body.lastName ?? current?.lastName ?? ''}`.trim();
