@@ -86,11 +86,14 @@ export class EmployeePatchController {
     for (const f of fields) {
       if (body[f] !== undefined) data[f] = body[f];
     }
+    if (body.dateOfBirth !== undefined) {
+      data.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : null;
+    }
     if (body.profilePhotoName !== undefined && body.profilePhoto === undefined) {
       data.profilePhoto = body.profilePhotoName || null;
     }
     if (body.gross !== undefined) data.gross = Number(body.gross);
-    if (body.approvalStage !== undefined) data.approvalStage = body.approvalStage;
+    if (body.approvalStage !== undefined) data.approvalStage = Number(body.approvalStage);
     if (body.checklist !== undefined) data.checklist = JSON.stringify(body.checklist);
     if (body.complianceStatus !== undefined) data.complianceStatus = JSON.stringify(body.complianceStatus);
     if (body.documents !== undefined) data.documents = JSON.stringify(body.documents);
