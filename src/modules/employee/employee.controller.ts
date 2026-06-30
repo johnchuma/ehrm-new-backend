@@ -40,19 +40,23 @@ export class EmployeeController {
     if (!trimmed) return null;
 
     const table = (this.prisma as any)[model];
-    if (!table?.findFirst) return value;
+    if (!table?.findMany) return value;
 
-    const found = await table.findFirst({
-      where: {
-        companyId,
-        OR: [
-          { id: trimmed },
-          { name: { equals: trimmed, mode: 'insensitive' } },
-          { code: { equals: trimmed, mode: 'insensitive' } },
-        ],
-      },
-      select: { id: true },
-    }).catch(() => null);
+    const normalized = trimmed.toLowerCase();
+    const found = await table
+      .findMany({
+        where: { companyId },
+        select: { id: true, name: true, code: true },
+      })
+      .then((rows: Array<{ id: string; name?: string | null; code?: string | null }>) =>
+        rows.find(
+          (row) =>
+            row.id === trimmed ||
+            String(row.name || '').trim().toLowerCase() === normalized ||
+            String(row.code || '').trim().toLowerCase() === normalized,
+        ) || null,
+      )
+      .catch(() => null);
 
     return found?.id || value;
   }
