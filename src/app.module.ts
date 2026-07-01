@@ -34,6 +34,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { OffboardingModule } from './modules/offboarding/offboarding.module';
 import { TenantModule } from './modules/tenant/tenant.module';
+import { CtcModule } from './modules/ctc/ctc.module';
 
 import { IamController } from './modules/auth/iam.controller';
 import { IamService } from './modules/auth/iam.service';
@@ -82,6 +83,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     ContractsModule,
     OffboardingModule,
     TenantModule,
+    CtcModule,
   ],
   controllers: [IamController],
   providers: [

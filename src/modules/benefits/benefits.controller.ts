@@ -39,6 +39,12 @@ export class BenefitsController {
 
   // Admin endpoints
 
+  @Get('admin')
+  @ApiOperation({ summary: '[Admin] Get company benefit plans' })
+  listAdminBenefits(@CurrentUser() user: any) {
+    return this.svc.listAdminBenefits(user.companyId);
+  }
+
   @Post('admin')
   @HttpCode(201)
   @ApiOperation({ summary: '[Admin] Create a benefit plan' })
