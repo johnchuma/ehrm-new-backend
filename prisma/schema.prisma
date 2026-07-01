@@ -233,6 +233,7 @@ model Company {
   payrollRunItems           PayrollRunItem[]
   payrollAdjustments        PayrollAdjustment[]
   payrollComponents         PayrollComponent[]
+  nonPayrollCosts           NonPayrollCost[]
 
   @@index([slug])
   @@index([status])
@@ -653,7 +654,7 @@ model BillingAlert {
   occurredAt DateTime  @default(now())
   createdAt  DateTime  @default(now())
 
-  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@index([resolved])
@@ -1216,6 +1217,26 @@ model PayrollRunItem {
   @@index([companyId])
   @@index([employeeId])
   @@map("payroll_run_items")
+}
+
+model NonPayrollCost {
+  id          String   @id @default(cuid())
+  companyId   String
+  category    String
+  title       String
+  amount      Decimal  @db.Decimal(15, 2)
+  costDate    DateTime
+  description String?  @db.Text
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([costDate])
+  @@index([category])
+  @@map("non_payroll_costs")
 }
 
 model PayrollAdjustment {

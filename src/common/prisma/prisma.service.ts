@@ -25,6 +25,10 @@ const TENANT_MODELS = new Set([
   'payrollRunItem',
   'payrollAdjustment',
   'payrollComponent',
+  'nonPayrollCost',
+  'benefit',
+  'benefitEnrollment',
+  'benefitClaim',
 ]);
 
 // Operations where we inject companyId into the WHERE clause

@@ -86,6 +86,27 @@ export class BenefitsService {
   }
 
   // Admin endpoints
+  async listAdminBenefits(companyId: string) {
+    return this.prisma.benefit.findMany({
+      where: { companyId },
+      include: {
+        _count: {
+          select: {
+            enrollments: { where: { status: 'ACTIVE' } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }).then((benefits) =>
+      benefits.map((benefit) => ({
+        ...benefit,
+        enrolled: benefit._count.enrollments,
+        cost: benefit.maxAmount ? Number(benefit.maxAmount) : 0,
+        _count: undefined,
+      })),
+    );
+  }
+
   async createBenefit(companyId: string, dto: any) {
     return this.prisma.benefit.create({ data: { ...dto, companyId } });
   }
@@ -102,7 +123,7 @@ export class BenefitsService {
     return this.prisma.benefitClaim.findMany({
       where: { companyId, ...(status ? { status } : {}) },
       include: {
-        enrollment: { include: { benefit: { select: { name: true } } } },
+        enrollment: { include: { benefit: { select: { name: true, type: true } } } },
       },
       orderBy: { createdAt: 'desc' },
     });
