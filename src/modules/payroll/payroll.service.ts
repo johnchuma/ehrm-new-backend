@@ -836,77 +836,48 @@ export class PayrollService {
       throw new BadRequestException('month and year are required');
     }
 
-    const preview = await this.buildPayrollPreview(companyId, body.month, body.year);
     const existing = await this.prisma.payrollRun.findUnique({
       where: { companyId_month_year: { companyId, month: body.month, year: body.year } },
     });
-    if (existing && existing.status === 'CLOSED') {
-      throw new BadRequestException('Payroll run is already closed for this period');
+    if (existing) {
+      throw new BadRequestException('Payroll run already exists for this period');
     }
 
+    const preview = await this.buildPayrollPreview(companyId, body.month, body.year);
     const approvalRequired = !!preview.approvalConfig;
     const nextStatus = approvalRequired ? 'PENDING_APPROVAL' : 'APPROVED';
     const payDate = toDateOnly(body.payDate);
 
     const run = await this.prisma.$transaction(async (tx) => {
-      const runRecord = existing
-        ? await tx.payrollRun.update({
-            where: { id: existing.id },
-            data: {
-              periodLabel: preview.periodLabel,
-              paymentMethod: body.paymentMethod || 'Bank Transfer',
-              payDate,
-              cutoffDay: body.cutoffDay ?? Number(preview.settings?.payrollCutoffDay || DEFAULT_PAYROLL_SETTINGS.payrollCutoffDay),
-              status: nextStatus,
-              employeeCount: preview.summary.employeeCount,
-              totalGrossSalary: preview.summary.totalGrossSalary,
-              totalNetSalary: preview.summary.totalNetSalary,
-              totalPaye: preview.summary.totalPaye,
-              totalNssf: preview.summary.totalNssf,
-              totalSdl: preview.summary.totalSdl,
-              totalWcf: preview.summary.totalWcf,
-              totalNhifEmployee: preview.summary.totalNhifEmployee,
-              totalNhifEmployer: preview.summary.totalNhifEmployer,
-              totalAllowances: preview.summary.totalAllowances,
-              totalDeductions: preview.summary.totalDeductions,
-              totalPayrollCost: preview.summary.totalPayrollCost,
-              approvalConfigKey: preview.approvalConfig?.moduleKey || null,
-              submittedAt: new Date(),
-              approvedAt: nextStatus === 'APPROVED' ? new Date() : null,
-              approvedBy: nextStatus === 'APPROVED' ? (actor?.fullName || actor?.name || null) : null,
-              closedAt: null,
-              metadata: JSON.stringify({ month: body.month, year: body.year, source: 'generatePayrollRun' }),
-            },
-          })
-        : await tx.payrollRun.create({
-            data: {
-              companyId,
-              month: body.month,
-              year: body.year,
-              periodLabel: preview.periodLabel,
-              paymentMethod: body.paymentMethod || 'Bank Transfer',
-              payDate,
-              cutoffDay: body.cutoffDay ?? Number(preview.settings?.payrollCutoffDay || DEFAULT_PAYROLL_SETTINGS.payrollCutoffDay),
-              status: nextStatus,
-              employeeCount: preview.summary.employeeCount,
-              totalGrossSalary: preview.summary.totalGrossSalary,
-              totalNetSalary: preview.summary.totalNetSalary,
-              totalPaye: preview.summary.totalPaye,
-              totalNssf: preview.summary.totalNssf,
-              totalSdl: preview.summary.totalSdl,
-              totalWcf: preview.summary.totalWcf,
-              totalNhifEmployee: preview.summary.totalNhifEmployee,
-              totalNhifEmployer: preview.summary.totalNhifEmployer,
-              totalAllowances: preview.summary.totalAllowances,
-              totalDeductions: preview.summary.totalDeductions,
-              totalPayrollCost: preview.summary.totalPayrollCost,
-              approvalConfigKey: preview.approvalConfig?.moduleKey || null,
-              submittedAt: new Date(),
-              approvedAt: nextStatus === 'APPROVED' ? new Date() : null,
-              approvedBy: nextStatus === 'APPROVED' ? (actor?.fullName || actor?.name || null) : null,
-              metadata: JSON.stringify({ month: body.month, year: body.year, source: 'generatePayrollRun' }),
-            },
-          });
+      const runRecord = await tx.payrollRun.create({
+        data: {
+          companyId,
+          month: body.month,
+          year: body.year,
+          periodLabel: preview.periodLabel,
+          paymentMethod: body.paymentMethod || 'Bank Transfer',
+          payDate,
+          cutoffDay: body.cutoffDay ?? Number(preview.settings?.payrollCutoffDay || DEFAULT_PAYROLL_SETTINGS.payrollCutoffDay),
+          status: nextStatus,
+          employeeCount: preview.summary.employeeCount,
+          totalGrossSalary: preview.summary.totalGrossSalary,
+          totalNetSalary: preview.summary.totalNetSalary,
+          totalPaye: preview.summary.totalPaye,
+          totalNssf: preview.summary.totalNssf,
+          totalSdl: preview.summary.totalSdl,
+          totalWcf: preview.summary.totalWcf,
+          totalNhifEmployee: preview.summary.totalNhifEmployee,
+          totalNhifEmployer: preview.summary.totalNhifEmployer,
+          totalAllowances: preview.summary.totalAllowances,
+          totalDeductions: preview.summary.totalDeductions,
+          totalPayrollCost: preview.summary.totalPayrollCost,
+          approvalConfigKey: preview.approvalConfig?.moduleKey || null,
+          submittedAt: new Date(),
+          approvedAt: nextStatus === 'APPROVED' ? new Date() : null,
+          approvedBy: nextStatus === 'APPROVED' ? (actor?.fullName || actor?.name || null) : null,
+          metadata: JSON.stringify({ month: body.month, year: body.year, source: 'generatePayrollRun' }),
+        },
+      });
 
       await tx.payrollRunItem.deleteMany({ where: { payrollRunId: runRecord.id } });
       await tx.payrollRunItem.createMany({
