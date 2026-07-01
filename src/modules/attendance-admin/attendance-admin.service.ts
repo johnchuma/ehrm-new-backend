@@ -3,6 +3,16 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 
 const PENDING_APPROVAL_STATUS = 'Pending Approval';
 const IN_PROGRESS_STATUS = 'In Progress';
+const DAY_KEYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+const DEFAULT_WORK_START = '08:00';
+const DEFAULT_WORK_END = '17:00';
+
+type AttendanceWorkSettings = {
+  dayConfigs: Record<string, { enabled?: boolean; start?: string; startTime?: string; end?: string; endTime?: string }>;
+  weekendDays: Set<string>;
+  defaultStart: string;
+  defaultEnd: string;
+};
 
 function normalizeJson(value: any, fallback: any) {
   if (!value) return fallback;
@@ -40,6 +50,70 @@ function dateKey(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
+function normalizeDayKey(value?: string | null) {
+  const text = String(value || '').trim().toUpperCase();
+  if (!text) return '';
+  const aliases: Record<string, string> = {
+    SUN: 'SUNDAY',
+    SUNDAY: 'SUNDAY',
+    MON: 'MONDAY',
+    MONDAY: 'MONDAY',
+    TUE: 'TUESDAY',
+    TUES: 'TUESDAY',
+    TUESDAY: 'TUESDAY',
+    WED: 'WEDNESDAY',
+    WEDNESDAY: 'WEDNESDAY',
+    THU: 'THURSDAY',
+    THUR: 'THURSDAY',
+    THURS: 'THURSDAY',
+    THURSDAY: 'THURSDAY',
+    FRI: 'FRIDAY',
+    FRIDAY: 'FRIDAY',
+    SAT: 'SATURDAY',
+    SATURDAY: 'SATURDAY',
+  };
+  return aliases[text] || '';
+}
+
+function parseDayTokenSequence(value?: string | null) {
+  const text = String(value || '').trim();
+  if (!text) return [];
+  const tokens = text
+    .split(/\s*,\s*/)
+    .flatMap((part) => {
+      const range = part.split(/\s*-\s*/).map(normalizeDayKey).filter(Boolean);
+      if (range.length !== 2) return range;
+      const start = DAY_KEYS.indexOf(range[0]);
+      const end = DAY_KEYS.indexOf(range[1]);
+      if (start < 0 || end < 0) return range;
+      const result: string[] = [];
+      let index = start;
+      while (true) {
+        result.push(DAY_KEYS[index]);
+        if (index === end) break;
+        index = (index + 1) % DAY_KEYS.length;
+        if (result.length > DAY_KEYS.length) break;
+      }
+      return result;
+    })
+    .filter(Boolean);
+  return [...new Set(tokens)];
+}
+
+function parseHoursRange(value?: string | null): [string, string] {
+  const text = String(value || '').trim();
+  const match = text.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+  if (!match) return [DEFAULT_WORK_START, DEFAULT_WORK_END];
+  return [match[1], match[2]];
+}
+
+function pickTime(...values: Array<string | null | undefined>) {
+  const value = values.find((item) => /^\d{1,2}:\d{2}$/.test(String(item || '').trim()));
+  if (!value) return '';
+  const [hour, minute] = String(value).split(':');
+  return `${hour.padStart(2, '0')}:${minute}`;
+}
+
 function resolveUploadPath(fileName?: string | null) {
   if (!fileName) return '';
   const value = String(fileName).trim();
@@ -59,6 +133,62 @@ async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
 export class AttendanceAdminService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async getAttendanceWorkSettings(companyId: string): Promise<AttendanceWorkSettings> {
+    const [companySettings, patterns] = await Promise.all([
+      this.prisma.companySettings.findUnique({
+        where: { companyId },
+        select: { generalSettings: true },
+      }),
+      this.prisma.workingDayPattern.findMany({
+        where: { companyId, isActive: true },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+
+    const general = normalizeJson(companySettings?.generalSettings, {});
+    const generalPatterns = Array.isArray(general?.workingDays) ? general.workingDays : [];
+    const source = patterns[0] || generalPatterns.find((item) => String(item?.status || 'Active').toLowerCase() !== 'inactive') || {};
+    const [defaultStart, defaultEnd] = parseHoursRange(source.hours);
+    const rawDayConfigs = normalizeJson(source.dayConfigs, {});
+    const rawWeekendDays = normalizeJson(source.weekendDays, null);
+    const weekendDays = new Set(
+      (Array.isArray(rawWeekendDays) ? rawWeekendDays : parseDayTokenSequence(source.weekend || 'Sat-Sun'))
+        .map(normalizeDayKey)
+        .filter(Boolean),
+    );
+    const enabledFromPattern = parseDayTokenSequence(source.pattern || 'Mon-Fri');
+    const enabledSet = new Set(enabledFromPattern.length ? enabledFromPattern : DAY_KEYS.filter((day) => !weekendDays.has(day)));
+    const dayConfigs = Object.fromEntries(
+      DAY_KEYS.map((day) => {
+        const config = rawDayConfigs?.[day] || {};
+        return [
+          day,
+          {
+            enabled: typeof config.enabled === 'boolean' ? config.enabled : enabledSet.has(day),
+            start: pickTime(config.start, config.startTime, source.startTime, defaultStart) || DEFAULT_WORK_START,
+            end: pickTime(config.end, config.endTime, source.endTime, defaultEnd) || DEFAULT_WORK_END,
+          },
+        ];
+      }),
+    );
+
+    return {
+      dayConfigs,
+      weekendDays,
+      defaultStart,
+      defaultEnd,
+    };
+  }
+
+  private resolveWorkDay(settings: AttendanceWorkSettings, date: Date) {
+    const dayKey = DAY_KEYS[date.getDay()];
+    const config = settings.dayConfigs[dayKey] || {};
+    const enabled = typeof config.enabled === 'boolean' ? config.enabled : !settings.weekendDays.has(dayKey);
+    const expectedIn = pickTime(config.start, config.startTime, settings.defaultStart) || DEFAULT_WORK_START;
+    const expectedOut = pickTime(config.end, config.endTime, settings.defaultEnd) || DEFAULT_WORK_END;
+    return { dayKey, isWorkDay: enabled, expectedIn, expectedOut };
+  }
+
   private async ensureDailyRecords(companyId: string, employees: Array<{ id: string }>, start: Date, end: Date) {
     if (!employees.length) return;
 
@@ -71,7 +201,8 @@ export class AttendanceAdminService {
     if (startDate.getTime() > cappedEnd.getTime()) return;
 
     const days = eachDate(startDate, cappedEnd);
-    const [existingRows, leaveRows] = await Promise.all([
+    const [workSettings, existingRows, leaveRows] = await Promise.all([
+      this.getAttendanceWorkSettings(companyId),
       this.prisma.attendance.findMany({
         where: { companyId, date: { gte: startDate, lte: cappedEnd } },
         select: {
@@ -82,6 +213,7 @@ export class AttendanceAdminService {
           checkOut: true,
           isManual: true,
           status: true,
+          notes: true,
         },
       }),
       this.prisma.leaveRequest.findMany({
@@ -114,6 +246,13 @@ export class AttendanceAdminService {
     for (const row of existingRows) {
       if (!activeEmployeeIds.has(row.employeeId)) continue;
       if (row.checkIn || row.checkOut || row.isManual) continue;
+      const workDay = this.resolveWorkDay(workSettings, row.date);
+      if (!workDay.isWorkDay) {
+        if (String(row.notes || '').startsWith('Auto-created daily attendance record:')) {
+          updates.push(this.prisma.attendance.delete({ where: { id: row.id } }));
+        }
+        continue;
+      }
       const onLeave = (leaveByEmployee.get(row.employeeId) || []).some((leave) => {
         const leaveStart = toDateOnly(leave.startDate)!;
         const leaveEnd = toDateOnly(leave.endDate)!;
@@ -128,7 +267,7 @@ export class AttendanceAdminService {
               status,
               notes: onLeave
                 ? 'Auto-created daily attendance record: employee is on approved leave.'
-                : 'Auto-created daily attendance record: no check-in or check-out recorded.',
+                : `Auto-created daily attendance record: expected ${workDay.expectedIn}-${workDay.expectedOut}; no check-in or check-out recorded.`,
             },
           }),
         );
@@ -137,6 +276,8 @@ export class AttendanceAdminService {
 
     for (const employee of employees) {
       for (const day of days) {
+        const workDay = this.resolveWorkDay(workSettings, day);
+        if (!workDay.isWorkDay) continue;
         const key = `${employee.id}:${dateKey(day)}`;
         if (existing.has(key)) continue;
         const onLeave = (leaveByEmployee.get(employee.id) || []).some((leave) => {
@@ -152,7 +293,7 @@ export class AttendanceAdminService {
           isManual: false,
           notes: onLeave
             ? 'Auto-created daily attendance record: employee is on approved leave.'
-            : 'Auto-created daily attendance record: no check-in or check-out recorded.',
+            : `Auto-created daily attendance record: expected ${workDay.expectedIn}-${workDay.expectedOut}; no check-in or check-out recorded.`,
         });
       }
     }
@@ -199,7 +340,8 @@ export class AttendanceAdminService {
 
     await this.ensureDailyRecords(companyId, employees, start, end);
 
-    const [attendance, shifts, locations, approvals, swaps, bulk] = await Promise.all([
+    const [workSettings, attendance, shifts, locations, approvals, swaps, bulk] = await Promise.all([
+      this.getAttendanceWorkSettings(companyId),
       this.prisma.attendance.findMany({
         where: { companyId, date: { gte: start, lte: end } },
         include: {
@@ -238,6 +380,7 @@ export class AttendanceAdminService {
 
     const rows = attendance.map((row) => {
       const employee = employeeById.get(row.employeeId) || row.employee;
+      const workDay = this.resolveWorkDay(workSettings, row.date);
       return {
         id: row.id,
         empId: row.employeeId,
@@ -256,6 +399,9 @@ export class AttendanceAdminService {
         missingCheckIn: !row.checkIn && !['ON_LEAVE'].includes(String(row.status).toUpperCase()),
         missingCheckOut: !!row.checkIn && !row.checkOut,
         autoCreated: !row.checkIn && !row.checkOut && !row.isManual,
+        expectedIn: workDay.expectedIn,
+        expectedOut: workDay.expectedOut,
+        workDay: workDay.isWorkDay,
       };
     });
 
