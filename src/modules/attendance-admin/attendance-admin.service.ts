@@ -537,6 +537,7 @@ export class AttendanceAdminService {
         status: item.status,
         notes: item.notes || '',
         approvalStage: item.approvalStage,
+        rows: normalizeJson(item.payload, []),
         rowsCount: normalizeJson(item.payload, []).length,
       })),
     };
@@ -546,6 +547,14 @@ export class AttendanceAdminService {
     const approvalRequired = await hasApprovalFlow(companyId, this.prisma);
     const attendanceDate = toDateOnly(body.attendanceDate || new Date());
     if (!attendanceDate) throw new BadRequestException('Invalid attendance date');
+
+    const existingSubmission = await this.prisma.attendanceBulkSubmission.findFirst({
+      where: { companyId, attendanceDate },
+      select: { id: true },
+    });
+    if (existingSubmission) {
+      throw new BadRequestException('A bulk attendance submission already exists for this date');
+    }
 
     const rows = Array.isArray(body.rows) ? body.rows : [];
     if (!rows.length) throw new BadRequestException('No attendance rows supplied');

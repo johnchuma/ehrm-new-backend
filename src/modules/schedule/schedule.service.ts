@@ -9,6 +9,18 @@ function resolveUploadPath(fileName?: string | null) {
   return `/uploads/${value.replace(/^\/+/, '')}`;
 }
 
+function dateKey(value: Date | string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+}
+
+function coversDate(assignment: { startDate: Date; endDate?: Date | null }, date: Date) {
+  const key = dateKey(date);
+  const start = dateKey(assignment.startDate);
+  const end = assignment.endDate ? dateKey(assignment.endDate) : '';
+  return start <= key && (!end || end >= key);
+}
+
 @Injectable()
 export class ScheduleService {
   constructor(private readonly prisma: PrismaService) {}
@@ -197,20 +209,29 @@ export class ScheduleService {
       active: shift.isActive,
     }));
 
-    const swapRows = swapsData.map((swap) => ({
-      id: swap.id,
-      requester: swap.requester?.fullName || swap.requester?.employeeNumber || swap.requesterId,
-      requestee: swap.target?.fullName || swap.target?.employeeNumber || swap.targetId,
-      requesterPhotoUrl: resolveUploadPath(swap.requester?.profilePhoto),
-      requesteePhotoUrl: resolveUploadPath(swap.target?.profilePhoto),
-      date: swap.requesterDate.toISOString().slice(0, 10),
-      fromShift: swap.requesterDate.toISOString().slice(0, 10),
-      toShift: swap.targetDate.toISOString().slice(0, 10),
-      reason: swap.reason || '',
-      status: swap.status,
-      approvedBy: swap.approvedBy || '',
-      approvedAt: swap.approvedAt || null,
-    }));
+    const swapRows = swapsData.map((swap) => {
+      const requesterAssignment = assignmentsData.find(
+        (assignment) => assignment.employeeId === swap.requesterId && coversDate(assignment, swap.requesterDate),
+      );
+      const targetAssignment = assignmentsData.find(
+        (assignment) => assignment.employeeId === swap.targetId && coversDate(assignment, swap.targetDate),
+      );
+      return {
+        id: swap.id,
+        requester: swap.requester?.fullName || swap.requester?.employeeNumber || swap.requesterId,
+        requestee: swap.target?.fullName || swap.target?.employeeNumber || swap.targetId,
+        requesterPhotoUrl: resolveUploadPath(swap.requester?.profilePhoto),
+        requesteePhotoUrl: resolveUploadPath(swap.target?.profilePhoto),
+        date: swap.requesterDate.toISOString().slice(0, 10),
+        targetDate: swap.targetDate.toISOString().slice(0, 10),
+        fromShift: requesterAssignment?.shift?.name || 'Unassigned',
+        toShift: targetAssignment?.shift?.name || 'Unassigned',
+        reason: swap.reason || '',
+        status: swap.status,
+        approvedBy: swap.approvedBy || '',
+        approvedAt: swap.approvedAt || null,
+      };
+    });
 
     const assignedEmployeeIds = new Set(assignmentRows.map((assignment) => assignment.empId));
 
@@ -333,14 +354,59 @@ export class ScheduleService {
     const cid = this.requireCompanyId(companyId);
     const swap = await this.prisma.shiftSwapRequest.findFirst({ where: { id, companyId: cid } });
     if (!swap) throw new NotFoundException('Swap request not found');
+    if (swap.status !== 'PENDING') throw new BadRequestException('Swap request has already been processed');
 
-    return this.prisma.shiftSwapRequest.update({
-      where: { id },
-      data: {
-        status: accept ? 'ACCEPTED' : 'REJECTED',
-        approvedBy: approvedBy || null,
-        approvedAt: new Date(),
-      },
+    if (!accept) {
+      return this.prisma.shiftSwapRequest.update({
+        where: { id },
+        data: {
+          status: 'REJECTED',
+          approvedBy: approvedBy || null,
+          approvedAt: new Date(),
+        },
+      });
+    }
+
+    const [requesterAssignment, targetAssignment] = await Promise.all([
+      this.prisma.shiftAssignment.findFirst({
+        where: {
+          employeeId: swap.requesterId,
+          startDate: { lte: swap.requesterDate },
+          OR: [{ endDate: null }, { endDate: { gte: swap.requesterDate } }],
+          employee: { companyId: cid },
+        },
+      }),
+      this.prisma.shiftAssignment.findFirst({
+        where: {
+          employeeId: swap.targetId,
+          startDate: { lte: swap.targetDate },
+          OR: [{ endDate: null }, { endDate: { gte: swap.targetDate } }],
+          employee: { companyId: cid },
+        },
+      }),
+    ]);
+
+    if (!requesterAssignment || !targetAssignment) {
+      throw new BadRequestException('Cannot approve swap because one or both employees have no shift assignment on the requested date');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.shiftAssignment.update({
+        where: { id: requesterAssignment.id },
+        data: { shiftId: targetAssignment.shiftId },
+      });
+      await tx.shiftAssignment.update({
+        where: { id: targetAssignment.id },
+        data: { shiftId: requesterAssignment.shiftId },
+      });
+      return tx.shiftSwapRequest.update({
+        where: { id },
+        data: {
+          status: 'ACCEPTED',
+          approvedBy: approvedBy || null,
+          approvedAt: new Date(),
+        },
+      });
     });
   }
 
