@@ -37,6 +37,18 @@ export class AttendanceAdminController {
     return this.svc.approveSubmission(user.companyId, id, user);
   }
 
+  @Post('overtime/:id/decision')
+  @ApiOperation({ summary: 'Authorize or reject overtime for an attendance record' })
+  decideOvertime(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    return this.svc.decideOvertime(user.companyId, id, body, user);
+  }
+
+  @Put('overtime/settings')
+  @ApiOperation({ summary: 'Update overtime settings' })
+  updateOvertimeSettings(@CurrentUser() user: any, @Body() body: any) {
+    return this.svc.updateOvertimeSettings(user.companyId, body);
+  }
+
   @Put('locations/:id')
   @ApiOperation({ summary: 'Update a geofence location' })
   updateLocation(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {

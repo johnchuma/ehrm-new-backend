@@ -14,6 +14,7 @@ const DEFAULT_PAYROLL_SETTINGS = {
   wcfRatePercent: 0.5,
   payrollCutoffDay: '25',
   currency: 'TZS',
+  overtimeRate: 0,
   sdlExempt: false,
 };
 
@@ -122,7 +123,7 @@ export class PayrollService {
   private async getPayrollSettings(companyId: string) {
     const companySettings = await this.prisma.companySettings.findUnique({
       where: { companyId },
-      select: { companyId: true, payrollCycle: true, generalSettings: true },
+      select: { companyId: true, payrollCycle: true, overtimeRate: true, generalSettings: true },
     });
 
     const generalSettings = parseJson(companySettings?.generalSettings, {}) || {};
@@ -130,6 +131,7 @@ export class PayrollService {
       ...DEFAULT_PAYROLL_SETTINGS,
       ...generalSettings,
       payrollCycle: companySettings?.payrollCycle || 'MONTHLY',
+      overtimeRate: Number(companySettings?.overtimeRate ?? generalSettings?.overtimeRate ?? DEFAULT_PAYROLL_SETTINGS.overtimeRate) || 0,
     };
   }
 
@@ -156,7 +158,7 @@ export class PayrollService {
       }),
       this.prisma.attendance.findMany({
         where: { companyId, date: { gte: start, lte: end } },
-        select: { employeeId: true, status: true, overtime: true, workMinutes: true, date: true },
+        select: { employeeId: true, status: true, overtime: true, approvedBy: true, workMinutes: true, date: true },
       }),
       this.prisma.offboarding.findMany({
         where: { companyId },
@@ -213,6 +215,16 @@ export class PayrollService {
       const status = String(row.status || '').toUpperCase();
       if (!employeeId || !ACTIVE_ATTENDANCE_STATUSES.has(status)) return;
       attendanceMap.set(employeeId, (attendanceMap.get(employeeId) || 0) + 1);
+    });
+    const overtimeRatePerHour = Number(settings?.overtimeRate || 0);
+    const authorizedOvertimeMap = new Map<string, number>();
+    attendance.forEach((row) => {
+      const employeeId = row.employeeId;
+      const approvedBy = String(row.approvedBy || '').trim();
+      if (!employeeId || !Number(row.overtime || 0)) return;
+      if (!approvedBy || approvedBy.toUpperCase().startsWith('UNAUTHORIZED:')) return;
+      const amount = Math.round((Number(row.overtime || 0) / 60) * overtimeRatePerHour);
+      authorizedOvertimeMap.set(employeeId, (authorizedOvertimeMap.get(employeeId) || 0) + amount);
     });
 
     const offboardingByEmployee = new Map<string, any>();
@@ -299,7 +311,7 @@ export class PayrollService {
       const componentDeductions = componentDeductionMap.get(employee.id) || 0;
       const adjustmentAllowances = adjustmentAllowanceMap.get(employee.id) || 0;
       const adjustmentDeductions = adjustmentDeductionMap.get(employee.id) || 0;
-      const overtime = Math.round(basicSalary * 0.01);
+      const overtime = authorizedOvertimeMap.get(employee.id) || 0;
       const terminationAmount = offboardingByEmployee.get(employee.id)?.amount || 0;
       const salaryAdvance = salaryAdvanceMap.get(employee.id) || 0;
       const allowances = componentAllowances + adjustmentAllowances;

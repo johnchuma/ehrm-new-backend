@@ -114,6 +114,17 @@ function pickTime(...values: Array<string | null | undefined>) {
   return `${hour.padStart(2, '0')}:${minute}`;
 }
 
+function overtimeDecision(row: { overtime?: number | null; approvedBy?: string | null }) {
+  if (!Number(row.overtime || 0)) return '';
+  const approvedBy = String(row.approvedBy || '').trim();
+  if (!approvedBy) return 'PENDING';
+  return approvedBy.toUpperCase().startsWith('UNAUTHORIZED:') ? 'UNAUTHORIZED' : 'AUTHORIZED';
+}
+
+function actorName(user: any) {
+  return user?.fullName || user?.name || user?.email || user?.sub || 'Admin';
+}
+
 function resolveUploadPath(fileName?: string | null) {
   if (!fileName) return '';
   const value = String(fileName).trim();
@@ -132,6 +143,15 @@ async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
 @Injectable()
 export class AttendanceAdminService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private async getOvertimeRate(companyId: string) {
+    const settings = await this.prisma.companySettings.findUnique({
+      where: { companyId },
+      select: { overtimeRate: true },
+    });
+    const amount = Number(settings?.overtimeRate || 0);
+    return Number.isFinite(amount) && amount > 0 ? amount : 0;
+  }
 
   private async getAttendanceWorkSettings(companyId: string): Promise<AttendanceWorkSettings> {
     const [companySettings, patterns] = await Promise.all([
@@ -340,8 +360,9 @@ export class AttendanceAdminService {
 
     await this.ensureDailyRecords(companyId, employees, start, end);
 
-    const [workSettings, attendance, shifts, locations, approvals, swaps, bulk] = await Promise.all([
+    const [workSettings, overtimeRate, attendance, shifts, locations, approvals, swaps, bulk] = await Promise.all([
       this.getAttendanceWorkSettings(companyId),
+      this.getOvertimeRate(companyId),
       this.prisma.attendance.findMany({
         where: { companyId, date: { gte: start, lte: end } },
         include: {
@@ -392,6 +413,14 @@ export class AttendanceAdminService {
         in: row.checkIn ? row.checkIn.toISOString() : '',
         out: row.checkOut ? row.checkOut.toISOString() : '',
         hours: row.workMinutes ? Number((row.workMinutes / 60).toFixed(2)) : 0,
+        overtimeMinutes: Number(row.overtime || 0),
+        overtimeHours: Number((Number(row.overtime || 0) / 60).toFixed(2)),
+        overtimeDecision: overtimeDecision(row),
+        overtimeApprovedBy: row.approvedBy?.startsWith('UNAUTHORIZED:')
+          ? row.approvedBy.replace(/^UNAUTHORIZED:/, '')
+          : row.approvedBy || '',
+        overtimeRate,
+        overtimeAmount: Math.round((Number(row.overtime || 0) / 60) * overtimeRate),
         method: row.isManual ? 'Manual' : 'Auto',
         status: row.status,
         notes: row.notes || '',
@@ -414,7 +443,11 @@ export class AttendanceAdminService {
     const openExceptions = attendance.filter((row) => String(row.status).toUpperCase() !== 'PRESENT' && String(row.status).toUpperCase() !== 'ABSENT').length;
     const pendingApprovals = bulk.filter((item) => item.status === PENDING_APPROVAL_STATUS).length;
     const totalOT = attendance.reduce((sum, row) => sum + Number(row.overtime || 0), 0);
-    const pendingOT = attendance.filter((row) => Number(row.overtime || 0) > 0 && !row.approvedBy).length;
+    const pendingOT = attendance.filter((row) => overtimeDecision(row) === 'PENDING').length;
+    const authorizedOT = attendance
+      .filter((row) => overtimeDecision(row) === 'AUTHORIZED')
+      .reduce((sum, row) => sum + Number(row.overtime || 0), 0);
+    const authorizedOTAmount = Math.round((authorizedOT / 60) * overtimeRate);
 
     const branchGroups = new Map<string, { name: string; count: number }>();
     const deptGroups = new Map<string, { name: string; count: number }>();
@@ -427,7 +460,11 @@ export class AttendanceAdminService {
     });
 
     return {
-      kpis: { totalEmployees, present, late, absent, active, openExceptions, pendingApprovals, pendingOT, totalOT, activeGeofences: locations.length },
+      kpis: { totalEmployees, present, late, absent, active, openExceptions, pendingApprovals, pendingOT, totalOT, authorizedOT, authorizedOTAmount, activeGeofences: locations.length },
+      overtimeSettings: {
+        ratePerHour: overtimeRate,
+        currency: 'TZS',
+      },
       employees: employees.map((employee) => ({
         id: employee.id,
         employeeNumber: employee.employeeNumber,
@@ -552,6 +589,56 @@ export class AttendanceAdminService {
     const rows = normalizeJson(submission.payload, []);
     await this.applyBulkRows(companyId, id, rows, submission.attendanceDate, submission);
     return this.getSubmission(companyId, id);
+  }
+
+  async updateOvertimeSettings(companyId: string, body: any) {
+    const ratePerHour = Number(body?.ratePerHour ?? body?.overtimeRate ?? 0);
+    if (!Number.isFinite(ratePerHour) || ratePerHour < 0) {
+      throw new BadRequestException('Overtime hourly amount must be a valid number');
+    }
+
+    return this.prisma.companySettings.upsert({
+      where: { companyId },
+      create: {
+        companyId,
+        overtimeRate: String(ratePerHour),
+      },
+      update: {
+        overtimeRate: String(ratePerHour),
+      },
+      select: {
+        overtimeRate: true,
+      },
+    });
+  }
+
+  async decideOvertime(companyId: string, id: string, body: any, user: any) {
+    const decision = String(body?.decision || '').trim().toUpperCase();
+    if (!['AUTHORIZED', 'UNAUTHORIZED'].includes(decision)) {
+      throw new BadRequestException('Decision must be AUTHORIZED or UNAUTHORIZED');
+    }
+
+    const row = await this.prisma.attendance.findFirst({
+      where: { id, companyId },
+      select: { id: true, overtime: true, notes: true },
+    });
+    if (!row) throw new NotFoundException('Attendance record not found');
+    if (!Number(row.overtime || 0)) throw new BadRequestException('This attendance record has no overtime');
+
+    const name = actorName(user);
+    const reason = String(body?.reason || '').trim();
+    const decisionNote = decision === 'AUTHORIZED'
+      ? `Overtime authorized by ${name}.`
+      : `Overtime unauthorized by ${name}${reason ? `: ${reason}` : ''}.`;
+    const notes = [row.notes, decisionNote].filter(Boolean).join('\n');
+
+    return this.prisma.attendance.update({
+      where: { id },
+      data: {
+        approvedBy: decision === 'AUTHORIZED' ? name : `UNAUTHORIZED:${name}`,
+        notes,
+      },
+    });
   }
 
   async listLocations(companyId: string) {

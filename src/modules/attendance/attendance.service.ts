@@ -1,6 +1,29 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
+const DAY_KEYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+
+function parseJson(value: any, fallback: any) {
+  if (!value) return fallback;
+  try {
+    return typeof value === 'string' ? JSON.parse(value) : value;
+  } catch {
+    return fallback;
+  }
+}
+
+function parseHoursRange(value?: string | null): [string, string] {
+  const match = String(value || '').match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+  return match ? [match[1], match[2]] : ['08:00', '17:00'];
+}
+
+function pickTime(...values: Array<string | null | undefined>) {
+  const value = values.find((item) => /^\d{1,2}:\d{2}$/.test(String(item || '').trim()));
+  if (!value) return '';
+  const [hour, minute] = String(value).split(':');
+  return `${hour.padStart(2, '0')}:${minute}`;
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(private readonly prisma: PrismaService) {}
@@ -18,6 +41,21 @@ export class AttendanceService {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
+  }
+
+  private async expectedCheckoutFor(companyId: string, date: Date) {
+    const pattern = await this.prisma.workingDayPattern.findFirst({
+      where: { companyId, isActive: true },
+      orderBy: { name: 'asc' },
+    });
+    const [, defaultEnd] = parseHoursRange(pattern?.hours);
+    const configs = parseJson(pattern?.dayConfigs, {});
+    const dayConfig = configs?.[DAY_KEYS[date.getDay()]] || {};
+    const end = pickTime(dayConfig.end, dayConfig.endTime, defaultEnd) || '17:00';
+    const [hour, minute] = end.split(':').map((item) => Number(item));
+    const expected = new Date(date);
+    expected.setHours(hour || 17, minute || 0, 0, 0);
+    return expected;
   }
 
   async getTodayStatus(userId: string) {
@@ -67,7 +105,7 @@ export class AttendanceService {
   }
 
   async checkOut(userId: string) {
-    const { employeeId } = await this.resolveEmployee(userId);
+    const { employeeId, companyId } = await this.resolveEmployee(userId);
     const today = this.todayDate();
     const record = await this.prisma.attendance.findUnique({
       where: { employeeId_date: { employeeId, date: today } },
@@ -77,8 +115,8 @@ export class AttendanceService {
 
     const now = new Date();
     const workMinutes = Math.floor((now.getTime() - record.checkIn!.getTime()) / 60000);
-    const standardMinutes = 8 * 60; // 8-hour standard day
-    const overtime = Math.max(0, workMinutes - standardMinutes);
+    const expectedCheckout = await this.expectedCheckoutFor(companyId, today);
+    const overtime = Math.max(0, Math.floor((now.getTime() - expectedCheckout.getTime()) / 60000));
 
     return this.prisma.attendance.update({
       where: { id: record.id },
