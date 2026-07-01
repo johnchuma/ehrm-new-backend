@@ -265,7 +265,7 @@ export class AttendanceAdminService {
 
     for (const row of existingRows) {
       if (!activeEmployeeIds.has(row.employeeId)) continue;
-      if (row.checkIn || row.checkOut || row.isManual) continue;
+      if (row.checkIn || row.checkOut) continue;
       const workDay = this.resolveWorkDay(workSettings, row.date);
       if (!workDay.isWorkDay) {
         if (String(row.notes || '').startsWith('Auto-created daily attendance record:')) {
@@ -278,6 +278,7 @@ export class AttendanceAdminService {
         const leaveEnd = toDateOnly(leave.endDate)!;
         return row.date.getTime() >= leaveStart.getTime() && row.date.getTime() <= leaveEnd.getTime();
       });
+      if (row.isManual && !onLeave) continue;
       const status = onLeave ? 'ON_LEAVE' : 'ABSENT';
       if (String(row.status).toUpperCase() !== status) {
         updates.push(

@@ -802,25 +802,28 @@ export class PayrollService {
     });
     const preview = existingRun || (await this.buildPayrollPreview(companyId, month, year));
 
-    if ('items' in preview && format === 'json') {
-      return {
-        run: this.serializeRun(preview),
-        items: preview.items.map((item: any) => this.serializeItem(item)),
-        summary: {
-          employeeCount: preview.employeeCount,
-          totalGrossSalary: Number(preview.totalGrossSalary || 0),
-          totalNetSalary: Number(preview.totalNetSalary || 0),
-          totalPaye: Number(preview.totalPaye || 0),
-          totalNssf: Number(preview.totalNssf || 0),
-          totalNhifEmployee: Number(preview.totalNhifEmployee || 0),
-          totalNhifEmployer: Number(preview.totalNhifEmployer || 0),
-          totalSdl: Number(preview.totalSdl || 0),
-          totalWcf: Number(preview.totalWcf || 0),
-          totalAllowances: Number(preview.totalAllowances || 0),
-          totalDeductions: Number(preview.totalDeductions || 0),
-          totalPayrollCost: Number(preview.totalPayrollCost || 0),
-        },
-      };
+    if (format === 'json') {
+      if ('items' in preview) {
+        return {
+          run: this.serializeRun(preview),
+          items: preview.items.map((item: any) => this.serializeItem(item)),
+          summary: {
+            employeeCount: preview.employeeCount,
+            totalGrossSalary: Number(preview.totalGrossSalary || 0),
+            totalNetSalary: Number(preview.totalNetSalary || 0),
+            totalPaye: Number(preview.totalPaye || 0),
+            totalNssf: Number(preview.totalNssf || 0),
+            totalNhifEmployee: Number(preview.totalNhifEmployee || 0),
+            totalNhifEmployer: Number(preview.totalNhifEmployer || 0),
+            totalSdl: Number(preview.totalSdl || 0),
+            totalWcf: Number(preview.totalWcf || 0),
+            totalAllowances: Number(preview.totalAllowances || 0),
+            totalDeductions: Number(preview.totalDeductions || 0),
+            totalPayrollCost: Number(preview.totalPayrollCost || 0),
+          },
+        };
+      }
+      return preview;
     }
 
     const rows = 'items' in preview ? preview.items.map((item: any) => this.serializeItem(item)) : preview.rows;
