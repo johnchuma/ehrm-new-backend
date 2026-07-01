@@ -19,6 +19,27 @@ function toDateOnly(value: string | Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+function eachDate(start: Date, end: Date) {
+  const days: Date[] = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  while (cursor.getTime() <= last.getTime()) {
+    days.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
+function isApprovedLeaveStatus(status?: string | null) {
+  return ['APPROVED', 'APPROVED_STATUS', 'ACTIVE'].includes(
+    String(status || '').trim().toUpperCase(),
+  );
+}
+
+function dateKey(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
 function resolveUploadPath(fileName?: string | null) {
   if (!fileName) return '';
   const value = String(fileName).trim();
@@ -38,6 +59,115 @@ async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
 export class AttendanceAdminService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async ensureDailyRecords(companyId: string, employees: Array<{ id: string }>, start: Date, end: Date) {
+    if (!employees.length) return;
+
+    const cappedEnd = (() => {
+      const today = toDateOnly(new Date())!;
+      const endDate = toDateOnly(end)!;
+      return endDate.getTime() > today.getTime() ? today : endDate;
+    })();
+    const startDate = toDateOnly(start)!;
+    if (startDate.getTime() > cappedEnd.getTime()) return;
+
+    const days = eachDate(startDate, cappedEnd);
+    const [existingRows, leaveRows] = await Promise.all([
+      this.prisma.attendance.findMany({
+        where: { companyId, date: { gte: startDate, lte: cappedEnd } },
+        select: {
+          id: true,
+          employeeId: true,
+          date: true,
+          checkIn: true,
+          checkOut: true,
+          isManual: true,
+          status: true,
+        },
+      }),
+      this.prisma.leaveRequest.findMany({
+        where: {
+          companyId,
+          status: { in: ['APPROVED', 'Approved', 'approved', 'ACTIVE', 'Active'] },
+          startDate: { lte: cappedEnd },
+          endDate: { gte: startDate },
+        },
+        select: { employeeId: true, startDate: true, endDate: true, status: true },
+      }),
+    ]);
+
+    const existing = new Set(
+      existingRows.map((row) => `${row.employeeId}:${dateKey(row.date)}`),
+    );
+    const leaveByEmployee = new Map<string, Array<{ startDate: Date; endDate: Date; status: string | null }>>();
+    leaveRows
+      .filter((row) => isApprovedLeaveStatus(row.status))
+      .forEach((row) => {
+        const current = leaveByEmployee.get(row.employeeId) || [];
+        current.push(row);
+        leaveByEmployee.set(row.employeeId, current);
+      });
+
+    const rowsToCreate = [];
+    const updates = [];
+    const activeEmployeeIds = new Set(employees.map((employee) => employee.id));
+
+    for (const row of existingRows) {
+      if (!activeEmployeeIds.has(row.employeeId)) continue;
+      if (row.checkIn || row.checkOut || row.isManual) continue;
+      const onLeave = (leaveByEmployee.get(row.employeeId) || []).some((leave) => {
+        const leaveStart = toDateOnly(leave.startDate)!;
+        const leaveEnd = toDateOnly(leave.endDate)!;
+        return row.date.getTime() >= leaveStart.getTime() && row.date.getTime() <= leaveEnd.getTime();
+      });
+      const status = onLeave ? 'ON_LEAVE' : 'ABSENT';
+      if (String(row.status).toUpperCase() !== status) {
+        updates.push(
+          this.prisma.attendance.update({
+            where: { id: row.id },
+            data: {
+              status,
+              notes: onLeave
+                ? 'Auto-created daily attendance record: employee is on approved leave.'
+                : 'Auto-created daily attendance record: no check-in or check-out recorded.',
+            },
+          }),
+        );
+      }
+    }
+
+    for (const employee of employees) {
+      for (const day of days) {
+        const key = `${employee.id}:${dateKey(day)}`;
+        if (existing.has(key)) continue;
+        const onLeave = (leaveByEmployee.get(employee.id) || []).some((leave) => {
+          const leaveStart = toDateOnly(leave.startDate)!;
+          const leaveEnd = toDateOnly(leave.endDate)!;
+          return day.getTime() >= leaveStart.getTime() && day.getTime() <= leaveEnd.getTime();
+        });
+        rowsToCreate.push({
+          employeeId: employee.id,
+          companyId,
+          date: day,
+          status: onLeave ? 'ON_LEAVE' : 'ABSENT',
+          isManual: false,
+          notes: onLeave
+            ? 'Auto-created daily attendance record: employee is on approved leave.'
+            : 'Auto-created daily attendance record: no check-in or check-out recorded.',
+        });
+      }
+    }
+
+    if (rowsToCreate.length) {
+      await this.prisma.attendance.createMany({
+        data: rowsToCreate,
+        skipDuplicates: true,
+      });
+    }
+    if (updates.length) {
+      await this.prisma.$transaction(updates);
+    }
+  }
+
   async overview(companyId: string, month?: number, year?: number) {
     const now = new Date();
     // Guard against NaN/invalid input (e.g. a month name that parseInt() turned
@@ -52,7 +182,24 @@ export class AttendanceAdminService {
     const end = new Date(targetYear, targetMonth, 0, 23, 59, 59);
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const [attendance, employees, shifts, locations, approvals, swaps, bulk] = await Promise.all([
+    const employees = await this.prisma.employee.findMany({
+        where: { companyId, status: { in: ['Active', 'ACTIVE'] } },
+        select: {
+          id: true,
+          employeeNumber: true,
+          fullName: true,
+          firstName: true,
+          lastName: true,
+          profilePhoto: true,
+          department: { select: { id: true, name: true } },
+          branch: { select: { id: true, name: true } },
+        },
+        orderBy: { fullName: 'asc' },
+      });
+
+    await this.ensureDailyRecords(companyId, employees, start, end);
+
+    const [attendance, shifts, locations, approvals, swaps, bulk] = await Promise.all([
       this.prisma.attendance.findMany({
         where: { companyId, date: { gte: start, lte: end } },
         include: {
@@ -68,21 +215,7 @@ export class AttendanceAdminService {
           },
           shift: { select: { id: true, name: true, startTime: true, endTime: true } },
         },
-        orderBy: { date: 'desc' },
-      }),
-      this.prisma.employee.findMany({
-        where: { companyId, status: 'Active' },
-        select: {
-          id: true,
-          employeeNumber: true,
-          fullName: true,
-          firstName: true,
-          lastName: true,
-          profilePhoto: true,
-          department: { select: { id: true, name: true } },
-          branch: { select: { id: true, name: true } },
-        },
-        orderBy: { fullName: 'asc' },
+        orderBy: [{ date: 'desc' }, { employee: { fullName: 'asc' } }],
       }),
       this.prisma.shift.findMany({ where: { companyId }, orderBy: { name: 'asc' } }),
       this.prisma.workspaceLocation.findMany({ where: { companyId, isActive: true }, orderBy: { name: 'asc' } }),
@@ -103,22 +236,28 @@ export class AttendanceAdminService {
     );
     const shiftById = new Map(shifts.map((shift) => [shift.id, shift]));
 
-    const rows = attendance.map((row) => ({
-      id: row.id,
-      empId: row.employeeId,
-      emp: employeeById.get(row.employeeId)?.fullName || employeeById.get(row.employeeId)?.employeeNumber || row.employeeId,
-      photoUrl: resolveUploadPath(employeeById.get(row.employeeId)?.profilePhoto),
-      dept: employeeById.get(row.employeeId)?.department?.name || 'Unassigned',
-      branch: employeeById.get(row.employeeId)?.branch?.name || 'Unassigned',
-      date: row.date.toISOString().slice(0, 10),
-      in: row.checkIn ? row.checkIn.toISOString() : '',
-      out: row.checkOut ? row.checkOut.toISOString() : '',
-      hours: row.workMinutes ? Number((row.workMinutes / 60).toFixed(2)) : 0,
-      method: row.isManual ? 'Manual' : 'Auto',
-      status: row.status,
-      notes: row.notes || '',
-      shift: shiftById.get(row.shiftId)?.name || '',
-    }));
+    const rows = attendance.map((row) => {
+      const employee = employeeById.get(row.employeeId) || row.employee;
+      return {
+        id: row.id,
+        empId: row.employeeId,
+        emp: employee?.fullName || employee?.employeeNumber || row.employeeId,
+        photoUrl: resolveUploadPath(employee?.profilePhoto),
+        dept: employee?.department?.name || 'Unassigned',
+        branch: employee?.branch?.name || 'Unassigned',
+        date: row.date.toISOString().slice(0, 10),
+        in: row.checkIn ? row.checkIn.toISOString() : '',
+        out: row.checkOut ? row.checkOut.toISOString() : '',
+        hours: row.workMinutes ? Number((row.workMinutes / 60).toFixed(2)) : 0,
+        method: row.isManual ? 'Manual' : 'Auto',
+        status: row.status,
+        notes: row.notes || '',
+        shift: shiftById.get(row.shiftId)?.name || '',
+        missingCheckIn: !row.checkIn && !['ON_LEAVE'].includes(String(row.status).toUpperCase()),
+        missingCheckOut: !!row.checkIn && !row.checkOut,
+        autoCreated: !row.checkIn && !row.checkOut && !row.isManual,
+      };
+    });
 
     const todayRows = attendance.filter((row) => row.date.getTime() === today.getTime());
     const present = todayRows.filter((row) => String(row.status).toUpperCase() === 'PRESENT').length;
