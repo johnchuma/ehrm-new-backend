@@ -18,6 +18,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { LeaveModule } from './modules/leave/leave.module';
 import { LeaveAdminModule } from './modules/leave-admin/leave-admin.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AttendanceAdminModule } from './modules/attendance-admin/attendance-admin.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
 import { HRQueryModule } from './modules/hrquery/hrquery.module';
@@ -69,6 +70,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     PayrollModule,
     HRQueryModule,
     TasksModule,
+    ApprovalsModule,
     TrainingModule,
     BenefitsModule,
     ScheduleModule,

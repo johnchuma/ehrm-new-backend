@@ -919,9 +919,10 @@ model LeaveRequest {
   approvalConfigKey String?
   approverId        String?
   approvedAt        DateTime?
-  rejectionReason   String?   @db.Text
-  handoverNotes     String?   @db.Text
-  createdAt         DateTime  @default(now())
+  rejectionReason      String?   @db.Text
+  handoverNotes        String?   @db.Text
+  sickLeaveSubCategory String?
+  createdAt            DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -986,6 +987,12 @@ model Attendance {
   status      String    @default("PRESENT")
   isManual    Boolean   @default(false)
   notes       String?
+  checkInLatitude   Decimal? @db.Decimal(10, 7)
+  checkInLongitude  Decimal? @db.Decimal(10, 7)
+  checkOutLatitude  Decimal? @db.Decimal(10, 7)
+  checkOutLongitude Decimal? @db.Decimal(10, 7)
+  source            String?
+  lateMinutes       Int?
   approvedBy  String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

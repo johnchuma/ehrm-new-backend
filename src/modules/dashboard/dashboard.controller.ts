@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth()
@@ -23,6 +24,7 @@ export class DashboardController {
   @ApiOperation({ summary: 'Company employee directory (search by name or department)' })
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'departmentId', required: false })
+  @RequirePermissions('employees.read')
   getDirectory(
     @CurrentUser() user: any,
     @Query('search') search?: string,
@@ -33,6 +35,7 @@ export class DashboardController {
 
   @Get('overview')
   @ApiOperation({ summary: 'Admin dashboard overview — aggregated KPIs for the company' })
+  @RequirePermissions('analytics.read')
   getOverview(@CurrentUser() user: any, @Query('month') month?: number, @Query('year') year?: number) {
     return this.svc.getOverview(user.companyId, month ? Number(month) : undefined, year ? Number(year) : undefined);
   }

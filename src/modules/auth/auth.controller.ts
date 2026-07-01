@@ -167,6 +167,13 @@ export class AuthController {
     return this.auth.validateToken(authHeader.replace('Bearer ', ''));
   }
 
+  @Get('me/permissions')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the current user effective permissions grouped by module (drives the management nav)' })
+  myPermissions(@CurrentUser() user: any) {
+    return this.auth.getEffectivePermissions(user.sub);
+  }
+
   @Public()
   @Post('login/phone')
   @HttpCode(200)

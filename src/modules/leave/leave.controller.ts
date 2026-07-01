@@ -43,6 +43,41 @@ export class LeaveController {
     return this.svc.cancelLeave(user.sub, id);
   }
 
+  // Reference-compatible aliases (portal frontend paths)
+
+  @Get('policy/categories')
+  @ApiOperation({ summary: 'Get leave categories (alias of /leave/types)' })
+  getPolicyCategories(@CurrentUser() user: any) {
+    return this.svc.getLeaveTypes(user.sub);
+  }
+
+  @Get('requests')
+  @ApiOperation({ summary: 'List my leave requests (alias of /leave/me/applications)' })
+  @ApiQuery({ name: 'status', required: false })
+  getRequests(@CurrentUser() user: any, @Query('status') status?: string) {
+    return this.svc.getMyApplications(user.sub, status);
+  }
+
+  @Post('requests')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Apply for leave (alias of /leave/me/apply)' })
+  createRequest(@CurrentUser() user: any, @Body() dto: ApplyLeaveDto) {
+    return this.svc.applyLeave(user.sub, dto);
+  }
+
+  @Post('requests/:id/cancel')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Cancel a pending leave request (alias)' })
+  cancelRequest(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.svc.cancelLeave(user.sub, id);
+  }
+
+  @Get('balance/:employeeId')
+  @ApiOperation({ summary: 'Get leave balances for an employee (self-service)' })
+  getBalanceFor(@CurrentUser() user: any, @Param('employeeId') employeeId: string) {
+    return this.svc.getBalancesFor(user.sub, employeeId);
+  }
+
   // Manager Self-Service
 
   @Get('team')

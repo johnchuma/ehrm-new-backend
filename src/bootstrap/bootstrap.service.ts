@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { PHASE_1_PERMISSIONS } from './permissions.seed';
+import { COMPANY_ADMIN_PERMISSIONS } from '../common/rbac/company-admin.permissions';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -29,6 +30,14 @@ export class BootstrapService implements OnModuleInit {
       const role = await this.ensureSuperAdminRole(superAdminUser.id);
       await this.grantAllPermissionsToRole(role.id, permissions, superAdminUser.id);
       await this.assignRoleToUser(superAdminUser.id, role.id);
+
+      // Company Admin template role — the fixed 48-permission set (12 resources).
+      const companyAdminRole = await this.ensureCompanyAdminRole();
+      const companyAdminPerms = permissions.filter((p) =>
+        COMPANY_ADMIN_PERMISSIONS.includes((p as any).name),
+      );
+      await this.grantAllPermissionsToRole(companyAdminRole.id, companyAdminPerms, superAdminUser.id);
+
       this.logger.log('Bootstrap complete.');
     } catch (err) {
       this.logger.error('Bootstrap IAM step failed (non-fatal)', err);
@@ -137,6 +146,29 @@ export class BootstrapService implements OnModuleInit {
       },
     });
     this.logger.log('System Administrator role created');
+    return role;
+  }
+
+  private async ensureCompanyAdminRole() {
+    const existing = await this.prisma.role.findFirst({
+      where: { name: 'Company Admin', companyId: null },
+    });
+    if (existing) {
+      this.logger.log('Company Admin role exists');
+      return existing;
+    }
+
+    const role = await this.prisma.role.create({
+      data: {
+        name: 'Company Admin',
+        slug: 'company-admin',
+        scope: 'GLOBAL',
+        description: 'Full access to all HR management features within a company',
+        isSystem: true,
+        isActive: true,
+      },
+    });
+    this.logger.log('Company Admin role created');
     return role;
   }
 

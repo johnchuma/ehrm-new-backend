@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Movements')
 @Controller('movements')
@@ -9,6 +10,7 @@ export class MovementController {
 
   @Get()
   @ApiOperation({ summary: 'List movements (filter by companyId, type, status)' })
+  @RequirePermissions('employees.read')
   async list(@Query() query: any) {
     const where: any = {};
     if (query.companyId) where.companyId = query.companyId;
@@ -21,6 +23,7 @@ export class MovementController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Movement stats' })
+  @RequirePermissions('employees.read')
   async stats(@Query('companyId') companyId: string) {
     const where = companyId ? { companyId } : {};
     const [total, promotions, transfers, salaryChanges, acting, reassignments] = await Promise.all([
@@ -36,12 +39,14 @@ export class MovementController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get movement by ID' })
+  @RequirePermissions('employees.read')
   async get(@Param('id') id: string) {
     return this.prisma.employeeMovement.findUnique({ where: { id } });
   }
 
   @Post()
   @ApiOperation({ summary: 'Create movement record' })
+  @RequirePermissions('employees.write')
   async create(@Body() body: any) {
     return this.prisma.employeeMovement.create({
       data: {
@@ -63,6 +68,7 @@ export class MovementController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update movement record' })
+  @RequirePermissions('employees.write')
   async update(@Param('id') id: string, @Body() body: any) {
     const data: any = {};
     const fields = ['employeeId', 'employeeName', 'movementType', 'fromValue', 'toValue', 'reason', 'effectiveDate', 'status', 'approvedBy'];
@@ -76,6 +82,7 @@ export class MovementController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete movement record' })
+  @RequirePermissions('employees.delete')
   async delete(@Param('id') id: string) {
     return this.prisma.employeeMovement.delete({ where: { id } });
   }

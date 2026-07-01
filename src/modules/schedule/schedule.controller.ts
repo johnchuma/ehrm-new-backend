@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { ScheduleService, SwapRequestDto } from './schedule.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
@@ -67,6 +68,7 @@ export class ScheduleController {
   @ApiOperation({ summary: 'Get admin schedule overview' })
   @ApiQuery({ name: 'month', required: false, type: Number })
   @ApiQuery({ name: 'year', required: false, type: Number })
+  @RequirePermissions('attendance.read')
   getAdminOverview(
     @CurrentUser() user: any,
     @Query('month') month?: string,
@@ -81,30 +83,35 @@ export class ScheduleController {
 
   @Post('admin/patterns')
   @ApiOperation({ summary: 'Create a shift pattern' })
+  @RequirePermissions('attendance.write')
   createPattern(@CurrentUser() user: any, @Body() body: any) {
     return this.svc.createPattern(this.requireCompany(user), body);
   }
 
   @Put('admin/patterns/:id')
   @ApiOperation({ summary: 'Update a shift pattern' })
+  @RequirePermissions('attendance.write')
   updatePattern(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
     return this.svc.updatePattern(this.requireCompany(user), id, body);
   }
 
   @Post('admin/assignments')
   @ApiOperation({ summary: 'Create a shift assignment' })
+  @RequirePermissions('attendance.write')
   createAssignment(@CurrentUser() user: any, @Body() body: any) {
     return this.svc.createAssignment(this.requireCompany(user), body);
   }
 
   @Put('admin/assignments/:id')
   @ApiOperation({ summary: 'Update a shift assignment' })
+  @RequirePermissions('attendance.write')
   updateAssignment(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
     return this.svc.updateAssignment(this.requireCompany(user), id, body);
   }
 
   @Put('admin/swaps/:id/respond')
   @ApiOperation({ summary: 'Admin respond to a swap request' })
+  @RequirePermissions('attendance.manage')
   respondToSwapAdmin(
     @CurrentUser() user: any,
     @Param('id') id: string,

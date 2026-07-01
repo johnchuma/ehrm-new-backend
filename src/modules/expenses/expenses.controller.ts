@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ExpensesService, SubmitExpenseDto } from './expenses.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Expenses')
 @ApiBearerAuth()
@@ -38,12 +39,14 @@ export class ExpensesController {
 
   @Get('admin')
   @ApiOperation({ summary: '[Admin/Finance] Get all company expense claims' })
+  @RequirePermissions('payroll.read')
   getAllClaims(@CurrentUser() user: any, @Query('status') status?: string) {
     return this.svc.getAllClaims(user.companyId, status);
   }
 
   @Put('admin/:id')
   @ApiOperation({ summary: '[Admin/Finance] Approve or reject an expense claim' })
+  @RequirePermissions('payroll.manage')
   processClaim(
     @CurrentUser() user: any,
     @Param('id') id: string,

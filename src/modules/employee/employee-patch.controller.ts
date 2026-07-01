@@ -6,6 +6,7 @@ import { EmailService } from '../notifications/email.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
 import { toNullableEmployeeDate } from './employee-date.util';
 import * as bcrypt from 'bcryptjs';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @Controller('employees')
 export class EmployeePatchController {
@@ -172,6 +173,7 @@ export class EmployeePatchController {
 
   @Patch(':id/onboarding')
   @Patch(':id')
+  @RequirePermissions('employees.write')
   async patch(@Param('id') id: string, @Body() body: Record<string, any>) {
     const emp = await this.prisma.employee.findUnique({ where: { id } });
     if (!emp) throw new NotFoundException('Employee not found');

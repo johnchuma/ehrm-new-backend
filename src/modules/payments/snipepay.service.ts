@@ -3,7 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
 const SNIPEPAY_BASE = 'https://api.snipepay.co.tz/v1';
-const SNIPEPAY_API_KEY = process.env.SNIPEPAY_API_KEY || 'CVBAUY873283Y939HFIUFBUI';
+const SNIPEPAY_API_KEY = process.env.SNIPEPAY_API_KEY || 'snp_08ca9cbb5ad22e9182b401ba31c510bacd8b5c65ab58096f9dd3935c5bec94a5';
 
 export interface SnipepayInitiatePayload {
   amount: number;

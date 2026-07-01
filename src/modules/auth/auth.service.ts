@@ -5,6 +5,12 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
 import { SmsService } from '../notifications/sms.service';
+import {
+  ALL_PERMISSION_NAMES,
+  COMPANY_ADMIN_PERMISSIONS,
+  groupPermissionsByResource,
+  isCompanyAdminRole,
+} from '../../common/rbac/company-admin.permissions';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +31,48 @@ export class AuthService {
     if (!role) return false;
     const normalized = role.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
     return normalized === 'system administrator' || normalized === 'system admin';
+  }
+
+  private isCompanyAdminRole(role?: string | null): boolean {
+    return isCompanyAdminRole(role);
+  }
+
+  /**
+   * Resolve a user's effective permission names: super admins get the full
+   * catalog, company admins get the fixed Company-Admin set, and everyone else
+   * gets exactly what their assigned roles grant.
+   */
+  async resolveUserPermissions(userId: string, role?: string | null): Promise<string[]> {
+    if (this.isSuperAdminRole(role)) return [...ALL_PERMISSION_NAMES];
+
+    const set = new Set<string>();
+    if (this.isCompanyAdminRole(role)) {
+      COMPANY_ADMIN_PERMISSIONS.forEach((p) => set.add(p));
+    }
+
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { userId },
+      include: { role: { include: { permissions: { include: { permission: true } } } } },
+    });
+    for (const ur of userRoles) {
+      for (const rp of ur.role.permissions) set.add(rp.permission.name);
+    }
+    return [...set];
+  }
+
+  /** Effective permissions grouped by resource — powers the management nav. */
+  async getEffectivePermissions(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    const permissions = await this.resolveUserPermissions(userId, user?.role);
+    return {
+      isSuperAdmin: this.isSuperAdminRole(user?.role),
+      isCompanyAdmin: this.isCompanyAdminRole(user?.role),
+      permissions,
+      modules: groupPermissionsByResource(permissions),
+    };
   }
 
   async login(email: string, password: string, ip?: string, userAgent?: string) {
@@ -48,12 +96,13 @@ export class AuthService {
     await this.prisma.user.update({ where: { id: user.id }, data: { failedAttempts: 0, lockedUntil: null, lastLoginAt: new Date() } });
 
     const isSuperAdmin = this.isSuperAdminRole(user.role);
+    const permissions = await this.resolveUserPermissions(user.id, user.role);
 
     const tokens = await this.generateTokens({
       sub: user.id,
       email: user.email ?? '',
       roles: [],
-      permissions: [],
+      permissions,
       selectedCompanyId: user.companyId ?? undefined,
       isSuperAdmin,
       isImpersonating: false,
@@ -80,7 +129,8 @@ export class AuthService {
         isActive: true,
       },
     });
-    const tokens = await this.generateTokens({ sub: user.id, email: user.email ?? '', roles: [], permissions: [], isSuperAdmin: false, isImpersonating: false });
+    const permissions = await this.resolveUserPermissions(user.id, user.role);
+    const tokens = await this.generateTokens({ sub: user.id, email: user.email ?? '', roles: [], permissions, isSuperAdmin: false, isImpersonating: false });
     const { password: _pw, ...safeUser } = user as any;
     return { ...tokens, user: safeUser };
   }
@@ -101,7 +151,9 @@ export class AuthService {
     await this.prisma.phoneOtp.update({ where: { id: record.id }, data: { used: true } });
     const user = await this.prisma.user.findFirst({ where: { phone } });
     if (!user) throw new UnauthorizedException('User not found with this phone number');
-    const tokens = await this.generateTokens({ sub: user.id, email: user.email ?? '', roles: [], permissions: [], isSuperAdmin: false, isImpersonating: false });
+    const isSuperAdmin = this.isSuperAdminRole(user.role);
+    const permissions = await this.resolveUserPermissions(user.id, user.role);
+    const tokens = await this.generateTokens({ sub: user.id, email: user.email ?? '', roles: [], permissions, isSuperAdmin, isImpersonating: false });
     return { ...tokens, user };
   }
 
@@ -183,8 +235,9 @@ export class AuthService {
     await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
 
     const isSuperAdmin = this.isSuperAdminRole(user.role);
+    const permissions = await this.resolveUserPermissions(user.id, user.role);
 
-    return this.generateTokens({ sub: user.id, email: user.email ?? '', roles: [], permissions: [], selectedCompanyId: user.companyId ?? undefined, isSuperAdmin, isImpersonating: false });
+    return this.generateTokens({ sub: user.id, email: user.email ?? '', roles: [], permissions, selectedCompanyId: user.companyId ?? undefined, isSuperAdmin, isImpersonating: false });
   }
 
   async logout(userId: string) {
@@ -211,11 +264,12 @@ export class AuthService {
     }
 
     const isSuperAdmin = this.isSuperAdminRole(user.role);
+    const permissions = await this.resolveUserPermissions(user.id, user.role);
     const tokens = await this.generateTokens({
       sub: user.id,
       email: user.email ?? '',
       roles: [],
-      permissions: [],
+      permissions,
       selectedCompanyId: company.id,
       isSuperAdmin,
       isImpersonating: false,
@@ -272,8 +326,30 @@ export class AuthService {
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.prisma.refreshToken.create({
-      data: { userId: payload.sub, token: refreshToken, jti: refreshJti, expiresAt, revoked: false, ipAddress: ip ?? null, userAgent: userAgent ?? null },
+      // Clamp to the column widths (ipAddress VarChar(191), userAgent VarChar(500))
+      // so an oversized header never triggers a P2000 "value too long" → 500.
+      data: {
+        userId: payload.sub,
+        token: refreshToken,
+        jti: refreshJti,
+        expiresAt,
+        revoked: false,
+        ipAddress: ip ? ip.slice(0, 191) : null,
+        userAgent: userAgent ? userAgent.slice(0, 500) : null,
+      },
     });
+
+    // Opportunistically prune this user's dead tokens so the table can't grow
+    // unbounded (rows are otherwise only ever flagged revoked, never removed).
+    // Bounded, indexed by userId, and best-effort — never fail token issuance.
+    this.prisma.refreshToken
+      .deleteMany({
+        where: {
+          userId: payload.sub,
+          OR: [{ revoked: true }, { expiresAt: { lt: new Date() } }],
+        },
+      })
+      .catch(() => {});
 
     return { accessToken, refreshToken };
   }

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 function safeArray(value: any) {
   return Array.isArray(value) ? value : [];
@@ -81,6 +82,7 @@ export class SettingsController {
 
   @Get('workspace/:companyId')
   @ApiOperation({ summary: 'Get complete workspace settings' })
+  @RequirePermissions('settings.read')
   async getWorkspaceSettings(@Param('companyId') companyId: string) {
     const [
       companySettings,
@@ -297,6 +299,7 @@ export class SettingsController {
 
   @Put('workspace/:companyId')
   @ApiOperation({ summary: 'Save complete workspace settings' })
+  @RequirePermissions('settings.manage')
   async saveWorkspaceSettings(@Param('companyId') companyId: string, @Body() body: any) {
     const payload = body?.settings || body || {};
 
@@ -978,12 +981,14 @@ export class SettingsController {
 
   @Get('business-units')
   @ApiOperation({ summary: 'List business units' })
+  @RequirePermissions('settings.read')
   async listBusinessUnits(@Query('companyId') companyId: string) {
     return { data: await this.prisma.businessUnit.findMany({ where: { companyId }, orderBy: { name: 'asc' } }) };
   }
 
   @Post('business-units')
   @ApiOperation({ summary: 'Create business unit' })
+  @RequirePermissions('settings.write')
   async createBusinessUnit(@Body() body: any) {
     return this.prisma.businessUnit.upsert({
       where: { companyId_name: { companyId: body.companyId, name: body.name } },
@@ -994,12 +999,14 @@ export class SettingsController {
 
   @Put('business-units/:id')
   @ApiOperation({ summary: 'Update business unit' })
+  @RequirePermissions('settings.write')
   async updateBusinessUnit(@Param('id') id: string, @Body() body: any) {
     return this.prisma.businessUnit.update({ where: { id }, data: { name: body.name, code: body.code } });
   }
 
   @Delete('business-units/:id')
   @ApiOperation({ summary: 'Delete business unit' })
+  @RequirePermissions('settings.delete')
   async deleteBusinessUnit(@Param('id') id: string) {
     return this.prisma.businessUnit.delete({ where: { id } });
   }
@@ -1008,12 +1015,14 @@ export class SettingsController {
 
   @Get('sections')
   @ApiOperation({ summary: 'List sections' })
+  @RequirePermissions('settings.read')
   async listSections(@Query('companyId') companyId: string) {
     return { data: await this.prisma.section.findMany({ where: { companyId }, orderBy: { name: 'asc' } }) };
   }
 
   @Post('sections')
   @ApiOperation({ summary: 'Create section' })
+  @RequirePermissions('settings.write')
   async createSection(@Body() body: any) {
     return this.prisma.section.upsert({
       where: { companyId_name: { companyId: body.companyId, name: body.name } },
@@ -1024,12 +1033,14 @@ export class SettingsController {
 
   @Put('sections/:id')
   @ApiOperation({ summary: 'Update section' })
+  @RequirePermissions('settings.write')
   async updateSection(@Param('id') id: string, @Body() body: any) {
     return this.prisma.section.update({ where: { id }, data: { name: body.name, code: body.code } });
   }
 
   @Delete('sections/:id')
   @ApiOperation({ summary: 'Delete section' })
+  @RequirePermissions('settings.delete')
   async deleteSection(@Param('id') id: string) {
     return this.prisma.section.delete({ where: { id } });
   }
@@ -1038,12 +1049,14 @@ export class SettingsController {
 
   @Get('job-titles')
   @ApiOperation({ summary: 'List job titles' })
+  @RequirePermissions('settings.read')
   async listJobTitles(@Query('companyId') companyId: string) {
     return { data: await this.prisma.jobTitle.findMany({ where: { companyId }, orderBy: { name: 'asc' } }) };
   }
 
   @Post('job-titles')
   @ApiOperation({ summary: 'Create job title' })
+  @RequirePermissions('settings.write')
   async createJobTitle(@Body() body: any) {
     return this.prisma.jobTitle.upsert({
       where: { companyId_name: { companyId: body.companyId, name: body.name } },
@@ -1054,12 +1067,14 @@ export class SettingsController {
 
   @Put('job-titles/:id')
   @ApiOperation({ summary: 'Update job title' })
+  @RequirePermissions('settings.write')
   async updateJobTitle(@Param('id') id: string, @Body() body: any) {
     return this.prisma.jobTitle.update({ where: { id }, data: { name: body.name, code: body.code, grade: body.grade } });
   }
 
   @Delete('job-titles/:id')
   @ApiOperation({ summary: 'Delete job title' })
+  @RequirePermissions('settings.delete')
   async deleteJobTitle(@Param('id') id: string) {
     return this.prisma.jobTitle.delete({ where: { id } });
   }
@@ -1068,12 +1083,14 @@ export class SettingsController {
 
   @Get('grades')
   @ApiOperation({ summary: 'List grades' })
+  @RequirePermissions('settings.read')
   async listGrades(@Query('companyId') companyId: string) {
     return { data: await this.prisma.grade.findMany({ where: { companyId }, orderBy: { rank: 'asc' } }) };
   }
 
   @Post('grades')
   @ApiOperation({ summary: 'Create grade' })
+  @RequirePermissions('settings.write')
   async createGrade(@Body() body: any) {
     return this.prisma.grade.upsert({
       where: { companyId_name: { companyId: body.companyId, name: body.name } },
@@ -1084,12 +1101,14 @@ export class SettingsController {
 
   @Put('grades/:id')
   @ApiOperation({ summary: 'Update grade' })
+  @RequirePermissions('settings.write')
   async updateGrade(@Param('id') id: string, @Body() body: any) {
     return this.prisma.grade.update({ where: { id }, data: { name: body.name, rank: body.rank } });
   }
 
   @Delete('grades/:id')
   @ApiOperation({ summary: 'Delete grade' })
+  @RequirePermissions('settings.delete')
   async deleteGrade(@Param('id') id: string) {
     return this.prisma.grade.delete({ where: { id } });
   }
@@ -1098,12 +1117,14 @@ export class SettingsController {
 
   @Get('positions')
   @ApiOperation({ summary: 'List positions' })
+  @RequirePermissions('settings.read')
   async listPositions(@Query('companyId') companyId: string) {
     return { data: await this.prisma.position.findMany({ where: { companyId }, orderBy: { name: 'asc' } }) };
   }
 
   @Post('positions')
   @ApiOperation({ summary: 'Create position' })
+  @RequirePermissions('settings.write')
   async createPosition(@Body() body: any) {
     return this.prisma.position.upsert({
       where: { companyId_name: { companyId: body.companyId, name: body.name } },
@@ -1114,12 +1135,14 @@ export class SettingsController {
 
   @Put('positions/:id')
   @ApiOperation({ summary: 'Update position' })
+  @RequirePermissions('settings.write')
   async updatePosition(@Param('id') id: string, @Body() body: any) {
     return this.prisma.position.update({ where: { id }, data: { name: body.name, code: body.code } });
   }
 
   @Delete('positions/:id')
   @ApiOperation({ summary: 'Delete position' })
+  @RequirePermissions('settings.delete')
   async deletePosition(@Param('id') id: string) {
     return this.prisma.position.delete({ where: { id } });
   }
@@ -1128,12 +1151,14 @@ export class SettingsController {
 
   @Get('contract-types')
   @ApiOperation({ summary: 'List contract types' })
+  @RequirePermissions('settings.read')
   async listContractTypes(@Query('companyId') companyId: string) {
     return { data: await this.prisma.contractType.findMany({ where: { companyId }, orderBy: { name: 'asc' } }) };
   }
 
   @Post('contract-types')
   @ApiOperation({ summary: 'Create contract type' })
+  @RequirePermissions('settings.write')
   async createContractType(@Body() body: any) {
     return this.prisma.contractType.upsert({
       where: { companyId_name: { companyId: body.companyId, name: body.name } },
@@ -1144,12 +1169,14 @@ export class SettingsController {
 
   @Put('contract-types/:id')
   @ApiOperation({ summary: 'Update contract type' })
+  @RequirePermissions('settings.write')
   async updateContractType(@Param('id') id: string, @Body() body: any) {
     return this.prisma.contractType.update({ where: { id }, data: { name: body.name, code: body.code } });
   }
 
   @Delete('contract-types/:id')
   @ApiOperation({ summary: 'Delete contract type' })
+  @RequirePermissions('settings.delete')
   async deleteContractType(@Param('id') id: string) {
     return this.prisma.contractType.delete({ where: { id } });
   }
