@@ -36,6 +36,7 @@ import { OffboardingModule } from './modules/offboarding/offboarding.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { CtcModule } from './modules/ctc/ctc.module';
 import { AssetsModule } from './modules/assets/assets.module';
+import { DisciplinaryModule } from './modules/disciplinary/disciplinary.module';
 
 import { IamController } from './modules/auth/iam.controller';
 import { IamService } from './modules/auth/iam.service';
@@ -86,6 +87,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     TenantModule,
     CtcModule,
     AssetsModule,
+    DisciplinaryModule,
   ],
   controllers: [IamController],
   providers: [

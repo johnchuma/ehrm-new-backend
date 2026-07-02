@@ -236,6 +236,10 @@ model Company {
   nonPayrollCosts           NonPayrollCost[]
   assets                    Asset[]
   assetProcurements         AssetProcurement[]
+  disciplinaryCases         DisciplinaryCase[]
+  disciplinaryHearings      DisciplinaryHearing[]
+  disciplinaryOutcomes      DisciplinaryOutcome[]
+  disciplinaryAppeals       DisciplinaryAppeal[]
 
   @@index([slug])
   @@index([status])
@@ -1763,4 +1767,116 @@ model AssetProcurement {
   @@index([status])
   @@index([requestDate])
   @@map("asset_procurements")
+}
+
+// ─── DISCIPLINARY ─────────────────────────────────────────────────────────────
+
+model DisciplinaryCase {
+  id             String    @id @default(cuid())
+  companyId      String
+  caseNumber     String?   // Human-readable e.g. DISC-001
+  employeeId     String?   // Optional link to employee record
+  employeeName   String
+  department     String?
+  allegation     String    @db.Text
+  category       String    // Misconduct, Gross Misconduct, Poor Performance, Insubordination, Attendance
+  severity       String    @default("Minor") // Minor, Serious, Gross
+  reportedById   String?
+  reportedBy     String?   // free-text
+  reportedDate   String    // YYYY-MM-DD
+  status         String    @default("Investigation") // Investigation, Notice Issued, Hearing Scheduled, Pending Outcome, Closed, Appealed
+  caseOfficerId  String?
+  caseOfficer    String?   // free-text
+  step           Int       @default(1) // 1..5 step in the pipeline
+  closedAt       DateTime?
+  notes          String?   @db.Text
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  hearings  DisciplinaryHearing[]
+  outcomes  DisciplinaryOutcome[]
+  appeals   DisciplinaryAppeal[]
+
+  @@unique([companyId, caseNumber])
+  @@index([companyId])
+  @@index([status])
+  @@index([severity])
+  @@index([category])
+  @@index([employeeId])
+  @@map("disciplinary_cases")
+}
+
+model DisciplinaryHearing {
+  id           String   @id @default(cuid())
+  companyId    String
+  caseId       String
+  date         String   // YYYY-MM-DD
+  time         String?  // HH:mm
+  venue        String?
+  panelChair   String?
+  panelMembers String?  @db.Text  // JSON array string
+  witnesses    String?  @db.Text  // JSON array string
+  status       String   @default("Scheduled") // Scheduled, Postponed, Completed, Cancelled
+  outcome      String?  @db.Text
+  notes        String?  @db.Text
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  case    DisciplinaryCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([caseId])
+  @@index([status])
+  @@index([date])
+  @@map("disciplinary_hearings")
+}
+
+model DisciplinaryOutcome {
+  id            String   @id @default(cuid())
+  companyId     String
+  caseId        String
+  decision      String   // Warning, Final Warning, Suspension, Dismissal, No Action
+  decisionDate  String   // YYYY-MM-DD
+  effectiveDate String?  // YYYY-MM-DD
+  appealed      Boolean  @default(false)
+  notes         String?  @db.Text
+  issuedById    String?
+  issuedBy      String?  // free-text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  case    DisciplinaryCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([caseId])
+  @@index([decision])
+  @@map("disciplinary_outcomes")
+}
+
+model DisciplinaryAppeal {
+  id               String    @id @default(cuid())
+  companyId        String
+  caseId           String
+  groundsForAppeal String    @db.Text
+  submittedDate    String    // YYYY-MM-DD
+  status           String    @default("Under Review") // Under Review, Upheld, Dismissed, Withdrawn
+  hearingDate      String?   // YYYY-MM-DD
+  panelDecision    String?   @db.Text
+  decidedAt        DateTime?
+  decidedBy        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  case    DisciplinaryCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([caseId])
+  @@index([status])
+  @@map("disciplinary_appeals")
 }
