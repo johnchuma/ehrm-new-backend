@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AnnouncementsService, CreateAnnouncementDto } from './announcements.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Announcements')
 @ApiBearerAuth()
@@ -26,12 +27,14 @@ export class AnnouncementsController {
   @Post()
   @HttpCode(201)
   @ApiOperation({ summary: '[Admin/HR] Create an announcement' })
+  @RequirePermissions('settings.write')
   create(@CurrentUser() user: any, @Body() dto: CreateAnnouncementDto) {
     return this.svc.createAnnouncement(user.sub, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: '[Admin/HR] Delete an announcement' })
+  @RequirePermissions('settings.delete')
   delete(@CurrentUser() user: any, @Param('id') id: string) {
     return this.svc.deleteAnnouncement(user.sub, id);
   }

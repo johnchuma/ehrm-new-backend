@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { HRQueryService, CreateQueryDto } from './hrquery.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('HR Queries')
 @ApiBearerAuth()
@@ -42,6 +43,7 @@ export class HRQueryController {
   @Get('all')
   @ApiOperation({ summary: '[HR] Get all company queries' })
   @ApiQuery({ name: 'status', required: false })
+  @RequirePermissions('employees.read')
   getAllQueries(@CurrentUser() user: any, @Query('status') status?: string) {
     return this.svc.getAllQueries(user.companyId, status);
   }
@@ -49,6 +51,7 @@ export class HRQueryController {
   @Post(':id/reply')
   @HttpCode(201)
   @ApiOperation({ summary: '[HR] Reply to a query and optionally update status' })
+  @RequirePermissions('employees.write')
   replyQuery(
     @CurrentUser() user: any,
     @Param('id') id: string,

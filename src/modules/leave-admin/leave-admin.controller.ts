@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nest
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { LeaveAdminService } from './leave-admin.service';
 
 @ApiTags('Leave Admin')
@@ -15,30 +16,35 @@ export class LeaveAdminController {
   @ApiOperation({ summary: 'Get leave admin overview' })
   @ApiQuery({ name: 'month', required: false, type: Number })
   @ApiQuery({ name: 'year', required: false, type: Number })
+  @RequirePermissions('leave.read')
   overview(@CurrentUser() user: any, @Query('month') month?: string, @Query('year') year?: string) {
     return this.svc.overview(user.companyId, month ? parseInt(month) : undefined, year ? parseInt(year) : undefined);
   }
 
   @Post('leave-types')
   @ApiOperation({ summary: 'Create a leave type' })
+  @RequirePermissions('leave.write')
   createLeaveType(@CurrentUser() user: any, @Body() body: any) {
     return this.svc.createLeaveType(user.companyId, body);
   }
 
   @Put('leave-types/:id')
   @ApiOperation({ summary: 'Update a leave type' })
+  @RequirePermissions('leave.write')
   updateLeaveType(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
     return this.svc.updateLeaveType(user.companyId, id, body);
   }
 
   @Post('requests')
   @ApiOperation({ summary: 'Create a leave request on behalf of an employee' })
+  @RequirePermissions('leave.write')
   createRequest(@CurrentUser() user: any, @Body() body: any) {
     return this.svc.createLeaveRequest(user.companyId, body);
   }
 
   @Post('requests/:id/respond')
   @ApiOperation({ summary: 'Approve or reject a leave request' })
+  @RequirePermissions('leave.manage')
   respond(@CurrentUser() user: any, @Param('id') id: string, @Body() body: { action: 'APPROVED' | 'REJECTED'; reason?: string }) {
     return this.svc.respond(user.companyId, id, body, user);
   }

@@ -60,6 +60,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         status = HttpStatus.BAD_REQUEST;
         code = 'FOREIGN_KEY_VIOLATION';
         message = 'Related record not found';
+      } else if (exception.code === 'P2000') {
+        // Value too long for a column (e.g. an oversized User-Agent header).
+        status = HttpStatus.BAD_REQUEST;
+        code = 'VALUE_TOO_LONG';
+        message = 'A submitted value is too long';
+      } else if (exception.code === 'P2024' || exception.code.startsWith('P1')) {
+        // P2024: connection-pool timeout; P1xxx: connection/reachability errors.
+        // These are transient DB-availability problems — surface a retryable 503
+        // instead of an opaque 500 so clients can back off and retry.
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        code = 'DATABASE_UNAVAILABLE';
+        message = 'The service is temporarily busy. Please retry shortly.';
+        this.logger.error(`DB availability error ${exception.code} on ${request.url}`);
+      } else {
+        // Any other known Prisma error we haven't special-cased: log it so it
+        // isn't a silent 500.
+        this.logger.error(`Unmapped Prisma error ${exception.code} on ${request.url}`);
       }
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);

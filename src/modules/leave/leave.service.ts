@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ApprovalsService } from '../approvals/approvals.service';
 
 const PENDING_APPROVAL_STATUS = 'PENDING';
 const APPROVED_STATUS = 'APPROVED';
@@ -19,7 +20,10 @@ async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
 
 @Injectable()
 export class LeaveService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly approvals: ApprovalsService,
+  ) {}
 
   private async resolveEmployee(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -79,19 +83,52 @@ export class LeaveService {
 
   async getMyApplications(userId: string, status?: string) {
     const { employeeId } = await this.resolveEmployee(userId);
-    return this.prisma.leaveRequest.findMany({
+    const requests = await this.prisma.leaveRequest.findMany({
       where: { employeeId, ...(status ? { status } : {}) },
       include: { leaveType: { select: { name: true, code: true, isPaid: true } } },
       orderBy: { createdAt: 'desc' },
     });
+    return this.attachApprovers(requests);
+  }
+
+  /** Dereference approverId → approver name so the portal can show who acted. */
+  private async attachApprovers<T extends { approverId: string | null }>(requests: T[]) {
+    const approverIds = [...new Set(requests.map((r) => r.approverId).filter(Boolean))] as string[];
+    if (!approverIds.length) return requests.map((r) => ({ ...r, approver: null }));
+    const approvers = await this.prisma.employee.findMany({
+      where: { id: { in: approverIds } },
+      select: { id: true, firstName: true, lastName: true, user: { select: { fullName: true } } },
+    });
+    const nameById = new Map(
+      approvers.map((a) => [
+        a.id,
+        a.user?.fullName || `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim() || null,
+      ]),
+    );
+    return requests.map((r) => ({
+      ...r,
+      approver: r.approverId ? { id: r.approverId, name: nameById.get(r.approverId) ?? null } : null,
+    }));
+  }
+
+  /** Self-service balance lookup by employeeId (portal passes the caller's own id). */
+  async getBalancesFor(userId: string, employeeId: string) {
+    const { employeeId: ownId } = await this.resolveEmployee(userId);
+    if (employeeId && employeeId !== ownId) {
+      throw new ForbiddenException('You can only view your own leave balance');
+    }
+    return this.getMyBalances(userId);
   }
 
   // ── Apply for Leave ──
 
   async applyLeave(userId: string, dto: ApplyLeaveDto) {
     const { employeeId, companyId } = await this.resolveEmployee(userId);
+    // The portal frontend sends `leaveCategoryId`; the admin/API path sends `leaveTypeId`.
+    const leaveTypeId = dto.leaveTypeId ?? dto.leaveCategoryId;
+    if (!leaveTypeId) throw new BadRequestException('A leave type is required');
     const leaveType = await this.prisma.leaveType.findFirst({
-      where: { id: dto.leaveTypeId, companyId, isActive: true },
+      where: { id: leaveTypeId, companyId, isActive: true },
     });
     if (!leaveType) throw new NotFoundException('Leave type not found');
 
@@ -117,7 +154,7 @@ export class LeaveService {
     // Check balance
     const year = start.getFullYear();
     const balance = await this.prisma.leaveBalance.findFirst({
-      where: { employeeId, leaveTypeId: dto.leaveTypeId, year },
+      where: { employeeId, leaveTypeId, year },
     });
     const available = balance
       ? Number(balance.totalDays) + Number(balance.carriedOver) - Number(balance.usedDays) - Number(balance.pendingDays)
@@ -131,12 +168,13 @@ export class LeaveService {
         data: {
           employeeId,
           companyId,
-          leaveTypeId: dto.leaveTypeId,
+          leaveTypeId,
           startDate: start,
           endDate: end,
           totalDays,
           reason: dto.reason,
           handoverNotes: dto.handoverNotes,
+          sickLeaveSubCategory: dto.sickLeaveSubCategory ?? undefined,
           status,
           approvalStage: approvalRequired ? 0 : 1,
           approvalConfigKey: approvalRequired ? LEAVE_APPROVAL_MODULE : null,
@@ -146,12 +184,12 @@ export class LeaveService {
       }),
       this.prisma.leaveBalance.upsert({
         where: {
-          employeeId_leaveTypeId_year: { employeeId, leaveTypeId: dto.leaveTypeId, year },
+          employeeId_leaveTypeId_year: { employeeId, leaveTypeId, year },
         },
         create: {
           employeeId,
           companyId,
-          leaveTypeId: dto.leaveTypeId,
+          leaveTypeId,
           year,
           totalDays: leaveType.daysPerYear,
           usedDays: approvalRequired ? 0 : totalDays,
@@ -163,6 +201,9 @@ export class LeaveService {
           : { usedDays: { increment: totalDays } },
       }),
     ]);
+
+    // The record's own status=PENDING + approvalStage=0 IS the approval task —
+    // it surfaces in approvers' /approvals/my-tasks. No separate row is created.
     return request;
   }
 
@@ -219,54 +260,11 @@ export class LeaveService {
   }
 
   async approveLeave(userId: string, requestId: string, action: 'APPROVED' | 'REJECTED', reason?: string) {
-    const { employeeId } = await this.resolveEmployee(userId);
-    const request = await this.prisma.leaveRequest.findUnique({ where: { id: requestId } });
-    if (!request) throw new NotFoundException('Leave request not found');
-    if (request.status !== 'PENDING') throw new BadRequestException('Request is no longer pending');
-
-    // Verify requester is the manager of the employee
-    const targetEmployee = await this.prisma.employee.findUnique({
-      where: { id: request.employeeId },
-      select: { managerId: true },
-    });
-    if (targetEmployee?.managerId !== employeeId)
-      throw new ForbiddenException('You are not the manager of this employee');
-
-    const year = request.startDate.getFullYear();
-    const updates: any[] = [
-      this.prisma.leaveRequest.update({
-        where: { id: requestId },
-        data: {
-          status: action,
-          approverId: employeeId,
-          approvalStage: 1,
-          approvedAt: action === 'APPROVED' ? new Date() : undefined,
-          rejectionReason: action === 'REJECTED' ? reason : undefined,
-        },
-      }),
-    ];
-
-    if (action === 'APPROVED') {
-      updates.push(
-        this.prisma.leaveBalance.updateMany({
-          where: { employeeId: request.employeeId, leaveTypeId: request.leaveTypeId, year },
-          data: {
-            usedDays: { increment: Number(request.totalDays) },
-            pendingDays: { decrement: Number(request.totalDays) },
-          },
-        }),
-      );
-    } else {
-      updates.push(
-        this.prisma.leaveBalance.updateMany({
-          where: { employeeId: request.employeeId, leaveTypeId: request.leaveTypeId, year },
-          data: { pendingDays: { decrement: Number(request.totalDays) } },
-        }),
-      );
-    }
-
-    const [updated] = await this.prisma.$transaction(updates);
-    return updated;
+    // Manager self-service path — delegate to the single shared workflow. The
+    // reporting manager satisfies eligibility for a manager step; a configured
+    // multi-level flow advances the stage instead of finalizing.
+    const decision = action === 'APPROVED' ? 'APPROVE' : 'REJECT';
+    return this.approvals.decideLeave(userId, requestId, decision, reason);
   }
 
   private calculateWorkingDays(start: Date, end: Date): number {
@@ -282,9 +280,13 @@ export class LeaveService {
 }
 
 export interface ApplyLeaveDto {
-  leaveTypeId: string;
+  /** Preferred field. The portal frontend sends `leaveCategoryId` instead. */
+  leaveTypeId?: string;
+  leaveCategoryId?: string;
   startDate: string;
   endDate: string;
   reason?: string;
   handoverNotes?: string;
+  /** Accepted for SICK leave; persisted once a schema column is added. */
+  sickLeaveSubCategory?: string;
 }

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ApprovalsService } from '../approvals/approvals.service';
 
 const PENDING_APPROVAL_STATUS = 'Pending Approval';
 const IN_PROGRESS_STATUS = 'In Progress';
@@ -142,7 +143,10 @@ async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
 
 @Injectable()
 export class AttendanceAdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly approvals: ApprovalsService,
+  ) {}
 
   private async getOvertimeRate(companyId: string) {
     const settings = await this.prisma.companySettings.findUnique({
@@ -628,27 +632,17 @@ export class AttendanceAdminService {
       throw new BadRequestException('Decision must be AUTHORIZED or UNAUTHORIZED');
     }
 
-    const row = await this.prisma.attendance.findFirst({
-      where: { id, companyId },
-      select: { id: true, overtime: true, notes: true },
-    });
+    // Scope to company, then delegate to the single shared approval workflow.
+    const row = await this.prisma.attendance.findFirst({ where: { id, companyId }, select: { id: true } });
     if (!row) throw new NotFoundException('Attendance record not found');
-    if (!Number(row.overtime || 0)) throw new BadRequestException('This attendance record has no overtime');
 
-    const name = actorName(user);
-    const reason = String(body?.reason || '').trim();
-    const decisionNote = decision === 'AUTHORIZED'
-      ? `Overtime authorized by ${name}.`
-      : `Overtime unauthorized by ${name}${reason ? `: ${reason}` : ''}.`;
-    const notes = [row.notes, decisionNote].filter(Boolean).join('\n');
-
-    return this.prisma.attendance.update({
-      where: { id },
-      data: {
-        approvedBy: decision === 'AUTHORIZED' ? name : `UNAUTHORIZED:${name}`,
-        notes,
-      },
-    });
+    return this.approvals.decideOvertime(
+      user?.sub || user?.id,
+      id,
+      decision === 'AUTHORIZED' ? 'APPROVE' : 'REJECT',
+      String(body?.reason || '').trim() || undefined,
+      { bypassEligibility: true }, // admin surface is permission-gated; may override/re-decide
+    );
   }
 
   async listLocations(companyId: string) {

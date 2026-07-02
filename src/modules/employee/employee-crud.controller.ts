@@ -7,6 +7,7 @@ import { ContractsService } from '../contracts/contracts.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
 import { toNullableEmployeeDate } from './employee-date.util';
 import * as bcrypt from 'bcryptjs';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Employees - CRUD')
 @Controller('employees')
@@ -20,6 +21,7 @@ export class EmployeeCrudController {
 
   @Get()
   @ApiOperation({ summary: 'List employees' })
+  @RequirePermissions('employees.read')
   async list(@Query() query: any) {
     const where: any = {};
     if (query.companyId) where.companyId = query.companyId;
@@ -59,6 +61,7 @@ export class EmployeeCrudController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Employee stats' })
+  @RequirePermissions('employees.read')
   async stats(@Query('companyId') companyId: string) {
     const where = companyId ? { companyId } : {};
     const [total, active, draft, onboarding] = await Promise.all([
@@ -72,6 +75,7 @@ export class EmployeeCrudController {
 
   @Get('signals')
   @ApiOperation({ summary: 'AI signals based on employee data' })
+  @RequirePermissions('employees.read')
   async getSignals(@Query('companyId') companyId: string) {
     const where = companyId ? { companyId } : {};
     const employees = await this.prisma.employee.findMany({ where });
@@ -167,12 +171,14 @@ export class EmployeeCrudController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get employee by ID' })
+  @RequirePermissions('employees.read')
   async get(@Param('id') id: string) {
     return this.prisma.employee.findUnique({ where: { id } });
   }
 
   @Post()
   @ApiOperation({ summary: 'Create employee' })
+  @RequirePermissions('employees.write')
   async create(@Body() body: Record<string, any>) {
         // Collect extra fields into metadata
     const extraFields = ['prefix', 'middleName', 'username', 'mobile', 'locale',
@@ -258,6 +264,8 @@ export class EmployeeCrudController {
             },
           });
           await this.prisma.employee.update({ where: { id: employee.id }, data: { userId: user.id } });
+          // Link the reverse side too — every /me resolver reads User.employeeId
+          await this.prisma.user.update({ where: { id: user.id }, data: { employeeId: employee.id } });
           // Send welcome email with credentials and confirmation link
           const confirmToken = this.jwt.sign({ sub: user.id, type: 'email_confirm' }, { expiresIn: '48h' });
           const confirmUrl = `${process.env.FRONTEND_URL || 'https://demo.exactehrm.co.tz'}/confirm-email?token=${confirmToken}`;
@@ -286,6 +294,7 @@ export class EmployeeCrudController {
   @Put(':id')
   @Patch(':id')
   @ApiOperation({ summary: 'Update employee' })
+  @RequirePermissions('employees.write')
   async update(@Param('id') id: string, @Body() body: Record<string, any>) {
     const data: any = {};
     console.log('[UPDATE] body.role:', body.role, 'body.companyRole:', body.companyRole);
@@ -408,12 +417,21 @@ export class EmployeeCrudController {
                 },
               });
               await this.prisma.employee.update({ where: { id }, data: { userId: user.id } });
+              await this.prisma.user.update({ where: { id: user.id }, data: { employeeId: id } });
             } else {
               user = existingUser;
               await this.prisma.employee.update({ where: { id }, data: { userId: user.id } });
+              // Only set the reverse link if this user isn't already tied to another employee (employeeId is @unique)
+              if (!existingUser.employeeId) {
+                await this.prisma.user.update({ where: { id: user.id }, data: { employeeId: id } });
+              }
             }
           } else {
             user = await this.prisma.user.findUnique({ where: { id: emp.userId } });
+            // Backfill the reverse link for already-linked employees whose user still lacks employeeId
+            if (user && !user.employeeId) {
+              await this.prisma.user.update({ where: { id: user.id }, data: { employeeId: id } });
+            }
           }
 
           if (user) {
@@ -546,6 +564,7 @@ export class EmployeeCrudController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete employee' })
+  @RequirePermissions('employees.delete')
   async delete(@Param('id') id: string) {
     return this.prisma.employee.delete({ where: { id } });
   }

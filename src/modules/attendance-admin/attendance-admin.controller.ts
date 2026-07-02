@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nest
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { AttendanceAdminService } from './attendance-admin.service';
 
 @ApiTags('Attendance Admin')
@@ -15,42 +16,49 @@ export class AttendanceAdminController {
   @ApiOperation({ summary: 'Get attendance admin overview' })
   @ApiQuery({ name: 'month', required: false, type: Number })
   @ApiQuery({ name: 'year', required: false, type: Number })
+  @RequirePermissions('attendance.read')
   overview(@CurrentUser() user: any, @Query('month') month?: string, @Query('year') year?: string) {
     return this.svc.overview(user.companyId, month ? parseInt(month) : undefined, year ? parseInt(year) : undefined);
   }
 
   @Get('locations')
   @ApiOperation({ summary: 'Get workspace locations used for geofencing' })
+  @RequirePermissions('attendance.read')
   listLocations(@CurrentUser() user: any) {
     return this.svc.listLocations(user.companyId);
   }
 
   @Post('bulk-submissions')
   @ApiOperation({ summary: 'Submit bulk attendance marking for approval' })
+  @RequirePermissions('attendance.write')
   submitBulk(@CurrentUser() user: any, @Body() body: any) {
     return this.svc.bulkSubmit(user.companyId, body, user);
   }
 
   @Post('bulk-submissions/:id/approve')
   @ApiOperation({ summary: 'Approve a bulk attendance submission' })
+  @RequirePermissions('attendance.manage')
   approveBulk(@CurrentUser() user: any, @Param('id') id: string) {
     return this.svc.approveSubmission(user.companyId, id, user);
   }
 
   @Post('overtime/:id/decision')
   @ApiOperation({ summary: 'Authorize or reject overtime for an attendance record' })
+  @RequirePermissions('attendance.manage')
   decideOvertime(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
     return this.svc.decideOvertime(user.companyId, id, body, user);
   }
 
   @Put('overtime/settings')
   @ApiOperation({ summary: 'Update overtime settings' })
+  @RequirePermissions('attendance.manage')
   updateOvertimeSettings(@CurrentUser() user: any, @Body() body: any) {
     return this.svc.updateOvertimeSettings(user.companyId, body);
   }
 
   @Put('locations/:id')
   @ApiOperation({ summary: 'Update a geofence location' })
+  @RequirePermissions('attendance.write')
   updateLocation(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
     return this.svc.updateLocation(user.companyId, id, body);
   }

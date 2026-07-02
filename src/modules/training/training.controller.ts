@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TrainingService } from './training.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Training')
 @ApiBearerAuth()
@@ -39,6 +40,7 @@ export class TrainingController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get training details with enrollment list (admin/manager)' })
+  @RequirePermissions('training.read')
   getTrainingById(@CurrentUser() user: any, @Param('id') id: string) {
     return this.svc.getTrainingById(user.companyId, id);
   }
@@ -46,6 +48,7 @@ export class TrainingController {
   @Post()
   @HttpCode(201)
   @ApiOperation({ summary: '[Admin/HR] Create a training program' })
+  @RequirePermissions('training.write')
   createTraining(@CurrentUser() user: any, @Body() dto: any) {
     return this.svc.createTraining(user.companyId, dto);
   }

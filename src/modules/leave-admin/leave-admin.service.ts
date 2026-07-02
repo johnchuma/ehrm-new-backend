@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ApprovalsService } from '../approvals/approvals.service';
 
 const PENDING_APPROVAL_STATUS = 'PENDING';
 const APPROVED_STATUS = 'APPROVED';
@@ -52,7 +53,10 @@ async function hasApprovalFlow(companyId: string, prisma: PrismaService) {
 
 @Injectable()
 export class LeaveAdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly approvals: ApprovalsService,
+  ) {}
 
   async overview(companyId: string, month?: number, year?: number) {
     const now = new Date();
@@ -488,34 +492,30 @@ export class LeaveAdminService {
   }
 
   async respond(companyId: string, requestId: string, body: { action: 'APPROVED' | 'REJECTED'; reason?: string }, actor?: any) {
+    // Company scoping, then delegate to the single shared approval workflow so the
+    // admin surface and the employee dashboard walk the exact same stage logic.
     const request = await this.prisma.leaveRequest.findFirst({
       where: { id: requestId, companyId },
-      include: { leaveType: true },
+      select: { id: true },
     });
     if (!request) throw new NotFoundException('Leave request not found');
-    if (request.status !== PENDING_APPROVAL_STATUS) throw new BadRequestException('Request is not pending approval');
 
-    const year = request.startDate.getFullYear();
-    await this.prisma.$transaction([
-      this.prisma.leaveRequest.update({
-        where: { id: requestId },
-        data: {
-          status: body.action,
-          approverId: actor?.sub || actor?.id || null,
-          approvalStage: 1,
-          approvedAt: body.action === APPROVED_STATUS ? new Date() : undefined,
-          rejectionReason: body.action === REJECTED_STATUS ? body.reason || null : null,
-        },
-      }),
-      this.prisma.leaveBalance.updateMany({
-        where: { employeeId: request.employeeId, leaveTypeId: request.leaveTypeId, year },
-        data: body.action === APPROVED_STATUS
-          ? { usedDays: { increment: Number(request.totalDays) }, pendingDays: { decrement: Number(request.totalDays) } }
-          : { pendingDays: { decrement: Number(request.totalDays) } },
-      }),
-    ]);
+    const decision = body.action === APPROVED_STATUS ? 'APPROVE' : 'REJECT';
+    const result = await this.approvals.decideLeave(
+      actor?.sub || actor?.id,
+      requestId,
+      decision,
+      body.reason,
+      { bypassEligibility: true }, // admin management surface is already permission-gated
+    );
 
-    return { message: body.action === APPROVED_STATUS ? 'Leave request approved' : 'Leave request rejected' };
+    const message =
+      result.status === 'APPROVED'
+        ? 'Leave request approved'
+        : result.status === 'REJECTED'
+          ? 'Leave request rejected'
+          : `Approved — advanced to stage ${result.approvalStage + 1} of ${result.totalSteps}`;
+    return { message, ...result };
   }
 
   private calculateWorkingDays(start: Date, end: Date): number {

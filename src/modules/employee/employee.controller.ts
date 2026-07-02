@@ -8,6 +8,7 @@ import { ContractsService } from '../contracts/contracts.service';
 import { dropInvalidEmployeeFks } from './employee-fk-guard';
 import { toNullableEmployeeDate } from './employee-date.util';
 import * as bcrypt from 'bcryptjs';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 function fileUrl(filename: string): string {
   return `/uploads/${filename}`;
@@ -88,6 +89,7 @@ export class EmployeeController {
 
   @Post()
   @ApiOperation({ summary: 'Create employee' })
+  @RequirePermissions('employees.write')
   async create(@Body() body: any) {
     const extraMeta: any = {};
     for (const k of ['prefix', 'middleName', 'username', 'mobile', 'locale', 'personalEmail',
@@ -194,6 +196,7 @@ export class EmployeeController {
   @Put(':id')
   @Patch(':id')
   @ApiOperation({ summary: 'Update employee' })
+  @RequirePermissions('employees.write')
   async update(@Param('id') id: string, @Body() body: any) {
     const current = await this.prisma.employee.findUnique({ where: { id }, select: { companyId: true, firstName: true, lastName: true } });
     const data: any = {};
@@ -260,6 +263,7 @@ export class EmployeeController {
 
   @Get(':id/documents')
   @ApiOperation({ summary: 'Get all documents for an employee (checklist files + uploaded docs)' })
+  @RequirePermissions('employees.read')
   async getDocuments(@Param('id') id: string) {
     const emp = await this.prisma.employee.findUnique({ where: { id } });
     if (!emp) throw new NotFoundException('Employee not found');
@@ -313,6 +317,7 @@ export class EmployeeController {
 
   @Post(':id/documents')
   @ApiOperation({ summary: 'Add a document record to employee' })
+  @RequirePermissions('employees.write')
   async addDocument(@Param('id') id: string, @Body() body: Record<string, any>) {
     const emp = await this.prisma.employee.findUnique({ where: { id } });
     if (!emp) throw new NotFoundException('Employee not found');
@@ -342,6 +347,7 @@ export class EmployeeController {
 
   @Delete(':id/documents/:docId')
   @ApiOperation({ summary: 'Delete a document from employee record' })
+  @RequirePermissions('employees.delete')
   async deleteDocument(@Param('id') id: string, @Param('docId') docId: string) {
     const emp = await this.prisma.employee.findUnique({ where: { id } });
     if (!emp) throw new NotFoundException('Employee not found');
@@ -359,6 +365,7 @@ export class EmployeeController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete employee' })
+  @RequirePermissions('employees.delete')
   async delete(@Param('id') id: string) {
     return this.prisma.employee.delete({ where: { id } });
   }

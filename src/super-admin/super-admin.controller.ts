@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -23,7 +24,9 @@ import { CreateCompanyDto } from './dto/create-company.dto';
 import { ImpersonateDto } from './dto/impersonate.dto';
 import { UpdateCompanyDto, UpdateCompanyStatusDto } from './dto/update-company.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
+import { UpdatePlanPriceDto } from './dto/update-plan-price.dto';
 import { Request } from 'express';
 
 // ─── /super-admin/* routes (no impersonation allowed) ────────────────────────
@@ -129,6 +132,21 @@ export class SuperAdminController {
     );
   }
 
+  @Post('users')
+  @ApiOperation({
+    summary:
+      'Deprecated — arbitrary user creation from the super-admin panel is forbidden. ' +
+      'Use POST /super-admin/users/super-admin to create a system administrator.',
+  })
+  @RequirePermissions('iam.manage')
+  createUser(@Body() _dto: CreateUserDto, @CurrentUser() _user: any) {
+    // Arbitrary user creation from the super-admin panel is no longer allowed.
+    // System-admin creation has its own endpoint (POST /users/super-admin).
+    throw new ForbiddenException(
+      'Creating arbitrary users from the super-admin panel is not allowed.',
+    );
+  }
+
   @Post('users/super-admin')
   @ApiOperation({ summary: 'Create a new super admin user' })
   @RequirePermissions('super_admin.manage')
@@ -141,13 +159,6 @@ export class SuperAdminController {
   @RequirePermissions('iam.manage')
   updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: any) {
     return this.svc.updateUser(id, dto, user.sub);
-  }
-
-  @Patch('users/:id/toggle-active')
-  @ApiOperation({ summary: 'Activate or deactivate a user' })
-  @RequirePermissions('iam.manage')
-  toggleUser(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.svc.toggleUserActive(id, user.sub);
   }
 
   @Delete('users/:id')
@@ -230,24 +241,26 @@ export class SuperAdminController {
   }
 
   @Post('subs/plans')
-  @ApiOperation({ summary: 'Create a new subscription plan' })
+  @ApiOperation({ summary: 'Deprecated — plans cannot be created from the dashboard' })
   @RequirePermissions('super_admin.manage')
-  createPlan(@Body() body: any) {
-    return this.subs.createPlan(body);
+  createPlan(@Body() _body: any) {
+    throw new ForbiddenException('Subscription plans cannot be created from the dashboard.');
   }
 
   @Put('subs/plans/:id')
-  @ApiOperation({ summary: 'Update a subscription plan' })
+  @ApiOperation({ summary: 'Update a subscription plan (price only)' })
   @RequirePermissions('super_admin.manage')
-  updatePlan(@Param('id') id: string, @Body() body: any) {
-    return this.subs.updatePlan(id, body);
+  updatePlan(@Param('id') id: string, @Body() dto: UpdatePlanPriceDto) {
+    // Only monthlyPrice / annualPrice are accepted — any other field is
+    // rejected with a 400 by the global whitelist ValidationPipe.
+    return this.subs.updatePlan(id, dto);
   }
 
   @Delete('subs/plans/:id')
-  @ApiOperation({ summary: 'Deactivate (soft-delete) a plan — blocked if it has active subscribers' })
+  @ApiOperation({ summary: 'Deprecated — plans cannot be deleted from the dashboard' })
   @RequirePermissions('super_admin.manage')
-  deletePlan(@Param('id') id: string) {
-    return this.subs.deletePlan(id);
+  deletePlan(@Param('id') _id: string) {
+    throw new ForbiddenException('Subscription plans cannot be deleted from the dashboard.');
   }
 
   @Get('subs/usage')
