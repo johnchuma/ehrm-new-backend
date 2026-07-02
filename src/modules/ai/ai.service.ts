@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
 interface ChatMessage {
@@ -20,6 +20,8 @@ export interface AiResponse {
   context: Record<string, any>;
   usage?: any;
   source: 'openai' | 'fallback';
+  conversationId?: string;
+  messageId?: string;
 }
 
 @Injectable()
@@ -33,34 +35,248 @@ export class AiService {
     userId: string | undefined,
     messages: ChatMessage[],
     clientContext: Record<string, any> = {},
+    conversationId?: string,
   ): Promise<AiResponse> {
-    const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
-    const intent = this.detectIntent(lastUser);
-    const context = await this.buildContext(companyId, userId, intent);
-    const enrichedContext = { ...context, ...clientContext };
-
-    if (!process.env.OPENAI_API_KEY) {
-      return this.fallbackResponse(lastUser, intent, enrichedContext);
+    if (!companyId || !userId) {
+      throw new ForbiddenException('ExactAI requires an authenticated company user.');
     }
 
-    const systemPrompt = this.buildSystemPrompt(enrichedContext, intent);
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+    const intent = this.detectIntent(lastUser);
+
+    // Load or create the conversation
+    const conversation = await this.ensureConversation({
+      conversationId,
+      companyId,
+      userId,
+      firstUserMessage: lastUser,
+      intent: intent.actionType,
+    });
+
+    // Persist the incoming user message (only the latest one — the controller
+    // already collapsed the transcript and appends only the new turn).
+    if (lastUser) {
+      await this.appendMessage(conversation.id, 'user', lastUser, null, intent.actionType);
+    }
+
+    // Reload the full message history for context (limit to last 20 for cost)
+    const history = await this.prisma.aiMessage.findMany({
+      where: { conversationId: conversation.id },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+      select: { role: true, content: true },
+    });
+
+    const context = await this.buildContext(companyId, userId, intent);
+    const enrichedContext = { ...context, ...clientContext };
+    const trimmedMessages = this.toOpenAiMessages(history);
+
+    const response = await this.generateReply(trimmedMessages, intent, enrichedContext);
+
+    // Persist assistant reply + actions
+    const assistantRow = await this.appendMessage(
+      conversation.id,
+      'assistant',
+      response.reply,
+      response.actions,
+      intent.actionType,
+      response.source,
+    );
+
+    // Update conversation preview + lastMessageAt
+    await this.prisma.aiConversation.update({
+      where: { id: conversation.id },
+      data: {
+        preview: response.reply.slice(0, 180),
+        intent: intent.actionType,
+        source: response.source,
+        lastMessageAt: new Date(),
+        messageCount: { increment: 2 },
+      },
+    });
+
+    return {
+      ...response,
+      conversationId: conversation.id,
+      messageId: assistantRow.id,
+    };
+  }
+
+  private async generateReply(
+    history: ChatMessage[],
+    intent: IntentHints,
+    context: Record<string, any>,
+  ): Promise<AiResponse> {
+    if (!process.env.OPENAI_API_KEY) {
+      return this.fallbackResponse(intent, context);
+    }
+    const systemPrompt = this.buildSystemPrompt(context, intent);
     try {
-      const data = await this.callOpenAI(systemPrompt, messages);
-      const reply = data.choices?.[0]?.message?.content?.trim() || this.fallbackText(intent);
-      const actions = this.buildActions(intent, enrichedContext);
+      const data = await this.callOpenAI(systemPrompt, history);
+      const reply = data.choices?.[0]?.message?.content?.trim() || this.fallbackText(intent, context);
+      const actions = this.buildActions(intent, context);
       return {
         reply,
         actions,
         suggestedAction: actions[0]?.type ?? null,
         intent: intent.actionType ?? 'general',
-        context: enrichedContext,
+        context,
         usage: data.usage,
         source: 'openai',
       };
     } catch (err: any) {
       this.logger.warn(`OpenAI call failed, falling back: ${err?.message ?? err}`);
-      return this.fallbackResponse(lastUser, intent, enrichedContext);
+      return this.fallbackResponse(intent, context);
     }
+  }
+
+  private async ensureConversation(args: {
+    conversationId?: string;
+    companyId: string;
+    userId: string;
+    firstUserMessage: string;
+    intent?: string;
+  }) {
+    if (args.conversationId) {
+      const existing = await this.prisma.aiConversation.findUnique({
+        where: { id: args.conversationId },
+      });
+      if (!existing) throw new NotFoundException('Conversation not found.');
+      if (existing.companyId !== args.companyId || existing.userId !== args.userId) {
+        throw new ForbiddenException('You do not have access to this conversation.');
+      }
+      return existing;
+    }
+    const title = this.deriveTitle(args.firstUserMessage);
+    return this.prisma.aiConversation.create({
+      data: {
+        companyId: args.companyId,
+        userId: args.userId,
+        title,
+        preview: args.firstUserMessage.slice(0, 180),
+        intent: args.intent,
+      },
+    });
+  }
+
+  private deriveTitle(text: string): string {
+    const cleaned = (text || '').replace(/\s+/g, ' ').trim();
+    if (!cleaned) return 'New conversation';
+    const cap = Math.min(60, cleaned.length);
+    const slice = cleaned.slice(0, cap);
+    return slice.length < cleaned.length ? `${slice}…` : slice;
+  }
+
+  private async appendMessage(
+    conversationId: string,
+    role: string,
+    content: string,
+    actions: any[] | null,
+    intent?: string,
+    source?: string,
+  ) {
+    return this.prisma.aiMessage.create({
+      data: {
+        conversationId,
+        role,
+        content,
+        actions: actions && actions.length ? JSON.stringify(actions) : null,
+        intent: intent ?? null,
+        source: source ?? null,
+      },
+    });
+  }
+
+  private toOpenAiMessages(history: { role: string; content: string }[]): ChatMessage[] {
+    return history
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+  }
+
+  async listConversations(companyId: string, userId: string) {
+    return this.prisma.aiConversation.findMany({
+      where: { companyId, userId },
+      orderBy: { lastMessageAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        title: true,
+        preview: true,
+        intent: true,
+        source: true,
+        messageCount: true,
+        createdAt: true,
+        updatedAt: true,
+        lastMessageAt: true,
+      },
+    });
+  }
+
+  async getConversation(companyId: string, userId: string, id: string) {
+    const convo = await this.prisma.aiConversation.findUnique({
+      where: { id },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            role: true,
+            content: true,
+            actions: true,
+            intent: true,
+            source: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+    if (!convo) throw new NotFoundException('Conversation not found.');
+    if (convo.companyId !== companyId || convo.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this conversation.');
+    }
+    return {
+      id: convo.id,
+      title: convo.title,
+      intent: convo.intent,
+      source: convo.source,
+      createdAt: convo.createdAt,
+      updatedAt: convo.updatedAt,
+      lastMessageAt: convo.lastMessageAt,
+      messageCount: convo.messageCount,
+      messages: convo.messages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        actions: m.actions ? safeJson(m.actions) : [],
+        intent: m.intent,
+        source: m.source,
+        createdAt: m.createdAt,
+      })),
+    };
+  }
+
+  async deleteConversation(companyId: string, userId: string, id: string) {
+    const convo = await this.prisma.aiConversation.findUnique({ where: { id } });
+    if (!convo) throw new NotFoundException('Conversation not found.');
+    if (convo.companyId !== companyId || convo.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this conversation.');
+    }
+    await this.prisma.aiConversation.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  async renameConversation(companyId: string, userId: string, id: string, title: string) {
+    const convo = await this.prisma.aiConversation.findUnique({ where: { id } });
+    if (!convo) throw new NotFoundException('Conversation not found.');
+    if (convo.companyId !== companyId || convo.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this conversation.');
+    }
+    const trimmed = (title || '').trim().slice(0, 80) || 'Untitled';
+    await this.prisma.aiConversation.update({
+      where: { id },
+      data: { title: trimmed },
+    });
+    return { id, title: trimmed };
   }
 
   // ── Intent detection ────────────────────────────────────────────────────
@@ -391,7 +607,7 @@ Return only the assistant reply — no preamble, no "I am an AI" disclaimers.`;
   }
 
   // ── Fallback (no API key / failure) ────────────────────────────────────
-  private fallbackResponse(query: string, intent: IntentHints, context: Record<string, any>): AiResponse {
+  private fallbackResponse(intent: IntentHints, context: Record<string, any>): AiResponse {
     return {
       reply: this.fallbackText(intent, context),
       actions: this.buildActions(intent, context),
@@ -452,4 +668,13 @@ function formatTzs(value: any): string {
   if (n >= 1_000_000) return `TZS ${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `TZS ${(n / 1_000).toFixed(0)}K`;
   return `TZS ${n.toFixed(0)}`;
+}
+
+function safeJson(text: string): any[] {
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }

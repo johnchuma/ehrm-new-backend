@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Param, Delete, Patch, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -73,13 +73,41 @@ export class DashboardController {
   @Post('exactai')
   @ApiOperation({
     summary:
-      'ExactAI — agentic HR assistant. Accepts { messages, context? } and returns grounded reply, suggested actions, and intent.',
+      'ExactAI — agentic HR assistant. Accepts { messages, context?, conversationId? } and returns grounded reply, suggested actions, and intent. Persists the turn in a conversation thread.',
   })
   exactai(
     @CurrentUser() user: any,
-    @Body() body: { messages: any[]; context?: Record<string, any> },
+    @Body() body: { messages: any[]; context?: Record<string, any>; conversationId?: string },
   ) {
-    const { messages = [], context = {} } = body;
-    return this.ai.chat(user.companyId, user.sub, messages, context);
+    const { messages = [], context = {}, conversationId } = body;
+    return this.ai.chat(user.companyId, user.sub, messages, context, conversationId);
+  }
+
+  @Get('exactai/conversations')
+  @ApiOperation({ summary: 'List the current user\u2019s ExactAI conversations (most recent first).' })
+  listConversations(@CurrentUser() user: any) {
+    return this.ai.listConversations(user.companyId, user.sub);
+  }
+
+  @Get('exactai/conversations/:id')
+  @ApiOperation({ summary: 'Get a single ExactAI conversation with full message history.' })
+  getConversation(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.ai.getConversation(user.companyId, user.sub, id);
+  }
+
+  @Delete('exactai/conversations/:id')
+  @ApiOperation({ summary: 'Delete an ExactAI conversation.' })
+  deleteConversation(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.ai.deleteConversation(user.companyId, user.sub, id);
+  }
+
+  @Patch('exactai/conversations/:id')
+  @ApiOperation({ summary: 'Rename an ExactAI conversation.' })
+  renameConversation(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() body: { title?: string },
+  ) {
+    return this.ai.renameConversation(user.companyId, user.sub, id, body?.title || '');
   }
 }
