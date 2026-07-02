@@ -1,16 +1,20 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { AiService } from '../ai/ai.service';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly svc: DashboardService) {}
+  constructor(
+    private readonly svc: DashboardService,
+    private readonly ai: AiService,
+  ) {}
 
   @Get('me')
   @ApiOperation({
@@ -64,5 +68,18 @@ export class DashboardController {
   @RequirePermissions('analytics.read')
   getSalaryIntelligence(@CurrentUser() user: any) {
     return this.svc.getSalaryIntelligence(user.companyId);
+  }
+
+  @Post('exactai')
+  @ApiOperation({
+    summary:
+      'ExactAI — agentic HR assistant. Accepts { messages, context? } and returns grounded reply, suggested actions, and intent.',
+  })
+  exactai(
+    @CurrentUser() user: any,
+    @Body() body: { messages: any[]; context?: Record<string, any> },
+  ) {
+    const { messages = [], context = {} } = body;
+    return this.ai.chat(user.companyId, user.sub, messages, context);
   }
 }
