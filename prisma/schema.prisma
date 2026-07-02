@@ -234,6 +234,8 @@ model Company {
   payrollAdjustments        PayrollAdjustment[]
   payrollComponents         PayrollComponent[]
   nonPayrollCosts           NonPayrollCost[]
+  assets                    Asset[]
+  assetProcurements         AssetProcurement[]
 
   @@index([slug])
   @@index([status])
@@ -259,6 +261,7 @@ model Branch {
   company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   departments Department[]
   employees   Employee[]
+  assets      Asset[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -767,6 +770,8 @@ model Employee {
   payrollRunItems      PayrollRunItem[]
   payrollAdjustments   PayrollAdjustment[]
   payrollComponents    PayrollComponent[]
+  assetsAssigned       Asset[]              @relation("EmployeeAssets")
+  assetAllocations     AssetAllocation[]    @relation("EmployeeAssetAllocations")
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])
@@ -1630,4 +1635,125 @@ model DemoRequest {
   createdAt DateTime @default(now())
 
   @@map("demo_requests")
+}
+
+// ─── ASSETS ───────────────────────────────────────────────────────────────────
+
+model Asset {
+  id              String    @id @default(cuid())
+  companyId       String
+  assetTag        String?   // Internal human-readable tag e.g. AST-001
+  name            String
+  category        String    // IT Equipment, Vehicle, Furniture, Machinery, Mobile Device, Office Equipment
+  make            String?
+  model           String?
+  serialNumber    String?
+  purchaseDate    String?   // YYYY-MM-DD
+  purchasePrice   Decimal?  @db.Decimal(15, 2)
+  currentValue    Decimal?  @db.Decimal(15, 2)
+  currency        String    @default("TZS")
+  location        String?
+  branchId        String?
+  condition       String    @default("Good") // Good, Fair, Poor, Damaged
+  status          String    @default("Available") // Active, Available, Under Maintenance, Disposed
+  assignedToId    String?   // Employee currently holding the asset
+  warrantyExpiry  String?   // YYYY-MM-DD
+  nextMaintenance String?   // YYYY-MM-DD
+  notes           String?   @db.Text
+  metadata        String?   @db.Text
+  deletedAt       DateTime?
+  createdById     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedTo    Employee?           @relation("EmployeeAssets", fields: [assignedToId], references: [id])
+  branch        Branch?             @relation(fields: [branchId], references: [id])
+  allocations   AssetAllocation[]
+  maintenance   AssetMaintenance[]
+
+  @@unique([companyId, assetTag])
+  @@index([companyId])
+  @@index([category])
+  @@index([status])
+  @@index([condition])
+  @@index([assignedToId])
+  @@index([deletedAt])
+  @@map("assets")
+}
+
+model AssetAllocation {
+  id                   String    @id @default(cuid())
+  companyId            String
+  assetId              String
+  employeeId           String
+  allocatedAt          String    // YYYY-MM-DD
+  expectedReturnDate   String?   // YYYY-MM-DD
+  returnedAt           String?   // YYYY-MM-DD
+  notes                String?   @db.Text
+  createdById          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  asset    Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  employee Employee @relation("EmployeeAssetAllocations", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([assetId])
+  @@index([employeeId])
+  @@index([returnedAt])
+  @@map("asset_allocations")
+}
+
+model AssetMaintenance {
+  id          String   @id @default(cuid())
+  companyId   String
+  assetId     String
+  type        String   // Routine, Repair, Inspection
+  description String   @db.Text
+  date        String   // YYYY-MM-DD
+  cost        Decimal? @db.Decimal(15, 2)
+  currency    String   @default("TZS")
+  technician  String?
+  status      String   @default("Scheduled") // Scheduled, In Progress, Completed, Cancelled
+  nextDue     String?  // YYYY-MM-DD
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([assetId])
+  @@index([status])
+  @@index([date])
+  @@map("asset_maintenance")
+}
+
+model AssetProcurement {
+  id             String   @id @default(cuid())
+  companyId      String
+  item           String
+  category       String
+  quantity       Int      @default(1)
+  estimatedCost  Decimal  @db.Decimal(15, 2)
+  currency       String   @default("TZS")
+  requestedById  String?
+  requestedBy    String?  // free-text fallback when no employee id
+  department     String?
+  justification  String?  @db.Text
+  status         String   @default("Pending") // Pending, Approved, Rejected, Ordered, Received
+  requestDate    String   // YYYY-MM-DD
+  approvedBy     String?
+  approvedAt     DateTime?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([status])
+  @@index([requestDate])
+  @@map("asset_procurements")
 }
