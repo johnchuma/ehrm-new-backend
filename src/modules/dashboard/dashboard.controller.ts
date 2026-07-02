@@ -55,4 +55,14 @@ export class DashboardController {
       year ? Number(year) : undefined,
     );
   }
+
+  @Get('salaryintelligence')
+  @ApiOperation({
+    summary:
+      'Salary & labour intelligence — compa ratio, pay band coverage, gender pay gap, market delta, critical roles, scenarios',
+  })
+  @RequirePermissions('analytics.read')
+  getSalaryIntelligence(@CurrentUser() user: any) {
+    return this.svc.getSalaryIntelligence(user.companyId);
+  }
 }
